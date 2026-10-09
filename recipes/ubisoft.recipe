@@ -1,0 +1,16 @@
+# Ubisoft Connect. Environment from frankea/Whisky's LauncherPresets.swift (GPL-3.0-or-later).
+# Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+name Ubisoft Connect
+kind launcher
+status experimental
+symbol u.circle
+about Лаунчер Ubisoft. Интерфейс через DXVK. Ещё не проверен на нашем движке.
+bottle ubisoft
+installer https://static3.cdn.ubi.com/orbit/launcher_installer/UbisoftConnectInstaller.exe /S
+exe C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\UbisoftConnect.exe
+env DXVK_ASYNC=1
+env CEF_DISABLE_SANDBOX=1
+dxvk UbisoftConnect.exe
+dxvk upc.exe
+dll UbisoftConnect.exe nvapi64=,nvapi=,nvngx=
+dll upc.exe nvapi64=,nvapi=,nvngx=

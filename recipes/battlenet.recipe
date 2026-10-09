@@ -1,0 +1,19 @@
+# Battle.net. Environment and helper from frankea/Whisky's LauncherPresets.swift
+# (GPL-3.0-or-later). The download link has no file name, the app names it after the response.
+# Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+name Battle.net
+kind launcher
+status experimental
+symbol b.circle
+about Лаунчер Blizzard. Интерфейс через DXVK. Ещё не проверен на нашем движке.
+bottle battlenet
+installer https://downloader.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live
+exe C:\Program Files (x86)\Battle.net\Battle.net Launcher.exe
+env LC_ALL=en_US.UTF-8
+env CEF_DISABLE_SANDBOX=1
+dxvk Battle.net Launcher.exe
+dxvk Battle.net.exe
+dxvk Battle.net Helper.exe
+dll Battle.net Launcher.exe nvapi64=,nvapi=,nvngx=
+dll Battle.net.exe nvapi64=,nvapi=,nvngx=
+dll Battle.net Helper.exe nvapi64=,nvapi=,nvngx=

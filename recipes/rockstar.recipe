@@ -1,0 +1,20 @@
+# Rockstar Games Launcher. Fixes from frankea/Whisky's LauncherPresets.swift and SteamLauncher.swift
+# (GPL-3.0-or-later): the launcher and Social Club draw with Chromium and need DXVK; Launcher.exe's
+# D3D12 query hangs its exit, which leaves the game "running" in Steam, so d3d12 is off for both,
+# with NVIDIA's libraries as for Steam's helpers. Rockstar titles bought on Steam start this
+# launcher inside the Steam bottle; the app applies these lines there too.
+name Rockstar Games Launcher
+kind launcher
+status experimental
+symbol r.circle
+about Лаунчер Rockstar (GTA, Red Dead). Интерфейс через DXVK. Ещё не проверен на нашем движке.
+bottle rockstar
+installer https://gamedownloads.rockstargames.com/public/installer/Rockstar-Games-Launcher.exe
+exe C:\Program Files\Rockstar Games\Launcher\Launcher.exe
+env WINE_LARGE_ADDRESS_AWARE=1
+env LC_ALL=en_US.UTF-8
+env CEF_DISABLE_SANDBOX=1
+dxvk Launcher.exe
+dxvk SocialClubHelper.exe
+dll Launcher.exe d3d12=,nvapi64=,nvapi=,nvngx=
+dll SocialClubHelper.exe d3d12=,nvapi64=,nvapi=,nvngx=

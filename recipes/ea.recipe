@@ -1,0 +1,18 @@
+# EA app (formerly Origin). Environment from frankea/Whisky's LauncherPresets.swift
+# (GPL-3.0-or-later). Its UI is Chromium-based like Steam's, so it goes on DXVK here.
+# Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+name EA app
+kind launcher
+status experimental
+symbol a.circle
+about Лаунчер EA (бывший Origin). Интерфейс через DXVK. Ещё не проверен на нашем движке.
+bottle ea
+installer https://origin-a.akamaihd.net/EA-Desktop-Client-Download/installer-releases/EAappInstaller.exe
+exe C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EADesktop.exe
+env LC_ALL=en_US.UTF-8
+env LANG=en_US.UTF-8
+env CEF_DISABLE_SANDBOX=1
+dxvk EADesktop.exe
+dxvk EABackgroundService.exe
+dll EADesktop.exe nvapi64=,nvapi=,nvngx=
+dll EABackgroundService.exe nvapi64=,nvapi=,nvngx=

@@ -1,0 +1,18 @@
+# Epic Games Launcher for Windows. Environment and helper from frankea/Whisky's
+# LauncherPresets.swift (GPL-3.0-or-later). The lighter path without the launcher (legendary) is
+# epic.recipe, still to be built.
+# Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+name Epic Games Launcher
+kind launcher
+status experimental
+symbol e.square
+about Windows-версия лаунчера Epic. Интерфейс через DXVK. Ещё не проверена на нашем движке.
+bottle epic
+installer https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi /qn
+exe C:\Program Files (x86)\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe
+env LC_ALL=en_US.UTF-8
+env CEF_DISABLE_SANDBOX=1
+dxvk EpicGamesLauncher.exe
+dxvk EpicWebHelper.exe
+dll EpicGamesLauncher.exe nvapi64=,nvapi=,nvngx=
+dll EpicWebHelper.exe nvapi64=,nvapi=,nvngx=

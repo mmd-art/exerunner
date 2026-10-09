@@ -1,0 +1,2722 @@
+{
+ "source": "frankea/Whisky 3abfbae, WhiskyKit/Sources/WhiskyKit/GameDatabase/Resources/GameDB.json (version 1), GPL-3.0-or-later",
+ "games": [
+  {
+   "id": "aoe2-de",
+   "title": "Age of Empires II: Definitive Edition",
+   "aliases": [
+    "AoE2 DE",
+    "AoE2DE"
+   ],
+   "store": "steam",
+   "steamAppID": 813780,
+   "exeNames": [
+    "AoE2DE_s.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + Microsoft runtime",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "dotnet48",
+     "xact"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "among-us",
+   "title": "Among Us",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 945360,
+   "exeNames": [
+    "Among Us.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "D3DMetal (cleaner shadows)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "animal-well",
+   "title": "Animal Well",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 813230,
+   "exeNames": [
+    "Animal Well.exe",
+    "AnimalWell.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended backend",
+    "whenToUse": "Default configuration; Whisky picks the backend for the installed runtime",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "assassins-creed-odyssey",
+   "title": "Assassin's Creed Odyssey",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 812140,
+   "exeNames": [
+    "ACOdyssey.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {
+     "ubiorbitapi_r2_loader": "n,b"
+    },
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "assetto-corsa",
+   "title": "Assetto Corsa",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 244210,
+   "exeNames": [
+    "AssettoCorsa.exe",
+    "acs.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Launch AssettoCorsa.exe (the launcher) — not acs.exe directly"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + vcredist",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2013",
+     "vcrun2019",
+     "d3dx9_43"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "baldurs-gate-3",
+   "title": "Baldur's Gate 3",
+   "aliases": [
+    "BG3",
+    "Baldurs Gate 3"
+   ],
+   "store": "steam",
+   "steamAppID": 1086940,
+   "exeNames": [
+    "bg3.exe",
+    "bg3_dx11.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Launch bg3_dx11.exe for the DX11 renderer (more stable than Vulkan)",
+    "Visual C++ 2022 runtime must be installed via winetricks",
+    "Large character models may cause brief frame drops during combat"
+   ],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "Vulkan renderer causes crashes; use DX11 mode instead",
+     "workaround": "Launch bg3_dx11.exe instead of bg3.exe"
+    },
+    {
+     "severity": "minor",
+     "text": "Character creation screen may have rendering artifacts",
+     "workaround": "Artifacts are cosmetic and do not affect gameplay"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal, DX11)",
+    "whenToUse": "Use DX11 mode for best stability on Apple Silicon",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "battlefield-2042",
+   "title": "Battlefield 2042",
+   "aliases": [
+    "BF2042",
+    "Battlefield 2042"
+   ],
+   "store": "steam",
+   "steamAppID": 1517290,
+   "exeNames": [
+    "BF2042.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": "EasyAntiCheat",
+   "notes": [
+    "Requires both EA App launcher and Easy Anti-Cheat, both of which are problematic",
+    "This is a multiplayer-only game; anti-cheat cannot be disabled",
+    "Unlikely to work until anti-cheat vendors support Wine/macOS"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "EA App launcher fails to initialize properly",
+     "workaround": "No workaround available"
+    },
+    {
+     "severity": "critical",
+     "text": "Easy Anti-Cheat blocks game launch even if launcher works",
+     "workaround": "Anti-cheat cannot be disabled for this multiplayer-only game"
+    }
+   ],
+   "recommended": {
+    "label": "Known Broken",
+    "whenToUse": "Game does not work due to EA launcher and anti-cheat requirements",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "black-mesa",
+   "title": "Black Mesa",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 362890,
+   "exeNames": [
+    "bms.exe",
+    "hl2.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "celeste",
+   "title": "Celeste",
+   "aliases": [
+    "celeste"
+   ],
+   "store": "steam",
+   "steamAppID": 504230,
+   "exeNames": [
+    "Celeste.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Perfect performance with no configuration needed",
+    "Speedrun timer works correctly under Wine",
+    "Everest mod loader is compatible with additional setup"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Works with minimal configuration on any Mac",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "cities-skylines-2",
+   "title": "Cities: Skylines II",
+   "aliases": [
+    "CS2",
+    "Cities Skylines 2"
+   ],
+   "store": "steam",
+   "steamAppID": 949230,
+   "exeNames": [
+    "Cities2.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "HDRP shader-compile crash on launch; no reliable workaround as of macOS 15.4",
+     "workaround": "None — track upstream Wine HDRP support"
+    }
+   ],
+   "recommended": {
+    "label": "DXVK (HDRP)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "cobalt-core",
+   "title": "Cobalt Core",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 2179850,
+   "exeNames": [
+    "CobaltCore.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "dotnet48"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "control",
+   "title": "Control",
+   "aliases": [
+    "Control Ultimate Edition"
+   ],
+   "store": "epic",
+   "steamAppID": null,
+   "exeNames": [
+    "Control_DX11.exe",
+    "Control_DX12.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Launch Control_DX11.exe for best compatibility; DX12 may crash",
+    "Disable ray tracing in graphics settings for stable performance",
+    "Epic Games Store version; Epic launcher setup required"
+   ],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "DX12 mode causes frequent crashes; use DX11 instead",
+     "workaround": "Launch Control_DX11.exe instead of Control_DX12.exe"
+    },
+    {
+     "severity": "major",
+     "text": "Ray tracing causes severe performance degradation",
+     "workaround": "Disable all ray tracing options in graphics settings"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (DXVK, DX11)",
+    "whenToUse": "DXVK with DX11 for best compatibility; disable ray tracing",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "cuphead",
+   "title": "Cuphead",
+   "aliases": [
+    "cuphead"
+   ],
+   "store": "steam",
+   "steamAppID": 268910,
+   "exeNames": [
+    "Cuphead.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Runs perfectly with smooth 60 FPS gameplay",
+    "The Delicious Last Course DLC works without issues",
+    "Local co-op works with two controllers"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Works great with D3DMetal on any Mac",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "cyberpunk-2077",
+   "title": "Cyberpunk 2077",
+   "aliases": [
+    "Cyberpunk",
+    "CP2077"
+   ],
+   "store": "steam",
+   "steamAppID": 1091500,
+   "exeNames": [
+    "Cyberpunk2077.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Disable ray tracing in-game for stable performance",
+    "Medium graphics preset is recommended for M1/M2; High for M3 Pro and above",
+    "Photo mode and driving work well after shader cache warm-up"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Shader compilation stuttering during first 30-60 minutes of gameplay",
+     "workaround": "Shader cache builds over time; performance improves on subsequent launches"
+    },
+    {
+     "severity": "minor",
+     "text": "Occasional texture streaming delays in dense city areas",
+     "workaround": "Lower texture quality setting by one step"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (Apple Silicon)",
+    "whenToUse": "Best performance on M-series Macs with D3DMetal",
+    "graphics": "automatic",
+    "environment": {
+     "D3DM_SUPPORT_DXR": "0"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": [
+    {
+     "label": "Recommended backend (fallback)",
+     "whenToUse": "Use if the default variant's forced D3DMetal settings cause glitches or crashes",
+     "graphics": "automatic",
+     "environment": {},
+     "dllOverrides": {},
+     "winetricks": [
+      "vcrun2022"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dark-souls-3",
+   "title": "Dark Souls III",
+   "aliases": [
+    "Dark Souls 3",
+    "DS3",
+    "DARK SOULS III"
+   ],
+   "store": "steam",
+   "steamAppID": 374320,
+   "exeNames": [
+    "DarkSoulsIII.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Online play requires disabling anti-cheat protections if present",
+    "Esync is recommended for proper thread synchronization",
+    "Save files are stored in the Wine prefix AppData directory"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Frame pacing issues may occur during boss fights",
+     "workaround": "Enable V-Sync in game settings or use enhanced sync"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "Standard setup with esync for thread synchronization",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "death-stranding",
+   "title": "Death Stranding",
+   "aliases": [
+    "Death Stranding Director's Cut",
+    "DS"
+   ],
+   "store": "steam",
+   "steamAppID": 1850570,
+   "exeNames": [
+    "ds.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Works well on Apple Silicon with D3DMetal; smooth gameplay experience",
+    "Director's Cut content is fully accessible",
+    "Online features may require additional configuration"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Minor texture pop-in during traversal across large terrain",
+     "workaround": "Lower LOD settings if texture pop-in is distracting"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "Works well on Apple Silicon with D3DMetal",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "destiny-2",
+   "title": "Destiny 2",
+   "aliases": [
+    "D2",
+    "Destiny2"
+   ],
+   "store": "steam",
+   "steamAppID": 1085660,
+   "exeNames": [
+    "destiny2.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": "BattlEye",
+   "notes": [
+    "Destiny 2 previously worked under Wine but Bungie has not enabled BattlEye support",
+    "Online-only game; cannot bypass anti-cheat for any game mode",
+    "Was briefly playable in 2023 before being blocked"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "BattlEye anti-cheat blocks game launch; Bungie has not enabled Wine support",
+     "workaround": "None; Bungie must enable BattlEye Wine/Proton support"
+    }
+   ],
+   "recommended": {
+    "label": "Known Broken",
+    "whenToUse": "Game does not work; BattlEye blocks Wine execution",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "diablo-iv",
+   "title": "Diablo IV",
+   "aliases": [
+    "Diablo 4",
+    "D4"
+   ],
+   "store": "battlenet",
+   "steamAppID": null,
+   "exeNames": [
+    "Diablo IV.exe",
+    "Diablo IV Launcher.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": "battleye",
+   "notes": [
+    "Battle.net launcher must be installed first; use the in-app dependency installer",
+    "Anti-cheat (BattlEye) blocks online play; offline content may work",
+    "Set Windows version to Win10 in bottle settings if the launcher refuses to start"
+   ],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "Battle.net 'No GPUs found' on first launch",
+     "workaround": "Enable GPU spoofing and DXVK temporarily during launcher startup, then disable DXVK before launching the game"
+    },
+    {
+     "severity": "major",
+     "text": "BattlEye anti-cheat prevents online play",
+     "workaround": "No workaround; this game is functionally offline-only on Whisky"
+    }
+   ],
+   "recommended": {
+    "label": "Battle.net (Experimental)",
+    "whenToUse": "Launching Diablo IV through the bundled Battle.net launcher",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "corefonts"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "disco-elysium",
+   "title": "Disco Elysium: The Final Cut",
+   "aliases": [
+    "Disco Elysium",
+    "DE"
+   ],
+   "store": "steam",
+   "steamAppID": 632470,
+   "exeNames": [
+    "disco elysium.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Works perfectly with default settings; minimal GPU requirements",
+    "Full voice acting and dialogue system work flawlessly",
+    "Save files are stored in the Wine prefix AppData directory"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Simple graphics; works easily with default settings",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "divinity-original-sin-2",
+   "title": "Divinity: Original Sin 2",
+   "aliases": [
+    "DOS2",
+    "Divinity OS2"
+   ],
+   "store": "gog",
+   "steamAppID": null,
+   "exeNames": [
+    "bg3.exe",
+    "SupportTool.exe",
+    "EoCApp.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "GOG version avoids Steam launcher overhead",
+    "Multiplayer may require port forwarding configuration",
+    "Mod support works through the built-in mod manager"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Loading times may be longer than native Windows",
+     "workaround": "Use an SSD for the bottle and game installation"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "GOG version with D3DMetal for best compatibility",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "djmax-respect-v",
+   "title": "DJMAX RESPECT V",
+   "aliases": [
+    "DJMAX"
+   ],
+   "store": "steam",
+   "steamAppID": 960170,
+   "exeNames": [
+    "DJMAX RESPECT V.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "IL2CPP failures usually indicate runtime/font gaps, not code bugs"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + Korean fonts",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "cjkfonts",
+     "fakekorean",
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "elden-ring",
+   "title": "Elden Ring",
+   "aliases": [
+    "ELDEN RING",
+    "eldenring"
+   ],
+   "store": "steam",
+   "steamAppID": 1245620,
+   "exeNames": [
+    "eldenring.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": "EasyAntiCheat",
+   "notes": [
+    "Easy Anti-Cheat must be disabled; online play is not available",
+    "First launch may take 2-3 minutes for shader compilation",
+    "Performance improves significantly after initial shader cache is built"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Occasional shader compilation stutter in open world areas",
+     "workaround": "Enable shader cache and allow initial compilation pass to complete"
+    },
+    {
+     "severity": "major",
+     "text": "Online features unavailable due to anti-cheat requirement",
+     "workaround": "Launch with anti-cheat disabled via Steam launch options"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (Apple Silicon)",
+    "whenToUse": "Standard setup for M-series Macs with anti-cheat disabled",
+    "graphics": "automatic",
+    "environment": {
+     "D3DM_SUPPORT_DXR": "0"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "fallout-4",
+   "title": "Fallout 4",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 377160,
+   "exeNames": [
+    "Fallout4Launcher.exe",
+    "Fallout4.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Disable Retina mode in bottle settings if launcher reports garbled resolutions"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + xact + Sequoia compat",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "xact"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "far-cry-4",
+   "title": "Far Cry 4",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 298110,
+   "exeNames": [
+    "FarCry4.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {
+     "ubiorbitapi_r2_loader": "n,b"
+    },
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "fields-of-mistria",
+   "title": "Fields of Mistria",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 2142790,
+   "exeNames": [
+    "Fields Of Mistria.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK (avoids MSAA query bug)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "fortnite",
+   "title": "Fortnite",
+   "aliases": [
+    "FN",
+    "Fortnite Battle Royale"
+   ],
+   "store": "epic",
+   "steamAppID": null,
+   "exeNames": [
+    "FortniteClient-Win64-Shipping.exe"
+   ],
+   "rating": "notSupported",
+   "antiCheat": "EasyAntiCheat",
+   "notes": [
+    "Easy Anti-Cheat in kernel mode blocks all Wine/Proton execution",
+    "Epic Games has not opted into EAC Wine support for Fortnite",
+    "Consider cloud gaming services as an alternative"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "Easy Anti-Cheat prevents game launch; Epic has not enabled Wine support",
+     "workaround": "None; Epic must enable EAC Wine/Proton support, which they have not done"
+    }
+   ],
+   "recommended": {
+    "label": "Not Supported",
+    "whenToUse": "This game cannot run under Wine due to kernel-level anti-cheat",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "futureport-82",
+   "title": "Futureport 82",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": null,
+   "exeNames": [
+    "Futureport82.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + Media Foundation",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "mf",
+     "mfplat",
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "god-of-war",
+   "title": "God of War",
+   "aliases": [
+    "God of War 2018",
+    "GoW"
+   ],
+   "store": "steam",
+   "steamAppID": 1593500,
+   "exeNames": [
+    "GoW.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Shader cache is important; first playthrough may have stuttering during effects",
+    "Controller strongly recommended; button prompts default to PlayStation layout",
+    "Performance is GPU-bound; lower resolution helps on M1/M2"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Shader compilation stuttering during large-scale combat encounters",
+     "workaround": "Enable shader cache; stuttering diminishes over time"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "Standard setup for Apple Silicon Macs",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "granblue-fantasy-relink",
+   "title": "Granblue Fantasy: Relink",
+   "aliases": [
+    "GBFR",
+    "Granblue Relink"
+   ],
+   "store": "steam",
+   "steamAppID": 881020,
+   "exeNames": [
+    "granblue_fantasy_relink.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Crash with 'illegal instruction in 64-bit code' on first launch is the AVX issue — disable AVX in performance settings"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + AVX-off",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "hades",
+   "title": "Hades",
+   "aliases": [
+    "Hades 1"
+   ],
+   "store": "steam",
+   "steamAppID": 1145360,
+   "exeNames": [
+    "Hades.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Excellent performance on both Apple Silicon and Intel",
+    "Set PULSE_LATENCY_MSEC to 60 to prevent audio crackling",
+    "Controller support works natively"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Audio crackling or popping during fast-paced gameplay",
+     "workaround": "Set PULSE_LATENCY_MSEC environment variable to 60"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Standard setup for all Macs",
+    "graphics": "automatic",
+    "environment": {
+     "PULSE_LATENCY_MSEC": "60"
+    },
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "halo-master-chief-collection",
+   "title": "Halo: The Master Chief Collection",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 976730,
+   "exeNames": [
+    "mcclauncher.exe",
+    "MCC-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "hitman-3",
+   "title": "Hitman: World of Assassination",
+   "aliases": [
+    "Hitman 3",
+    "HITMAN 3",
+    "Hitman WoA"
+   ],
+   "store": "epic",
+   "steamAppID": null,
+   "exeNames": [
+    "HITMAN3.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Epic Games Store version; requires Epic launcher setup",
+    "Medium graphics preset recommended for M1/M2",
+    "Always-online requirement means internet connection is necessary"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Long loading times between levels compared to native",
+     "workaround": "Use an SSD for the Wine bottle to improve load times"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "D3DMetal handles Glacier engine well on Apple Silicon",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "hogwarts-legacy",
+   "title": "Hogwarts Legacy",
+   "aliases": [
+    "Hogwarts"
+   ],
+   "store": "steam",
+   "steamAppID": 990080,
+   "exeNames": [
+    "HogwartsLegacy.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "This configuration is unverified and may not work on current versions",
+    "Very demanding game; expect low framerates even on M3 Max",
+    "Disable ray tracing and use lowest settings for best chance of success"
+   ],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "Game may fail to launch or crash during loading screens",
+     "workaround": "No reliable workaround known; try different Wine versions"
+    }
+   ],
+   "recommended": {
+    "label": "Experimental (Untested)",
+    "whenToUse": "Unverified configuration based on community reports",
+    "graphics": "automatic",
+    "environment": {
+     "D3DM_SUPPORT_DXR": "0"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "hollow-knight",
+   "title": "Hollow Knight",
+   "aliases": [
+    "HollowKnight"
+   ],
+   "store": "steam",
+   "steamAppID": 367520,
+   "exeNames": [
+    "hollow_knight.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Runs flawlessly on both Apple Silicon and Intel Macs",
+    "Full controller support works out of the box",
+    "Save files are compatible with other platforms"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Standard setup for all Macs",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "horizon-forbidden-west",
+   "title": "Horizon Forbidden West",
+   "aliases": [
+    "HFW"
+   ],
+   "store": "steam",
+   "steamAppID": 2420110,
+   "exeNames": [
+    "HorizonForbiddenWest.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended (Decima engine)",
+    "whenToUse": "Default configuration; Whisky picks the backend for the installed runtime",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "horizon-zero-dawn",
+   "title": "Horizon Zero Dawn",
+   "aliases": [
+    "HZD",
+    "Horizon Zero Dawn Complete Edition"
+   ],
+   "store": "steam",
+   "steamAppID": 1151640,
+   "exeNames": [
+    "HorizonZeroDawn.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "DirectX 12 only; DXVK cannot run it, so it uses the recommended backend",
+    "Lower settings to Medium for M1/M2; High works on M3 Pro and above",
+    "Save files are compatible with Steam Cloud"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Long initial shader compilation on first launch (5-10 minutes)",
+     "workaround": "Wait for shader compilation to complete before playing"
+    },
+    {
+     "severity": "minor",
+     "text": "Occasional crashes during fast travel",
+     "workaround": "Save frequently; game auto-saves before fast travel"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Recommended backend for this DirectX 12 only title",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "injustice-2",
+   "title": "Injustice 2",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 552500,
+   "exeNames": [
+    "Injustice2.exe",
+    "InjusticeGame.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + d3dcompiler",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "it-takes-two",
+   "title": "It Takes Two",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1426210,
+   "exeNames": [
+    "ItTakesTwo.exe",
+    "ItTakesTwo_Trial.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "jusant",
+   "title": "Jusant",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1977170,
+   "exeNames": [
+    "Jusant.exe",
+    "Jusant-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "killer7",
+   "title": "killer7",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1241890,
+   "exeNames": [
+    "killer7.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "wine",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "mgs-master-collection-vol-1",
+   "title": "Metal Gear Solid: Master Collection Vol. 1",
+   "aliases": [
+    "MGS Master Collection"
+   ],
+   "store": "steam",
+   "steamAppID": 2131630,
+   "exeNames": [
+    "MGS3.exe",
+    "MGS2.exe",
+    "MGS.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "Game crashes after splash with no reliable workaround",
+     "workaround": "None known — track upstream"
+    }
+   ],
+   "recommended": {
+    "label": "DXVK (best effort)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "monster-hunter-wilds",
+   "title": "Monster Hunter Wilds",
+   "aliases": [
+    "MH Wilds",
+    "Wilds Beta"
+   ],
+   "store": "steam",
+   "steamAppID": 2246340,
+   "exeNames": [
+    "MonsterHunterWilds.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended (RE Engine)",
+    "whenToUse": "Default configuration; Whisky picks the backend for the installed runtime",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "monster-hunter-world",
+   "title": "Monster Hunter: World",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 582010,
+   "exeNames": [
+    "MonsterHunterWorld.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "mf"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "mortal-kombat-komplete-edition",
+   "title": "Mortal Kombat Komplete Edition",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 237110,
+   "exeNames": [
+    "MKKE.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2013",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "bannerlord-ii",
+   "title": "Mount & Blade II: Bannerlord",
+   "aliases": [
+    "Bannerlord II",
+    "Bannerlord 2"
+   ],
+   "store": "steam",
+   "steamAppID": 261550,
+   "exeNames": [
+    "Bannerlord.exe",
+    "Bannerlord_BE.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Use Bannerlord.exe (not the BE/BattleEye variant) — anti-cheat blocks online play"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + .NET runtime",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "dotnet48"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "persona-3-reload",
+   "title": "Persona 3 Reload",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 2161700,
+   "exeNames": [
+    "P3R.exe",
+    "P3R-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "ps-plus-pc-app",
+   "title": "PlayStation Plus (PC App)",
+   "aliases": [
+    "PSN PC",
+    "Sony PC App"
+   ],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "PlayStationPlus.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + .NET 6 + WebView2",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "dotnet48",
+     "dotnetdesktop6",
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "potion-craft",
+   "title": "Potion Craft",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1210320,
+   "exeNames": [
+    "Potion Craft.exe",
+    "PotionCraft.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK (Unity URP)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "psychonauts-2",
+   "title": "Psychonauts 2",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 607080,
+   "exeNames": [
+    "Psychonauts2.exe",
+    "Psychonauts2-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "pubg",
+   "title": "PUBG: Battlegrounds",
+   "aliases": [
+    "PUBG",
+    "PlayerUnknown's Battlegrounds"
+   ],
+   "store": "steam",
+   "steamAppID": 578080,
+   "exeNames": [
+    "TslGame.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": "BattlEye",
+   "notes": [
+    "BattlEye anti-cheat blocks all Wine/Proton execution",
+    "Multiplayer-only game; anti-cheat cannot be bypassed",
+    "Unlikely to work until Krafton enables BattlEye Wine support"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "BattlEye prevents game from launching under Wine",
+     "workaround": "None; developer must enable BattlEye Wine/Proton support"
+    }
+   ],
+   "recommended": {
+    "label": "Known Broken",
+    "whenToUse": "Game does not work; anti-cheat blocks Wine execution",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "ready-or-not",
+   "title": "Ready Or Not",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1144200,
+   "exeNames": [
+    "ReadyOrNot.exe",
+    "ReadyOrNot-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "red-dead-redemption-2",
+   "title": "Red Dead Redemption 2",
+   "aliases": [
+    "RDR2",
+    "Red Dead 2"
+   ],
+   "store": "steam",
+   "steamAppID": 1174180,
+   "exeNames": [
+    "RDR2.exe"
+   ],
+   "rating": "broken",
+   "antiCheat": null,
+   "notes": [
+    "The Rockstar Games Launcher is required but has persistent issues under Wine",
+    "Even when the launcher works, the game often fails during DRM verification",
+    "This title may become playable with future Wine/Whisky updates"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "Rockstar Games Launcher fails to authenticate or hangs during DRM check",
+     "workaround": "No reliable workaround; wait for upstream fixes"
+    },
+    {
+     "severity": "critical",
+     "text": "Game crashes on startup even when launcher is bypassed",
+     "workaround": "None available"
+    }
+   ],
+   "recommended": {
+    "label": "Known Broken",
+    "whenToUse": "Game currently does not work due to Rockstar Launcher issues",
+    "graphics": "automatic",
+    "environment": {
+     "WINE_LARGE_ADDRESS_AWARE": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "sekiro",
+   "title": "Sekiro: Shadows Die Twice",
+   "aliases": [
+    "Sekiro",
+    "SEKIRO"
+   ],
+   "store": "steam",
+   "steamAppID": 814380,
+   "exeNames": [
+    "sekiro.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Runs well with D3DMetal on Apple Silicon; minor shader stutter on first encounters",
+    "Controller is strongly recommended for this game",
+    "Frame rate cap to 60 FPS is recommended for stability"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Minor frame drops during particle-heavy boss attacks",
+     "workaround": "Cap frame rate to 60 FPS in game settings"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "Standard setup for Apple Silicon",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "severed-steel",
+   "title": "Severed Steel",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1227690,
+   "exeNames": [
+    "SeveredSteel.exe",
+    "SeveredSteel-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "slime-rancher-2",
+   "title": "Slime Rancher 2",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 1657630,
+   "exeNames": [
+    "SlimeRancher2.exe",
+    "SlimeRancher2-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "spellforce-3",
+   "title": "SpellForce 3",
+   "aliases": [
+    "SpellForce 3 Reforced"
+   ],
+   "store": "steam",
+   "steamAppID": 311290,
+   "exeNames": [
+    "sf3.exe",
+    "SpellForce3.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + fonts + d3dcompiler",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "corefonts",
+     "d3dcompiler_47",
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "stardew-valley",
+   "title": "Stardew Valley",
+   "aliases": [
+    "StardewValley"
+   ],
+   "store": "steam",
+   "steamAppID": 413150,
+   "exeNames": [
+    "Stardew Valley.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Works perfectly with default settings on both Apple Silicon and Intel",
+    "Controller support works natively through Wine input mapping",
+    "Mods using SMAPI may require additional configuration"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "SMAPI mod loader may fail to initialize on first run",
+     "workaround": "Run the game once without SMAPI, then re-enable it"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Works out of the box with default settings",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "starfield",
+   "title": "Starfield",
+   "aliases": [
+    "starfield"
+   ],
+   "store": "steam",
+   "steamAppID": 1716740,
+   "exeNames": [
+    "Starfield.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "This configuration is unverified and likely does not work well",
+    "Extremely demanding game; even native ports on consoles struggle",
+    "AVX instructions may be required; check compatibility"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "Likely crashes or fails to launch due to DX12 requirements",
+     "workaround": "No reliable workaround known"
+    }
+   ],
+   "recommended": {
+    "label": "Experimental (recommended backend)",
+    "whenToUse": "Unverified; DirectX 12 only, so it uses the recommended backend",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "street-fighter-6",
+   "title": "Street Fighter 6",
+   "aliases": [
+    "SF6"
+   ],
+   "store": "steam",
+   "steamAppID": 1364780,
+   "exeNames": [
+    "StreetFighter6.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended (RE Engine)",
+    "whenToUse": "Default configuration; Whisky picks the backend for the installed runtime",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "supermarket-together",
+   "title": "Supermarket Together",
+   "aliases": [
+    "Supermarket"
+   ],
+   "store": "steam",
+   "steamAppID": 2709570,
+   "exeNames": [
+    "Supermarket Together.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + vcrun",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "tales-of-berseria",
+   "title": "Tales of Berseria",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 429660,
+   "exeNames": [
+    "TOB.exe",
+    "Tales of Berseria.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "team-fortress-2",
+   "title": "Team Fortress 2",
+   "aliases": [
+    "TF2"
+   ],
+   "store": "steam",
+   "steamAppID": 440,
+   "exeNames": [
+    "tf_win64.exe",
+    "hl2.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Remove any user-set d3d11 DLL override before launching — let DXVK handle Source's DX9 path"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK D3D9 (Source)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2010"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "tmnt-shredders-revenge",
+   "title": "Teenage Mutant Ninja Turtles: Shredder's Revenge",
+   "aliases": [
+    "TMNT Shredders Revenge",
+    "Shredder's Revenge"
+   ],
+   "store": "steam",
+   "steamAppID": 1361510,
+   "exeNames": [
+    "TMNT.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK (GameMaker)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "terraria",
+   "title": "Terraria",
+   "aliases": [
+    "terraria"
+   ],
+   "store": "steam",
+   "steamAppID": 105600,
+   "exeNames": [
+    "Terraria.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Works perfectly with default settings on any Mac",
+    "Multiplayer hosting and joining works through Wine networking",
+    "tModLoader for mods may require .NET runtime via winetricks"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Works out of the box with minimal configuration",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "binding-of-isaac-rebirth",
+   "title": "The Binding of Isaac: Rebirth",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 250900,
+   "exeNames": [
+    "isaac-ng.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "wine",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "skyrim-se",
+   "title": "The Elder Scrolls V: Skyrim Special Edition",
+   "aliases": [
+    "Skyrim",
+    "Skyrim SE",
+    "SkyrimSE"
+   ],
+   "store": "steam",
+   "steamAppID": 489830,
+   "exeNames": [
+    "SkyrimSE.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Vanilla Skyrim SE plays well; modded play is heavier and may need DXVK",
+    "Avoid third-party 'optimization guides' that recommend stale Wine flags"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "ENB shader presets may render inverted or missing effects",
+     "workaround": "Disable ENB postprocess passes that rely on D3D9 wrappers"
+    }
+   ],
+   "recommended": {
+    "label": "Vanilla (no mods)",
+    "whenToUse": "Playing the base game without SKSE or mod loaders",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": [
+    {
+     "label": "SKSE / Modded",
+     "whenToUse": "Running with Skyrim Script Extender (SKSE) and mods",
+     "graphics": "dxvk",
+     "environment": {
+      "DXVK_ASYNC": "1"
+     },
+     "dllOverrides": {},
+     "winetricks": [
+      "vcrun2022",
+      "d3dcompiler_47"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "talos-principle-2",
+   "title": "The Talos Principle 2",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 835960,
+   "exeNames": [
+    "Talos2.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended (UE5)",
+    "whenToUse": "Default configuration; Whisky picks the backend for the installed runtime",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "the-witcher-2",
+   "title": "The Witcher 2: Assassins of Kings",
+   "aliases": [
+    "Witcher 2",
+    "TW2"
+   ],
+   "store": "gog",
+   "steamAppID": null,
+   "exeNames": [
+    "witcher2.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "GOG version avoids Steam launcher; works without DRM",
+    "WineD3D fallback provides best DX9 compatibility for this older title",
+    "Enhanced Edition is recommended over the base game"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Occasional lighting glitches in interior scenes",
+     "workaround": "Switch between WineD3D and D3DMetal variants to see which renders better"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (WineD3D)",
+    "whenToUse": "WineD3D works best for this older DX9 title",
+    "graphics": "wine",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": [
+    {
+     "label": "D3DMetal (Alternative)",
+     "whenToUse": "Try if WineD3D has rendering issues",
+     "graphics": "automatic",
+     "environment": {},
+     "dllOverrides": {},
+     "winetricks": []
+    }
+   ]
+  },
+  {
+   "id": "the-witcher-3",
+   "title": "The Witcher 3: Wild Hunt",
+   "aliases": [
+    "Witcher 3",
+    "TW3",
+    "Wild Hunt"
+   ],
+   "store": "steam",
+   "steamAppID": 292030,
+   "exeNames": [
+    "witcher3.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "Next-Gen update uses DX12 and works well with D3DMetal on Apple Silicon",
+    "Minor shader stuttering during cutscenes on first playthrough",
+    "HDR is not supported; disable it in game settings"
+   ],
+   "issues": [
+    {
+     "severity": "minor",
+     "text": "Minor shader compilation stutter during cutscenes and area transitions",
+     "workaround": "Shader cache improves over time; pre-load by exploring areas slowly"
+    },
+    {
+     "severity": "major",
+     "text": "Ray tracing features may cause instability",
+     "workaround": "Disable all ray tracing options in graphics settings"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (D3DMetal)",
+    "whenToUse": "Best experience for the Next-Gen update on Apple Silicon",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "they-are-billions",
+   "title": "They Are Billions",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 644930,
+   "exeNames": [
+    "TheyAreBillions.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + d3dcompiler",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "thunderstore-mod-manager",
+   "title": "Thunderstore Mod Manager",
+   "aliases": [
+    "TMM"
+   ],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "Thunderstore Mod Manager.exe",
+    "Overwolf.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + .NET",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "dotnet48",
+     "corefonts"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "total-war-warhammer-3",
+   "title": "Total War: Warhammer III",
+   "aliases": [
+    "Warhammer 3",
+    "TW:WH3",
+    "TWW3"
+   ],
+   "store": "steam",
+   "steamAppID": 1142710,
+   "exeNames": [
+    "Warhammer3.exe"
+   ],
+   "rating": "playable",
+   "antiCheat": null,
+   "notes": [
+    "DXVK is recommended for better handling of large-scale battles",
+    "Lower unit sizes in battle settings for better performance",
+    "Campaign map runs smoother than real-time battles"
+   ],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "Frame drops during large-scale battles with many units",
+     "workaround": "Reduce unit size and detail settings; DXVK async helps significantly"
+    },
+    {
+     "severity": "minor",
+     "text": "Initial shader compilation causes stuttering on first battle",
+     "workaround": "Shader cache builds over multiple battles"
+    }
+   ],
+   "recommended": {
+    "label": "Recommended (DXVK)",
+    "whenToUse": "DXVK with async shaders for large-scale battles",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "trackmania-2020",
+   "title": "Trackmania (2020)",
+   "aliases": [
+    "TM2020",
+    "Trackmania"
+   ],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "Trackmania.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [
+    {
+     "severity": "major",
+     "text": "Ubisoft Connect launcher may divide-by-zero before reaching the game",
+     "workaround": "Run via Ubisoft Connect helper bottle preset or skip Ubisoft Connect entirely"
+    }
+   ],
+   "recommended": {
+    "label": "DXVK + Ubisoft Connect",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "dotnet48"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "trackmania-nations-forever",
+   "title": "Trackmania Nations Forever",
+   "aliases": [
+    "TMNF"
+   ],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "TmForever.exe",
+    "TmNationsForever.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK D3D9 (perf)",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2008"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "trackmania-turbo",
+   "title": "Trackmania Turbo",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 360830,
+   "exeNames": [
+    "TrackmaniaTurbo.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {
+     "ubiorbitapi_r2_loader": "n,b"
+    },
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "train-sim-world-5",
+   "title": "Train Sim World 5",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 2967990,
+   "exeNames": [
+    "TS5Game.exe",
+    "TS5Game-Win64-Shipping.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "turtle-wow",
+   "title": "Turtle WoW",
+   "aliases": [],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "WoW.exe",
+    "TurtleWoW.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "AVX-off",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "undertale",
+   "title": "Undertale",
+   "aliases": [
+    "UNDERTALE"
+   ],
+   "store": "steam",
+   "steamAppID": 391540,
+   "exeNames": [
+    "UNDERTALE.exe"
+   ],
+   "rating": "works",
+   "antiCheat": null,
+   "notes": [
+    "Runs flawlessly with absolutely no configuration needed",
+    "All game features including controller support work perfectly",
+    "Save files are in the expected AppData location within the Wine prefix"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Everything works with defaults",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "valorant",
+   "title": "Valorant",
+   "aliases": [
+    "VALORANT"
+   ],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "VALORANT.exe",
+    "VALORANT-Win64-Shipping.exe"
+   ],
+   "rating": "notSupported",
+   "antiCheat": "Vanguard",
+   "notes": [
+    "Vanguard anti-cheat requires a Windows kernel driver that cannot run on macOS",
+    "This is a fundamental limitation; no configuration can make this game work",
+    "Consider native alternatives or cloud gaming services"
+   ],
+   "issues": [
+    {
+     "severity": "critical",
+     "text": "Vanguard kernel-level anti-cheat prevents the game from launching",
+     "workaround": "None; this is a fundamental incompatibility with Wine/macOS"
+    }
+   ],
+   "recommended": {
+    "label": "Not Supported",
+    "whenToUse": "This game cannot run under Wine due to kernel-level anti-cheat",
+    "graphics": "automatic",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  },
+  {
+   "id": "warframe",
+   "title": "Warframe",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 230410,
+   "exeNames": [
+    "Warframe.exe",
+    "Warframe.x64.exe",
+    "Launcher.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK + corefonts",
+    "whenToUse": "Recommended community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2019",
+     "corefonts"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "warhammer-40k-space-marine",
+   "title": "Warhammer 40,000: Space Marine",
+   "aliases": [
+    "Space Marine"
+   ],
+   "store": "steam",
+   "steamAppID": 55150,
+   "exeNames": [
+    "spacemarine.exe",
+    "SpaceMarine.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [
+    "Original 2011 release; for 'Space Marine 2' (2024), see a separate entry once verified",
+    "Steam launches the game directly without a wrapper launcher"
+   ],
+   "issues": [],
+   "recommended": {
+    "label": "DXVK recommended",
+    "whenToUse": "Default configuration for the original 2011 release",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {
+     "dxgi": "n,b",
+     "d3d11": "n,b"
+    },
+    "winetricks": [
+     "vcrun2010"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "ys-x-nordics",
+   "title": "Ys X: Nordics",
+   "aliases": [],
+   "store": "steam",
+   "steamAppID": 2731870,
+   "exeNames": [
+    "YsX.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "Recommended",
+    "whenToUse": "Community-tested configuration",
+    "graphics": "dxvk",
+    "environment": {
+     "DXVK_ASYNC": "1"
+    },
+    "dllOverrides": {},
+    "winetricks": [
+     "vcrun2022",
+     "d3dcompiler_47"
+    ]
+   },
+   "alternatives": []
+  },
+  {
+   "id": "zuma-deluxe",
+   "title": "Zuma Deluxe",
+   "aliases": [],
+   "store": "other",
+   "steamAppID": null,
+   "exeNames": [
+    "Zuma.exe"
+   ],
+   "rating": "unverified",
+   "antiCheat": null,
+   "notes": [],
+   "issues": [],
+   "recommended": {
+    "label": "wined3d + WinXP",
+    "whenToUse": "DDraw classic game",
+    "graphics": "wine",
+    "environment": {},
+    "dllOverrides": {},
+    "winetricks": []
+   },
+   "alternatives": []
+  }
+ ]
+}

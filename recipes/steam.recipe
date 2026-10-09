@@ -1,0 +1,33 @@
+# Steam client for Windows.
+# Its own processes draw their Chromium UI through DXVK (D3D11 on Vulkan/MoltenVK) on wine's own
+# DXGI; games it starts keep D3DMetal. Environment and helper list from frankea/Whisky's
+# LauncherPresets.swift (GPL-3.0-or-later): the overlay is gameoverlayui64.exe in current
+# clients, GameOverlayUI.exe in older ones. Chromium probes NVIDIA's libraries, and the ones
+# MetalFX needs in system32 pull D3DMetal into the helper, which crashes it: they are off there.
+name Steam
+kind launcher
+status tested
+symbol gamecontroller
+about Магазин и лаунчер Valve. Интерфейс рисуется через DXVK, игры получают D3DMetal.
+bottle steam
+installer https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe /S
+exe C:\Program Files (x86)\Steam\Steam.exe
+games steam
+env LC_ALL=en_US.UTF-8
+env LANG=en_US.UTF-8
+env LC_TIME=C
+env LC_NUMERIC=C
+env STEAM_DISABLE_CEF_SANDBOX=1
+env CEF_DISABLE_SANDBOX=1
+env STEAM_RUNTIME=0
+env DXVK_ASYNC=1
+dxvk steam.exe
+dxvk steamwebhelper.exe
+dxvk steamservice.exe
+dxvk gameoverlayui64.exe
+dxvk GameOverlayUI.exe
+dll steamwebhelper.exe nvapi64=,nvapi=,nvngx=
+dll steamservice.exe nvapi64=,nvapi=,nvngx=
+dll gameoverlayui64.exe nvapi64=,nvapi=,nvngx=
+dll GameOverlayUI.exe nvapi64=,nvapi=,nvngx=
+shutdown -shutdown
