@@ -1,0 +1,83 @@
+#!/bin/bash
+# Build WinRunner.app into build/app.noindex/ (never into /Applications). The .noindex folder keeps
+# Spotlight and Launchpad from listing this copy next to the installed one.
+#
+# usage: build-app.sh [debug|release]
+# Signs with the certificate named in $CODESIGN_IDENTITY or in scripts/signing.local (one line, not
+# in git), so macOS keeps the app's permissions between builds; otherwise ad hoc. The engine goes inside when
+# engine/portable exists (scripts/build-engine.sh portable): the app then needs nothing else.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+NAME="WinRunner"
+CONFIG="${1:-release}"
+APP="$ROOT/build/app.noindex/$NAME.app"
+IDENTITY="${CODESIGN_IDENTITY:-$(cat "$ROOT/scripts/signing.local" 2>/dev/null || true)}"
+
+swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64
+BIN="$(swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64 --show-bin-path)/$NAME"
+
+rm -rf "$APP" "$ROOT/build/$NAME.app"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$BIN" "$APP/Contents/MacOS/$NAME"
+ditto "$ROOT/recipes" "$APP/Contents/Resources/recipes"
+ditto "$ROOT/compat" "$APP/Contents/Resources/compat"
+cp "$ROOT/LICENSE" "$ROOT/CREDITS.md" "$APP/Contents/Resources/"
+if [ -f "$ROOT/engine/portable/engine.json" ]; then
+  ditto "$ROOT/engine/portable" "$APP/Contents/Resources/engine"
+fi
+
+# the icon is drawn by the app itself (AppIcon.swift)
+ICONSET="$ROOT/build/AppIcon.iconset"
+rm -rf "$ICONSET"
+"$APP/Contents/MacOS/$NAME" --make-icon "$ICONSET"
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$ICONSET"
+
+cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>$NAME</string>
+  <key>CFBundleIdentifier</key><string>local.winrunner.app</string>
+  <key>CFBundleName</key><string>$NAME</string>
+  <key>CFBundleDisplayName</key><string>$NAME</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleShortVersionString</key><string>0.1</string>
+  <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
+  <key>LSMinimumSystemVersion</key><string>15.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>GPL-3.0-or-later</string>
+</dict>
+</plist>
+PLIST
+
+# by hash: the keychain can hold several certificates with this name, only one of them valid
+HASH=""
+if [ -n "$IDENTITY" ]; then
+  HASH="$(security find-identity -v -p codesigning | awk -v name="\"$IDENTITY\"" 'index($0, name) { print $2; exit }')"
+fi
+SIGN="${HASH:--}"
+# the engine's own programs and libraries first, then the app that seals them
+if [ -d "$APP/Contents/Resources/engine" ]; then
+  python3 -I - "$APP/Contents/Resources/engine" <<'PY' | xargs -0 codesign --force --sign "$SIGN"
+import os, sys
+magics = (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xce\xfa\xed\xfe")
+for root, _, files in os.walk(sys.argv[1]):
+    for name in files:
+        path = os.path.join(root, name)
+        if os.path.islink(path):
+            continue
+        with open(path, "rb") as f:
+            if f.read(4) in magics:
+                sys.stdout.write(path + "\0")
+PY
+fi
+codesign --force --sign "$SIGN" "$APP"
+codesign --verify --strict "$APP"
+# only the installed copy should open documents and show in "Open With"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$APP" >/dev/null 2>&1 || true
+echo "built $APP"

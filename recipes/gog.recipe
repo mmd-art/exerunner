@@ -1,0 +1,7 @@
+# GOG games without GOG Galaxy, through gogdl (the downloader Heroic uses). Not built yet.
+name GOG
+kind launcher
+status planned
+symbol g.circle
+about Игры GOG без лаунчера, через открытый загрузчик gogdl. В работе.
+bottle gog

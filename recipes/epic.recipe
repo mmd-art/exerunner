@@ -1,0 +1,8 @@
+# Epic Games without the Epic launcher: legendary (the open client Heroic uses) signs in through
+# the browser, downloads Windows games into a bottle and starts them directly. Not built yet.
+name Epic Games
+kind launcher
+status planned
+symbol e.circle
+about Игры Epic без лаунчера: вход через браузер, загрузка и запуск через legendary. В работе.
+bottle epic
