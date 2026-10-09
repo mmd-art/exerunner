@@ -1,0 +1,275 @@
+{
+  "source": "frankea/Whisky WhiskyKit/Sources/WhiskyKit/Diagnostics/Resources/patterns.json (GPL-3.0-or-later), converted by tools/import-whisky-crash-patterns.py",
+  "patterns": [
+    {
+      "id": "dll-load-failure",
+      "category": "dependenciesLoading",
+      "severity": "error",
+      "confidence": 0.9,
+      "prefilter": "import_dll",
+      "regex": "err:module:import_dll Library (\\S+\\.dll).*not found",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "dll-load-d3dcompiler",
+      "category": "dependenciesLoading",
+      "severity": "error",
+      "confidence": 0.85,
+      "prefilter": "d3dcompiler",
+      "regex": "err:.*(d3dcompiler_\\d+\\.dll).*(?:not found|could not be loaded)",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "dll-load-d3dx9",
+      "category": "dependenciesLoading",
+      "severity": "error",
+      "confidence": 0.85,
+      "prefilter": "d3dx9",
+      "regex": "err:.*(d3dx9_\\d+\\.dll).*(?:not found|could not be loaded)",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "dll-load-xinput",
+      "category": "dependenciesLoading",
+      "severity": "warning",
+      "confidence": 0.8,
+      "prefilter": "xinput",
+      "regex": "err:.*(xinput\\d+_\\d+\\.dll).*(?:not found|could not be loaded)",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "dll-load-xaudio2",
+      "category": "dependenciesLoading",
+      "severity": "warning",
+      "confidence": 0.8,
+      "prefilter": "xaudio2",
+      "regex": "err:.*(xaudio2_\\d+\\.dll).*(?:not found|could not be loaded)",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "dotnet-clr-missing",
+      "category": "dependenciesLoading",
+      "severity": "error",
+      "confidence": 0.9,
+      "prefilter": "mscoree",
+      "regex": "err:.*(mscoree\\.dll|mscorlib\\.dll|fusion\\.dll).*(?:not found|could not be loaded)",
+      "remedies": [
+        "install-missing-dll"
+      ]
+    },
+    {
+      "id": "access-violation",
+      "category": "coreCrashFatal",
+      "severity": "critical",
+      "confidence": 0.95,
+      "prefilter": "c0000005",
+      "regex": "(?:err:seh|Unhandled exception).*c0000005",
+      "remedies": [
+        "switch-graphics",
+        "info:prefix",
+        "logging-crash"
+      ]
+    },
+    {
+      "id": "page-fault",
+      "category": "coreCrashFatal",
+      "severity": "critical",
+      "confidence": 0.95,
+      "prefilter": "page fault",
+      "regex": "wine: Unhandled page fault on (?:read|write|execute) access",
+      "remedies": [
+        "switch-graphics",
+        "info:prefix",
+        "logging-crash"
+      ]
+    },
+    {
+      "id": "nt-raise-exception",
+      "category": "coreCrashFatal",
+      "severity": "critical",
+      "confidence": 0.9,
+      "prefilter": "NtRaiseException",
+      "regex": "err:seh:NtRaiseException Unhandled exception",
+      "remedies": [
+        "switch-graphics",
+        "logging-crash"
+      ]
+    },
+    {
+      "id": "ldr-init-failure",
+      "category": "coreCrashFatal",
+      "severity": "critical",
+      "confidence": 0.85,
+      "prefilter": "LdrInitializeThunk",
+      "regex": "err:.*LdrInitializeThunk.*failed",
+      "remedies": [
+        "info:prefix",
+        "logging-crash"
+      ]
+    },
+    {
+      "id": "gpu-device-lost-dxvk",
+      "category": "graphics",
+      "severity": "error",
+      "confidence": 0.7,
+      "prefilter": null,
+      "regex": "(?:err:.*device_lost|DXGI_ERROR_DEVICE_REMOVED|D3D.*device lost)",
+      "remedies": [
+        "switch-graphics",
+        "raytracing-off"
+      ]
+    },
+    {
+      "id": "gpu-metal-validation",
+      "category": "graphics",
+      "severity": "error",
+      "confidence": 0.65,
+      "prefilter": "Metal",
+      "regex": "Metal.*(?:validation|error|assert|failed)",
+      "remedies": [
+        "switch-graphics"
+      ]
+    },
+    {
+      "id": "gpu-d3d-device-hung",
+      "category": "graphics",
+      "severity": "error",
+      "confidence": 0.7,
+      "prefilter": "device hung",
+      "regex": "(?:D3D|d3d).*device hung",
+      "remedies": [
+        "switch-graphics",
+        "raytracing-off"
+      ]
+    },
+    {
+      "id": "dx12-path-issue",
+      "category": "graphics",
+      "severity": "warning",
+      "confidence": 0.6,
+      "prefilter": null,
+      "regex": "(?:DX12|dx12|D3D12).*(?:not supported|failed|error|unsupported)",
+      "remedies": [
+        "switch-graphics"
+      ]
+    },
+    {
+      "id": "swapchain-failure",
+      "category": "graphics",
+      "severity": "error",
+      "confidence": 0.65,
+      "prefilter": "swapchain",
+      "regex": "(?:err|ERR).*swapchain.*(?:fail|error|create)",
+      "remedies": [
+        "switch-graphics"
+      ]
+    },
+    {
+      "id": "prefix-corruption",
+      "category": "prefixFilesystem",
+      "severity": "error",
+      "confidence": 0.7,
+      "prefilter": "could not load",
+      "regex": "wine: could not load .+, status c[0-9a-f]+",
+      "remedies": [
+        "info:prefix"
+      ]
+    },
+    {
+      "id": "prefix-user-dirs-missing",
+      "category": "prefixFilesystem",
+      "severity": "warning",
+      "confidence": 0.6,
+      "prefilter": "user dirs",
+      "regex": "(?:err|warn).*user dirs.*(?:missing|not found|cannot)",
+      "remedies": [
+        "info:prefix"
+      ]
+    },
+    {
+      "id": "network-winhttp-tls",
+      "category": "networkingLaunchers",
+      "severity": "error",
+      "confidence": 0.65,
+      "prefilter": "winhttp",
+      "regex": "err:winhttp:.*(?:secure connection failed|certificate|SSL|TLS)",
+      "remedies": [
+        "info:network"
+      ]
+    },
+    {
+      "id": "network-http-timeout",
+      "category": "networkingLaunchers",
+      "severity": "warning",
+      "confidence": 0.5,
+      "prefilter": null,
+      "regex": "(?:err|ERR):(?:winhttp|wininet).*(?:timeout|timed out)",
+      "remedies": [
+        "info:network"
+      ]
+    },
+    {
+      "id": "anticheat-eac",
+      "category": "antiCheatUnsupported",
+      "severity": "critical",
+      "confidence": 0.99,
+      "prefilter": "EasyAntiCheat",
+      "regex": "EasyAntiCheat.*(?:Fatal|error|not installed|cannot)",
+      "remedies": [
+        "info:anticheat"
+      ]
+    },
+    {
+      "id": "anticheat-battleye",
+      "category": "antiCheatUnsupported",
+      "severity": "critical",
+      "confidence": 0.99,
+      "prefilter": "BattlEye",
+      "regex": "BattlEye.*(?:error|failed|not supported|cannot)",
+      "remedies": [
+        "info:anticheat"
+      ]
+    },
+    {
+      "id": "steam-download-stall",
+      "category": "networkingLaunchers",
+      "severity": "warning",
+      "confidence": 0.6,
+      "prefilter": "download",
+      "regex": "(?:Steam|steam|content_log).*(?:download|HTTP).*(?:stall|timeout|failed|timed out|connection reset)",
+      "remedies": [
+        "info:steam-download"
+      ]
+    },
+    {
+      "id": "wine-nonzero-exit",
+      "category": "otherUnknown",
+      "severity": "info",
+      "confidence": 0.3,
+      "prefilter": "exit code",
+      "regex": "(?:process|wine|wineserver).*exit code (?!0\\b)(\\d+)",
+      "remedies": []
+    },
+    {
+      "id": "wine-failed-to-start",
+      "category": "prefixFilesystem",
+      "severity": "error",
+      "confidence": 0.8,
+      "prefilter": "failed to start",
+      "regex": "wine: failed to start (.+): ([0-9a-f]+)",
+      "remedies": [
+        "info:path"
+      ]
+    }
+  ]
+}
