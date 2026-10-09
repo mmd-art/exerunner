@@ -1,0 +1,18 @@
+engine/src/
+engine/build/
+engine/build-tools/
+engine/dist/
+engine/portable/
+engine/deps/
+engine/ccache/
+bottles/
+build/
+app/.build/
+*.log
+.DS_Store
+scripts/signing.local
+# built from tests/*.c and tests/*.swift, see the comments there
+tests/d3dprobe.exe
+tests/winlist
+# screenshots carry local paths; regenerated for the public release
+docs/screens/
