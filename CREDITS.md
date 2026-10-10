@@ -1,7 +1,7 @@
 # Credits and licences
 
-WinRunner (working name) is free software under the GNU General Public License, version 3 or
-later. See [LICENSE](LICENSE).
+ExeRunner is free software under the GNU General Public License, version 3 or later. See
+[LICENSE](LICENSE). It is not affiliated with Apple, Microsoft, Valve or CodeWeavers.
 
 ## Taken from other projects
 
@@ -46,7 +46,7 @@ Built by `scripts/build-engine.sh`; nothing below is modified here unless said s
 - `engine/compat/cxcompatdb.c` is ours. It implements the module name and the two functions
   CrossOver's Wine exports for it (`prepend_dll_path`, `add_load_order_override`); CrossOver's
   own module is closed and is not used.
-- `lib/winrunner/discord-bridge.exe` is built with MinGW-w64 from `engine/discord-bridge/bridge.c`
+- `lib/exerunner/discord-bridge.exe` is built with MinGW-w64 from `engine/discord-bridge/bridge.c`
   (Whisky's, above).
 - The engine inside the app (`scripts/build-engine.sh portable`) also carries libraries wine
   opens and links: FreeType, GnuTLS and what it needs, SDL2, GStreamer with a set of plugins, and
@@ -55,8 +55,14 @@ Built by `scripts/build-engine.sh`; nothing below is modified here unless said s
   Homebrew builds it is GPL-3.0-or-later. Sources are at https://formulae.brew.sh and with each
   project.
 
-## Not included
+## D3DMetal
 
-**D3DMetal** belongs to Apple and its licence does not allow redistribution. Every user
-downloads Game Porting Toolkit from developer.apple.com with their own Apple ID and imports it
-into the app.
+**D3DMetal** belongs to Apple and is not in this repository. Apple's Game Porting Toolkit licence
+allows passing it on for non-commercial purposes only, with Apple's notices (sections 2A(iii) and
+2C), and allows using it for developing, testing or evaluating games. So:
+
+- builds made by `scripts/build-app.sh` carry the D3DMetal the builder imported from Apple's
+  download, with Apple's `License.rtf` and `Acknowledgements.rtf` next to it; ExeRunner is free,
+  and must stay free while it carries D3DMetal;
+- `scripts/build-app.sh --without-d3dmetal` (or `EXERUNNER_D3DMETAL=0`) builds without it;
+- users can always import a newer Game Porting Toolkit in the app; the newer D3DMetal wins.

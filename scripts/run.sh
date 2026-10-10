@@ -30,11 +30,11 @@ done
 # Wine hands the whole Unix environment to every Windows process, so a program in the bottle
 # could read tokens and keys from the shell that started it. Keep only what Wine and the
 # graphics layers need; the caller's own WINE*, D3DM_*, MTL_* and Steam settings pass through.
-if [ -z "${WINRUNNER_CLEAN_ENV:-}" ]; then
+if [ -z "${EXERUNNER_CLEAN_ENV:-}" ]; then
   keep=(HOME USER LOGNAME SHELL TMPDIR LANG TERM PATH)
   while IFS='=' read -r name _; do
     case "$name" in
-      LC_*|WINE*|WINRUNNER_*|D3DM_*|MTL_*|ROSETTA_*|DXVK_*|MVK_*|GST_*|SteamAppId|SteamGameId|STEAM_COMPAT_*) keep+=("$name") ;;
+      LC_*|WINE*|EXERUNNER_*|D3DM_*|MTL_*|ROSETTA_*|DXVK_*|MVK_*|GST_*|SteamAppId|SteamGameId|STEAM_COMPAT_*) keep+=("$name") ;;
     esac
   done < <(env)
   args=()
@@ -44,9 +44,9 @@ if [ -z "${WINRUNNER_CLEAN_ENV:-}" ]; then
   opts=(--bottle "$BOTTLE")
   if [ -n "$RECIPE" ]; then opts+=(--recipe "$RECIPE"); fi
   if [ "$KILL" = 1 ]; then opts+=(--kill); fi
-  exec env -i WINRUNNER_CLEAN_ENV=1 "${args[@]}" /bin/bash "$0" "${opts[@]}" -- "$@"
+  exec env -i EXERUNNER_CLEAN_ENV=1 "${args[@]}" /bin/bash "$0" "${opts[@]}" -- "$@"
 fi
-unset WINRUNNER_CLEAN_ENV
+unset EXERUNNER_CLEAN_ENV
 
 export WINEPREFIX="$ROOT/bottles/$BOTTLE"
 if [ "$KILL" = 1 ]; then
@@ -65,12 +65,12 @@ export ROSETTA_ADVERTISE_AVX="${ROSETTA_ADVERTISE_AVX:-1}"
 export MVK_CONFIG_LOG_LEVEL="${MVK_CONFIG_LOG_LEVEL:-1}"
 
 # D3DMetal (deploy-gptk.sh) for DX10-DX12. cxcompatdb.so prepends its DLLs in every process
-# except WINRUNNER_D3DMETAL_SKIP; the libd3dshared path lets ntdll register D3DMetal's code with
-# Rosetta. WINRUNNER_D3DMETAL=0 turns it off for this run.
+# except EXERUNNER_D3DMETAL_SKIP; the libd3dshared path lets ntdll register D3DMetal's code with
+# Rosetta. EXERUNNER_D3DMETAL=0 turns it off for this run.
 GPTK="$DIST/lib/apple_gptk"
-if [ "${WINRUNNER_D3DMETAL:-1}" != 0 ] && [ -e "$GPTK/external/libd3dshared.dylib" ]; then
+if [ "${EXERUNNER_D3DMETAL:-1}" != 0 ] && [ -e "$GPTK/external/libd3dshared.dylib" ]; then
   export CX_APPLEGPTK_LIBD3DSHARED_PATH="$GPTK/external/libd3dshared.dylib"
-  export WINRUNNER_D3DMETAL_DIR="$GPTK/wine"
+  export EXERUNNER_D3DMETAL_DIR="$GPTK/wine"
 fi
 
 if [ ! -d "$WINEPREFIX" ]; then
@@ -111,7 +111,7 @@ if [ -n "$RECIPE" ]; then
   if [ "${#dxvk_exes[@]}" -gt 0 ]; then
     [ -d "$DIST/lib/dxvk/x64" ] || { echo "no DXVK in the engine, run build-engine.sh dxvk"; exit 1; }
     skip="$(IFS=,; echo "${dxvk_exes[*]}")"
-    export WINRUNNER_D3DMETAL_SKIP="${WINRUNNER_D3DMETAL_SKIP:+$WINRUNNER_D3DMETAL_SKIP,}$skip"
+    export EXERUNNER_D3DMETAL_SKIP="${EXERUNNER_D3DMETAL_SKIP:+$EXERUNNER_D3DMETAL_SKIP,}$skip"
     # DXVK's DLLs in the bottle; programs without an override keep loading the builtin ones
     for pair in "x64:system32" "x32:syswow64"; do
       src="$DIST/lib/dxvk/${pair%%:*}"; dst="$WINEPREFIX/drive_c/windows/${pair##*:}"
@@ -122,10 +122,10 @@ if [ -n "$RECIPE" ]; then
   fi
   if [ "${#dxvk_exes[@]}" -gt 0 ] || [ "${#dll_lines[@]}" -gt 0 ]; then
     # per-program overrides, imported once per recipe version
-    stamp="$WINEPREFIX/.winrunner-recipe-$RECIPE"
+    stamp="$WINEPREFIX/.exerunner-recipe-$RECIPE"
     sum="$(shasum -a 256 "$file" | cut -d' ' -f1)"
     if [ "$(cat "$stamp" 2>/dev/null)" != "$sum" ]; then
-      reg="$WINEPREFIX/drive_c/winrunner-recipe-$RECIPE.reg"
+      reg="$WINEPREFIX/drive_c/exerunner-recipe-$RECIPE.reg"
       {
         echo "REGEDIT4"
         for exe in ${dxvk_exes[@]+"${dxvk_exes[@]}"}; do
@@ -143,7 +143,7 @@ if [ -n "$RECIPE" ]; then
           for pair in "${pairs[@]}"; do echo "\"${pair%%=*}\"=\"${pair#*=}\""; done
         done
       } > "$reg"
-      "$DIST/bin/wine" regedit /S "C:\\winrunner-recipe-$RECIPE.reg"
+      "$DIST/bin/wine" regedit /S "C:\\exerunner-recipe-$RECIPE.reg"
       "$DIST/bin/wineserver" -w
       rm -f "$reg"
       echo "$sum" > "$stamp"
@@ -152,7 +152,7 @@ if [ -n "$RECIPE" ]; then
 fi
 
 # DLSS through MetalFX needs both DLLs inside the bottle (Apple's Read Me)
-if [ -n "${WINRUNNER_D3DMETAL_DIR:-}" ] && [ -e "$GPTK/wine/x86_64-windows/nvngx.dll" ]; then
+if [ -n "${EXERUNNER_D3DMETAL_DIR:-}" ] && [ -e "$GPTK/wine/x86_64-windows/nvngx.dll" ]; then
   sys32="$WINEPREFIX/drive_c/windows/system32"
   for f in nvngx.dll nvapi64.dll; do
     cmp -s "$GPTK/wine/x86_64-windows/$f" "$sys32/$f" || cp -f "$GPTK/wine/x86_64-windows/$f" "$sys32/$f"

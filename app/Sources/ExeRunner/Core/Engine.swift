@@ -7,19 +7,28 @@ struct Engine: Equatable {
     var wine: URL { root.appendingPathComponent("bin/wine") }
     var wineserver: URL { root.appendingPathComponent("bin/wineserver") }
     var lib: URL { root.appendingPathComponent("lib", isDirectory: true) }
-    /// D3DMetal: what the user imported, or for a development engine what scripts/deploy-gptk.sh
-    /// put into it
+    enum D3DMetalSource { case imported, bundled, engine }
+
+    /// D3DMetal: the newer of what the user imported and what the app carries (a user can put in
+    /// Apple's next release without waiting for a new app), else what scripts/deploy-gptk.sh put
+    /// into a development engine
     var gptk: URL {
-        if FileManager.default.fileExists(atPath: Paths.d3dmetal.appendingPathComponent("external/libd3dshared.dylib").path) {
-            return Paths.d3dmetal
-        }
+        let found = [Paths.d3dmetal, Paths.bundledD3DMetal].compactMap { $0 }
+            .filter { FileManager.default.fileExists(atPath: $0.appendingPathComponent("external/libd3dshared.dylib").path) }
+        if let newest = found.max(by: { D3DMetalVersion($0) < D3DMetalVersion($1) }) { return newest }
         return lib.appendingPathComponent("apple_gptk", isDirectory: true)
+    }
+
+    var d3dmetalSource: D3DMetalSource {
+        if gptk.standardizedFileURL == Paths.d3dmetal.standardizedFileURL { return .imported }
+        if gptk.standardizedFileURL == Paths.bundledD3DMetal?.standardizedFileURL { return .bundled }
+        return .engine
     }
     /// Carries its own libraries instead of Homebrew's (scripts/build-engine.sh portable)
     var isPortable: Bool { FileManager.default.fileExists(atPath: root.appendingPathComponent("engine.json").path) }
     var dxvk: URL { lib.appendingPathComponent("dxvk", isDirectory: true) }
     var compatModule: URL { lib.appendingPathComponent("wine/x86_64-unix/cxcompatdb.so") }
-    var discordBridge: URL { lib.appendingPathComponent("winrunner/discord-bridge.exe") }
+    var discordBridge: URL { lib.appendingPathComponent("exerunner/discord-bridge.exe") }
 
     var isValid: Bool { FileManager.default.isExecutableFile(atPath: wine.path) }
     var hasCompatModule: Bool { FileManager.default.fileExists(atPath: compatModule.path) }
@@ -53,6 +62,9 @@ struct Engine: Equatable {
     func clearQuarantine() async {
         guard getxattr(wine.path, "com.apple.quarantine", nil, 0, 0, 0) >= 0 else { return }
         _ = await Shell.run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", root.path])
+        if let d3dmetal = Paths.bundledD3DMetal, FileManager.default.fileExists(atPath: d3dmetal.path) {
+            _ = await Shell.run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", d3dmetal.path])
+        }
     }
 
     func version() async -> String? {
@@ -93,9 +105,9 @@ enum WineEnvironment {
         env["MVK_CONFIG_LOG_LEVEL"] = "1"
         if engine.d3dmetalVersion != nil {
             env["CX_APPLEGPTK_LIBD3DSHARED_PATH"] = engine.gptk.appendingPathComponent("external/libd3dshared.dylib").path
-            env["WINRUNNER_D3DMETAL_DIR"] = engine.gptk.appendingPathComponent("wine").path
+            env["EXERUNNER_D3DMETAL_DIR"] = engine.gptk.appendingPathComponent("wine").path
             env["D3DM_ENABLE_METALFX"] = "1"
-            if !skip.isEmpty { env["WINRUNNER_D3DMETAL_SKIP"] = skip.sorted().joined(separator: ",") }
+            if !skip.isEmpty { env["EXERUNNER_D3DMETAL_SKIP"] = skip.sorted().joined(separator: ",") }
         }
         for (key, value) in extra { env[key] = value }
         return env
@@ -169,4 +181,37 @@ enum WineProcess {
             process.waitUntilExit()
         }.value
     }
+}
+
+/// A D3DMetal version as Apple numbers them: 3.0, 4.0b2 (a beta comes before its release)
+struct D3DMetalVersion: Comparable {
+    let parts: [Int]
+    let beta: Int?
+
+    init(_ folder: URL) {
+        let text = (try? String(contentsOf: folder.appendingPathComponent("D3DMETAL_VERSION"), encoding: .utf8)) ?? ""
+        self.init(text.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    init(_ text: String) {
+        let lower = text.lowercased()
+        let split = lower.range(of: "b")
+        let main = split.map { String(lower[..<$0.lowerBound]) } ?? lower
+        parts = main.split(separator: ".").map { Int($0) ?? 0 }
+        beta = split.map { Int(lower[$0.upperBound...].filter(\.isNumber)) ?? 0 }
+    }
+
+    static func < (a: D3DMetalVersion, b: D3DMetalVersion) -> Bool {
+        for i in 0..<max(a.parts.count, b.parts.count) {
+            let x = i < a.parts.count ? a.parts[i] : 0, y = i < b.parts.count ? b.parts[i] : 0
+            if x != y { return x < y }
+        }
+        switch (a.beta, b.beta) {
+        case let (x?, y?): return x < y
+        case (_?, nil): return true
+        default: return false
+        }
+    }
+
+    static func == (a: D3DMetalVersion, b: D3DMetalVersion) -> Bool { !(a < b) && !(b < a) }
 }

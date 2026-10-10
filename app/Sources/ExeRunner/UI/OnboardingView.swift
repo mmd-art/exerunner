@@ -142,7 +142,7 @@ struct OnboardingView: View {
                           level: engine.hasMonoAndGecko ? .ok : .warning)
             } else {
                 StatusRow(title: "Движок не найден",
-                          detail: "Он лежит внутри WinRunner.app; если его там нет, приложение скачано не целиком. Можно указать папку движка вручную.",
+                          detail: "Он лежит внутри ExeRunner.app; если его там нет, приложение скачано не целиком. Можно указать папку движка вручную.",
                           level: .missing)
             }
             Button(state.engine == nil ? "Указать папку движка…" : "Указать другую папку…") {
@@ -156,15 +156,18 @@ struct OnboardingView: View {
 
     private var d3dmetal: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("D3DMetal от Apple переводит DirectX 11 и 12 в Metal: без него большинство современных игр не запустится. Раздавать его нельзя, поэтому каждый скачивает свой, это бесплатно.")
+            Text("D3DMetal от Apple переводит DirectX 11 и 12 в Metal: без него большинство современных игр не запустится.")
                 .foregroundStyle(.secondary)
-            if let version = state.engine?.d3dmetalVersion {
-                StatusRow(title: "D3DMetal \(version) подключён", detail: "", level: .ok)
+            if let engine = state.engine, let version = engine.d3dmetalVersion {
+                StatusRow(title: engine.d3dmetalSource == .bundled ? "D3DMetal \(version) уже в приложении" : "D3DMetal \(version) подключён",
+                          detail: engine.d3dmetalSource == .bundled ? "Можно идти дальше. Новую версию от Apple можно подключить ниже." : "",
+                          level: .ok)
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text("1. Открой страницу загрузок Apple и войди под своим Apple ID")
-                Text("2. Скачай Game Porting Toolkit (файл .dmg)")
-                Text("3. Перетащи его сюда")
+                Text("Свой или более новый D3DMetal:").font(.headline)
+                Text("1. Открой страницу загрузок Apple и войди под своим Apple ID (бесплатно)")
+                Text("2. Скачай Game Porting Toolkit, файл .dmg, обычно он попадает в «Загрузки»")
+                Text("3. Перетащи его сюда: \(AppInfo.name) сам достанет D3DMetal из образа и положит к себе")
             }
             Button("Открыть страницу загрузок Apple") { NSWorkspace.shared.open(AppInfo.appleDownloads) }
                 .buttonStyle(.pill)

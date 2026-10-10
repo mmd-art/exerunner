@@ -9,7 +9,7 @@ enum Winetricks {
         Set(((try? String(contentsOf: stamp(bottle), encoding: .utf8)) ?? "").split(separator: "\n").map(String.init))
     }
 
-    private static func stamp(_ bottle: Bottle) -> URL { bottle.url.appendingPathComponent(".winrunner-winetricks") }
+    private static func stamp(_ bottle: Bottle) -> URL { bottle.url.appendingPathComponent(".exerunner-winetricks") }
 
     static func missing(_ verbs: [String], in bottle: Bottle) -> [String] {
         let done = installed(in: bottle)

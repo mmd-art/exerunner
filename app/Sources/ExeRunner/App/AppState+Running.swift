@@ -34,6 +34,7 @@ extension AppState {
     /// its new log; starts the Discord bridge last, right before the program.
     func prepare(_ item: LibraryItem, engine: Engine) async throws -> (environment: [String: String], log: URL) {
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
+        Migration.renameStamps(in: bottle)
         let log = Paths.logFile(item.id)
         logSegments[item.id] = LogSegment(url: log)
         followsClient[item.id] = nil
@@ -61,7 +62,7 @@ extension AppState {
         let compat = try BottleManager.writeCompatEnvironment(bottle, perProgram: perProgramEnvironment(in: item.bottle),
                                                               d3dmetalOff: skipList(in: item.bottle))
         var extra = environment(for: item)
-        extra["WINRUNNER_COMPAT_FILE"] = compat.path
+        extra["EXERUNNER_COMPAT_FILE"] = compat.path
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
         if bottleSettings.discordBridge { BottleManager.startDiscordBridge(bottle, engine: engine, environment: env) }
         return (env, log)
@@ -97,7 +98,7 @@ extension AppState {
         let clientLog = currentLog(of: client)
         followsClient[item.id] = (client.id, clientLog?.size ?? 0)
         var extra = environment(for: client)
-        extra["WINRUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
+        extra["EXERUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
         return try await WineProcess.run(engine: engine, arguments: [client.executable] + item.arguments, environment: env, log: log)
     }

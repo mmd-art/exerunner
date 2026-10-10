@@ -73,13 +73,13 @@ enum CompatDatabase {
         var games: [GameProfile]
     }
 
-    /// Whisky's database, then this app's own entries (games-winrunner.json), which replace
+    /// Whisky's database, then this app's own entries (games-exerunner.json), which replace
     /// Whisky's for the same game
     static func load() -> (source: String, games: [GameProfile]) {
         guard let dir = Paths.compat else { return ("", []) }
         var sources: [String] = []
         var games: [GameProfile] = []
-        for name in ["games.json", "games-winrunner.json"] {
+        for name in ["games.json", "games-exerunner.json"] {
             guard let data = try? Data(contentsOf: dir.appendingPathComponent(name)) else { continue }
             do {
                 let file = try JSONDecoder().decode(File.self, from: data)

@@ -52,7 +52,7 @@ enum D3DMetalImporter {
 
     private static func mount(_ image: URL) async throws -> URL {
         let mountpoint = FileManager.default.temporaryDirectory
-            .appendingPathComponent("winrunner-gptk-\(UUID().uuidString.prefix(8))", isDirectory: true)
+            .appendingPathComponent("exerunner-gptk-\(UUID().uuidString.prefix(8))", isDirectory: true)
         try Paths.ensure(mountpoint)
         let result = await Shell.run("/usr/bin/hdiutil",
                                      ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountpoint.path, image.path])
@@ -95,6 +95,15 @@ enum D3DMetalImporter {
             try fm.createSymbolicLink(atPath: nvngxSO.path, withDestinationPath: "../../external/libd3dshared.dylib")
             try? fm.removeItem(at: windows.appendingPathComponent("nvngx.dll"))
             try fm.copyItem(at: windows.appendingPathComponent("nvngx-on-metalfx.dll"), to: windows.appendingPathComponent("nvngx.dll"))
+        }
+        // Apple's licence lets D3DMetal be passed on non-commercially with Apple's notices: they
+        // travel with it (the evaluation environment keeps them next to redist/)
+        for name in ["License.rtf", "Acknowledgements.rtf"] {
+            let candidates = [lib.deletingLastPathComponent().deletingLastPathComponent(), lib.deletingLastPathComponent()]
+                .map { $0.appendingPathComponent(name) }
+            if let notice = candidates.first(where: { fm.fileExists(atPath: $0.path) }) {
+                try? fm.copyItem(at: notice, to: target.appendingPathComponent("Apple \(name)"))
+            }
         }
         let info = NSDictionary(contentsOf: target.appendingPathComponent("external/D3DMetal.framework/Resources/Info.plist"))
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"

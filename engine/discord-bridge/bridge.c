@@ -1,8 +1,8 @@
 /*
  *  bridge.c
- *  win-runner's Discord bridge, from WhiskyDiscordBridge in frankea/Whisky
+ *  ExeRunner's Discord bridge, from WhiskyDiscordBridge in frankea/Whisky
  *  (scripts/discord-bridge/bridge.c at 3abfbae). Changes: the instance mutex and
- *  log prefix carry win-runner's name.
+ *  log prefix carry ExeRunner's name.
  *
  *  This file is part of Whisky.
  *
@@ -30,7 +30,7 @@
 #include <string.h>
 
 #define PIPE_NAME "\\\\.\\pipe\\discord-ipc-0"
-#define INSTANCE_MUTEX "Local\\WinRunnerDiscordBridge"
+#define INSTANCE_MUTEX "Local\\ExeRunnerDiscordBridge"
 #define BUFFER_SIZE 4096
 /* Discord's client libraries walk discord-ipc-0 through discord-ipc-9. */
 #define SOCKET_CANDIDATES 10
@@ -83,7 +83,7 @@ static void log_line(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    fprintf(stderr, "winrunner-discord-bridge: ");
+    fprintf(stderr, "exerunner-discord-bridge: ");
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
     fflush(stderr);

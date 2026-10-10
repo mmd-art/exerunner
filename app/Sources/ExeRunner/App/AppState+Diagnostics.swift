@@ -82,7 +82,7 @@ extension AppState {
         case .audioDriver(let driver):
             updateBottle(item.bottle) { $0.audioDriver = driver }
             // what the registry has may differ from what was last written: write it again
-            try? FileManager.default.removeItem(at: bottle.url.appendingPathComponent(".winrunner-audio"))
+            try? FileManager.default.removeItem(at: bottle.url.appendingPathComponent(".exerunner-audio"))
         case .audioLatency(let latency):
             updateBottle(item.bottle) { $0.audioLatency = latency }
         case .resetAudio:
@@ -451,7 +451,7 @@ extension AppState {
         var environment: [String: String] = [:]
         if let engine {
             var extra = self.environment(for: item)
-            extra["WINRUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
+            extra["EXERUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
             environment = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
         }
         let segment = segment(for: item.id)

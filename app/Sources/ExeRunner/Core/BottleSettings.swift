@@ -76,7 +76,7 @@ extension BottleManager {
     /// Imports a REGEDIT4 file into the bottle. The values are live for every process once
     /// regedit exits; wineserver writes them to user.reg and system.reg a little later.
     static func importRegistry(_ text: String, into bottle: Bottle, engine: Engine, log: URL) async throws {
-        let name = "winrunner-\(UUID().uuidString.prefix(8)).reg"
+        let name = "exerunner-\(UUID().uuidString.prefix(8)).reg"
         let file = bottle.driveC.appendingPathComponent(name)
         try ("REGEDIT4\n" + text).write(to: file, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: file) }
@@ -87,7 +87,7 @@ extension BottleManager {
     /// The audio driver and buffer, written only when they changed since the last launch. From
     /// frankea/Whisky's WineAudioRegistry.swift (GPL-3.0-or-later).
     static func applyAudio(_ settings: BottleSettings, to bottle: Bottle, engine: Engine, log: URL) async throws {
-        let stamp = bottle.url.appendingPathComponent(".winrunner-audio")
+        let stamp = bottle.url.appendingPathComponent(".exerunner-audio")
         let wanted = "driver=\(settings.audioDriver.rawValue) latency=\(settings.audioLatency.rawValue)"
         let previous = try? String(contentsOf: stamp, encoding: .utf8)
         if previous == wanted { return }

@@ -214,10 +214,10 @@ portable() {
 # Relays a game's Discord pipe to the Discord app on the Mac (engine/discord-bridge/bridge.c)
 discord() {
   step "discord bridge"
-  mkdir -p "$DIST/lib/winrunner"
+  mkdir -p "$DIST/lib/exerunner"
   x86_64-w64-mingw32-gcc -O2 -Wall -Wextra -mwindows -static -s \
-    -o "$DIST/lib/winrunner/discord-bridge.exe" "$ROOT/engine/discord-bridge/bridge.c"
-  echo "installed $DIST/lib/winrunner/discord-bridge.exe"
+    -o "$DIST/lib/exerunner/discord-bridge.exe" "$ROOT/engine/discord-bridge/bridge.c"
+  echo "installed $DIST/lib/exerunner/discord-bridge.exe"
 }
 
 fetch_addon() {

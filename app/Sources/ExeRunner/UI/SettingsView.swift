@@ -36,8 +36,14 @@ struct SettingsView: View {
             }
 
             Section("D3DMetal (DirectX 11 и 12)") {
-                if let version = state.engine?.d3dmetalVersion {
-                    StatusRow(title: "D3DMetal \(version)", detail: "Включается для каждой программы отдельно; Steam рисует свой интерфейс через DXVK", level: .ok)
+                if let engine = state.engine, let version = engine.d3dmetalVersion {
+                    let source = switch engine.d3dmetalSource {
+                    case .bundled: "встроен в приложение"
+                    case .imported: "подключён из Game Porting Toolkit"
+                    case .engine: "из движка разработки"
+                    }
+                    StatusRow(title: "D3DMetal \(version), \(source)",
+                              detail: "Включается для каждой программы отдельно; Steam рисует свой интерфейс через DXVK", level: .ok)
                 } else {
                     StatusRow(title: "Не подключён", detail: "Без него не запустятся игры на DirectX 12 и многие на DirectX 11", level: .warning)
                 }
@@ -51,6 +57,10 @@ struct SettingsView: View {
                         }
                     }
                     Button("Страница загрузок Apple") { NSWorkspace.shared.open(AppInfo.appleDownloads) }
+                    if state.engine?.d3dmetalSource == .imported,
+                       let bundled = Paths.bundledD3DMetal, FileManager.default.fileExists(atPath: bundled.path) {
+                        Button("Вернуть встроенный") { state.removeImportedD3DMetal() }
+                    }
                 }
                 .buttonStyle(.pill)
                 .disabled(state.engine == nil || state.activity != nil)

@@ -4,7 +4,7 @@
 # does) so that reading them back is tested too.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/app/Sources/WinRunner/Core"
+SRC="$ROOT/app/Sources/ExeRunner/Core"
 WORK="$(mktemp -d)"
 FAKES=()
 trap 'kill "${FAKES[@]}" 2>/dev/null || true; rm -rf "$WORK"' EXIT
@@ -30,8 +30,12 @@ env -i WINEPREFIX="$WORK/bottles/steam" "$WORK/wine" start.exe /exec /Users/some
 FAKES+=($!); disown
 
 cp "$ROOT/tests/core-test.swift" "$WORK/main.swift"
-swiftc -O -o "$WORK/core-test" "$WORK/main.swift" "$SRC/Basics.swift" "$SRC/Settings.swift" "$SRC/VDF.swift" \
+# the app finds compat/ by walking up from itself to the folder with scripts/build-engine.sh
+mkdir -p "$WORK/bin"
+ln -s "$ROOT/scripts" "$WORK/scripts"
+ln -s "$ROOT/compat" "$WORK/compat"
+swiftc -O -o "$WORK/bin/core-test" "$WORK/main.swift" "$SRC/Basics.swift" "$SRC/Settings.swift" "$SRC/VDF.swift" \
   "$SRC/Processes.swift" "$SRC/Diagnostics.swift" "$SRC/Library.swift" "$SRC/Bottles.swift" "$SRC/Engine.swift" 2>&1 \
   | grep -v "^$" || true
 sleep 0.5
-EXPECT_PREFIX="$WORK/bottles/steam" "$WORK/core-test"
+EXPECT_PREFIX="$WORK/bottles/steam" "$WORK/bin/core-test"

@@ -72,12 +72,12 @@ enum BottleManager {
     /// Per-program DLL overrides through AppDefaults (program -> dll -> mode). Exactly these stay
     /// in place: overrides of programs dropped since the last call are deleted.
     static func applyOverrides(_ bottle: Bottle, engine: Engine, overrides: [String: [String: String]], log: URL) async throws {
-        let stamp = bottle.url.appendingPathComponent(".winrunner-overrides")
+        let stamp = bottle.url.appendingPathComponent(".exerunner-overrides")
         let wanted = overrides.flatMap { exe, dlls in dlls.map { "\(exe)\t\($0.key)=\($0.value)" } }.sorted().joined(separator: "\n")
         let previous = (try? String(contentsOf: stamp, encoding: .utf8)) ?? ""
         if previous == wanted { return }
         // the first version kept only DXVK programs, in another file
-        let legacy = bottle.url.appendingPathComponent(".winrunner-dxvk")
+        let legacy = bottle.url.appendingPathComponent(".exerunner-dxvk")
         let legacyNames = ((try? String(contentsOf: legacy, encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
         let previousNames = Set(previous.split(separator: "\n").compactMap { $0.split(separator: "\t").first.map(String.init) })
             .union(legacyNames)
@@ -89,12 +89,12 @@ enum BottleManager {
             reg += "\n[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\\(exe)\\DllOverrides]\n"
             for (dll, mode) in dlls.sorted(by: { $0.key < $1.key }) { reg += "\"\(dll)\"=\"\(mode)\"\n" }
         }
-        let regFile = bottle.driveC.appendingPathComponent("winrunner-overrides.reg")
+        let regFile = bottle.driveC.appendingPathComponent("exerunner-overrides.reg")
         try reg.write(to: regFile, atomically: true, encoding: .utf8)
         // the change is live for every process once regedit exits; waiting for the bottle to go
         // idle would wait for a running Steam to quit
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
-        _ = try await WineProcess.run(engine: engine, arguments: ["regedit", "/S", "C:\\winrunner-overrides.reg"], environment: env, log: log)
+        _ = try await WineProcess.run(engine: engine, arguments: ["regedit", "/S", "C:\\exerunner-overrides.reg"], environment: env, log: log)
         try? FileManager.default.removeItem(at: regFile)
         try? FileManager.default.removeItem(at: legacy)
         try wanted.write(to: stamp, atomically: true, encoding: .utf8)
@@ -113,7 +113,7 @@ enum BottleManager {
         return file
     }
 
-    static func compatFile(_ bottle: Bottle) -> URL { bottle.url.appendingPathComponent(".winrunner-compat-env") }
+    static func compatFile(_ bottle: Bottle) -> URL { bottle.url.appendingPathComponent(".exerunner-compat-env") }
 
     /// DLSS through MetalFX needs nvngx.dll and nvapi64.dll inside the bottle (Apple's Read Me).
     static func installMetalFXFiles(_ bottle: Bottle, engine: Engine) {

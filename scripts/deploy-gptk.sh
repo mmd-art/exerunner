@@ -7,7 +7,7 @@
 #
 # Wine's own d3d10/d3d11/d3d12/dxgi stay where they are. Our cxcompatdb.so (engine/compat)
 # prepends apple_gptk/wine to the builtin DLL path in each process that should get D3DMetal,
-# which is every process except the executables the launcher lists in WINRUNNER_D3DMETAL_SKIP.
+# which is every process except the executables the launcher lists in EXERUNNER_D3DMETAL_SKIP.
 # Same layout as CrossOver's lib64/apple_gptk.
 #
 # Nothing of Apple's lives in git: the user brings their own download. The payload's unix

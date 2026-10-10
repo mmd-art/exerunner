@@ -1,16 +1,24 @@
 #!/bin/bash
-# Build WinRunner.app into build/app.noindex/ (never into /Applications). The .noindex folder keeps
+# Build ExeRunner.app into build/app.noindex/ (never into /Applications). The .noindex folder keeps
 # Spotlight and Launchpad from listing this copy next to the installed one.
 #
-# usage: build-app.sh [debug|release]
+# usage: build-app.sh [debug|release] [--without-d3dmetal]
 # Signs with the certificate named in $CODESIGN_IDENTITY or in scripts/signing.local (one line, not
 # in git), so macOS keeps the app's permissions between builds; otherwise ad hoc. The engine goes inside when
 # engine/portable exists (scripts/build-engine.sh portable): the app then needs nothing else.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-NAME="WinRunner"
-CONFIG="${1:-release}"
+NAME="ExeRunner"
+CONFIG="release"
+WITH_D3DMETAL="${EXERUNNER_D3DMETAL:-1}"
+for arg in "$@"; do
+  case "$arg" in
+    debug|release) CONFIG="$arg" ;;
+    --without-d3dmetal) WITH_D3DMETAL=0 ;;
+    *) echo "usage: $0 [debug|release] [--without-d3dmetal]"; exit 2 ;;
+  esac
+done
 APP="$ROOT/build/app.noindex/$NAME.app"
 IDENTITY="${CODESIGN_IDENTITY:-$(cat "$ROOT/scripts/signing.local" 2>/dev/null || true)}"
 
@@ -26,6 +34,19 @@ cp "$ROOT/LICENSE" "$ROOT/CREDITS.md" "$APP/Contents/Resources/"
 if [ -f "$ROOT/engine/portable/engine.json" ]; then
   ditto "$ROOT/engine/portable" "$APP/Contents/Resources/engine"
 fi
+# D3DMetal goes in for free builds: Apple's Game Porting Toolkit licence lets it be passed on
+# non-commercially, with Apple's notices (sections 2A(iii) and 2C). --without-d3dmetal, or
+# EXERUNNER_D3DMETAL=0, leaves it out; users then import Apple's download in the app. It comes
+# from this Mac's import, which carries the notices.
+GPTK="$HOME/Library/Application Support/$NAME/D3DMetal"
+if [ "$WITH_D3DMETAL" = 1 ]; then
+  if [ -f "$GPTK/external/libd3dshared.dylib" ] && [ -f "$GPTK/Apple License.rtf" ]; then
+    ditto "$GPTK" "$APP/Contents/Resources/d3dmetal"
+    echo "D3DMetal $(cat "$GPTK/D3DMETAL_VERSION") inside, with Apple's notices"
+  else
+    echo "no D3DMetal with Apple's notices at $GPTK: import Game Porting Toolkit in the app first; building without it"
+  fi
+fi
 
 # the icon is drawn by the app itself (AppIcon.swift)
 ICONSET="$ROOT/build/AppIcon.iconset"
@@ -40,7 +61,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key><string>$NAME</string>
-  <key>CFBundleIdentifier</key><string>local.winrunner.app</string>
+  <key>CFBundleIdentifier</key><string>local.exerunner.app</string>
   <key>CFBundleName</key><string>$NAME</string>
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>

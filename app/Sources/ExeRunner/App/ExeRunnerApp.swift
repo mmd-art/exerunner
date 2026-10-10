@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct WinRunnerApp: App {
+struct ExeRunnerApp: App {
     @StateObject private var state = AppState()
 
     var body: some Scene {

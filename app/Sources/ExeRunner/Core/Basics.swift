@@ -3,7 +3,7 @@ import Foundation
 
 enum AppInfo {
     /// Working name; the product name is still open.
-    static let name = "WinRunner"
+    static let name = "ExeRunner"
     static let appleDownloads = URL(string: "https://developer.apple.com/download/all/?q=Game%20Porting%20Toolkit")!
 }
 
@@ -27,10 +27,22 @@ enum Paths {
     static var defaultEngine: URL { support.appendingPathComponent("Engine", isDirectory: true) }
     /// The engine the app carries (scripts/build-engine.sh portable, put in by build-app.sh)
     static var bundledEngine: URL? { Bundle.main.resourceURL?.appendingPathComponent("engine", isDirectory: true) }
-    /// Engine built from this repository (scripts/build-engine.sh)
-    static var devEngine: URL { home.appendingPathComponent("Developer/win-runner/engine/dist", isDirectory: true) }
-    /// D3DMetal as the user imported it from Apple's download; it never ships with the app
+    /// The repository a development build runs from: the folder above the app (build/app.noindex)
+    /// or the SwiftPM build (app/.build) that has scripts/build-engine.sh; nil for an installed app
+    static var repository: URL? {
+        var dir = Bundle.main.bundleURL
+        for _ in 0..<6 {
+            dir.deleteLastPathComponent()
+            if fm.fileExists(atPath: dir.appendingPathComponent("scripts/build-engine.sh").path) { return dir }
+        }
+        return nil
+    }
+    /// Engine built from the repository (scripts/build-engine.sh)
+    static var devEngine: URL? { repository?.appendingPathComponent("engine/dist", isDirectory: true) }
+    /// D3DMetal as the user imported it from Apple's download
     static var d3dmetal: URL { support.appendingPathComponent("D3DMetal", isDirectory: true) }
+    /// D3DMetal inside the app, when the build carried it (scripts/build-app.sh)
+    static var bundledD3DMetal: URL? { Bundle.main.resourceURL?.appendingPathComponent("d3dmetal", isDirectory: true) }
     static var caches: URL {
         fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent(AppInfo.name, isDirectory: true)
     }
@@ -41,7 +53,7 @@ enum Paths {
     static var recipes: URL? {
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent("recipes", isDirectory: true),
-            home.appendingPathComponent("Developer/win-runner/recipes", isDirectory: true),
+            repository?.appendingPathComponent("recipes", isDirectory: true),
         ]
         return candidates.compactMap { $0 }.first { fm.fileExists(atPath: $0.path) }
     }
@@ -50,7 +62,7 @@ enum Paths {
     static var compat: URL? {
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent("compat", isDirectory: true),
-            home.appendingPathComponent("Developer/win-runner/compat", isDirectory: true),
+            repository?.appendingPathComponent("compat", isDirectory: true),
         ]
         return candidates.compactMap { $0 }.first { fm.fileExists(atPath: $0.appendingPathComponent("games.json").path) }
     }

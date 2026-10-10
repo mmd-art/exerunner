@@ -1,4 +1,4 @@
-/* win-runner's compat module.
+/* ExeRunner's compat module.
  *
  * ntdll dlopens <dir of ntdll.so>/cxcompatdb.so at the end of process start-up, before the main
  * executable runs (CrossOver hack 24067 in dlls/ntdll/unix/loader.c), and exports
@@ -6,13 +6,13 @@
  * that name which applies its compatibility database. This one applies what the launcher
  * (scripts/run.sh) puts in the environment:
  *
- *   WINRUNNER_D3DMETAL_DIR   D3DMetal's wine/ dir (x86_64-windows, x86_64-unix). Prepended to the
+ *   EXERUNNER_D3DMETAL_DIR   D3DMetal's wine/ dir (x86_64-windows, x86_64-unix). Prepended to the
  *                            builtin DLL search path, so its d3d10/d3d11/d3d12/dxgi replace wine's
  *                            own in this process only.
- *   WINRUNNER_D3DMETAL_SKIP  comma-separated executable names that keep wine's own DLLs, such as
+ *   EXERUNNER_D3DMETAL_SKIP  comma-separated executable names that keep wine's own DLLs, such as
  *                            steamwebhelper.exe, whose Chromium crashes on D3DMetal's D3D11. Read
  *                            only without a compat file (run.sh); the app says it in the file.
- *   WINRUNNER_COMPAT_FILE    lines "<program.exe>\tNAME=value"; the matching ones are set in this
+ *   EXERUNNER_COMPAT_FILE    lines "<program.exe>\tNAME=value"; the matching ones are set in this
  *                            process. That reaches a game a launcher starts, which inherits the
  *                            launcher's environment otherwise. Only libraries reading the Unix
  *                            environment see them (D3DMetal, Metal, MoltenVK): the Windows
@@ -78,11 +78,11 @@ static void *ntdll_symbol(const char *symbol)
     return dlsym(ntdll, symbol);
 }
 
-/* Applies this program's lines from WINRUNNER_COMPAT_FILE. Returns -1 without a readable file,
+/* Applies this program's lines from EXERUNNER_COMPAT_FILE. Returns -1 without a readable file,
  * else 1 when a line turns D3DMetal off for the program and 0 when none does. */
 static int apply_compat_file(const char *exe)
 {
-    const char *path = getenv("WINRUNNER_COMPAT_FILE");
+    const char *path = getenv("EXERUNNER_COMPAT_FILE");
     char line[4096];
     int d3dmetal_off = 0;
     FILE *file;
@@ -106,17 +106,17 @@ static int apply_compat_file(const char *exe)
 }
 
 __attribute__((constructor))
-static void winrunner_compat_init(void)
+static void exerunner_compat_init(void)
 {
     const char *dir;
     void (*prepend_dll_path)(const char *);
     char *copy;
     int d3dmetal_off = apply_compat_file(exe_name());
 
-    dir = getenv("WINRUNNER_D3DMETAL_DIR");
+    dir = getenv("EXERUNNER_D3DMETAL_DIR");
     if (!dir || !*dir || d3dmetal_off == 1) return;
     /* the file is rewritten before every launch; a list inherited from a launcher may be older */
-    if (d3dmetal_off == -1 && in_list(exe_name(), getenv("WINRUNNER_D3DMETAL_SKIP"))) return;
+    if (d3dmetal_off == -1 && in_list(exe_name(), getenv("EXERUNNER_D3DMETAL_SKIP"))) return;
     if (!(prepend_dll_path = ntdll_symbol("prepend_dll_path"))) return;
     /* the loader keeps the pointer for the life of the process */
     if ((copy = strdup(dir))) prepend_dll_path(copy);

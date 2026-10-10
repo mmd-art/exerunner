@@ -360,6 +360,12 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Drops the user's own D3DMetal; the app's built-in one takes over again
+    func removeImportedD3DMetal() {
+        try? FileManager.default.removeItem(at: Paths.d3dmetal)
+        engine = Engine.locate(settings)
+    }
+
     func installRosetta() async {
         let token = beginActivity("Устанавливаю Rosetta…")
         defer { endActivity(token) }

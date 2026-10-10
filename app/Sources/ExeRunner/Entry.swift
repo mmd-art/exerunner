@@ -9,6 +9,7 @@ import Foundation
 @main
 enum Entry {
     static func main() {
+        Migration.run()
         let args = CommandLine.arguments
         if let index = args.firstIndex(of: "--launch"), index + 1 < args.count {
             Headless.launch(itemID: args[index + 1])
@@ -25,7 +26,7 @@ enum Entry {
         } else if let index = args.firstIndex(of: "--make-icon"), index + 1 < args.count {
             Headless.makeIcon(at: URL(fileURLWithPath: args[index + 1], isDirectory: true))
         } else {
-            WinRunnerApp.main()
+            ExeRunnerApp.main()
         }
     }
 }

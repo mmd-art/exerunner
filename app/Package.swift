@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "WinRunner",
+    name: "ExeRunner",
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
-            name: "WinRunner",
-            path: "Sources/WinRunner",
+            name: "ExeRunner",
+            path: "Sources/ExeRunner",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]

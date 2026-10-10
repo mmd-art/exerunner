@@ -25,7 +25,7 @@ enum Shortcuts {
         let id = item.id.replacingOccurrences(of: "[^A-Za-z0-9.-]", with: "-", options: .regularExpression)
         let plist: [String: Any] = [
             "CFBundleExecutable": "launch",
-            "CFBundleIdentifier": "local.winrunner.shortcut.\(id)",
+            "CFBundleIdentifier": "local.exerunner.shortcut.\(id)",
             "CFBundleName": item.name,
             "CFBundleDisplayName": item.name,
             "CFBundlePackageType": "APPL",
