@@ -103,6 +103,10 @@ enum WineEnvironment {
         }
         // games that probe cpuid before using AVX/AVX2
         env["ROSETTA_ADVERTISE_AVX"] = "1"
+        // DXVK's pipeline cache (<program>.dxvk-cache) survives between runs here, not in the
+        // program's folder or wherever it was started
+        env["DXVK_STATE_CACHE_PATH"] = Paths.caches.appendingPathComponent("dxvk", isDirectory: true).path
+        try? Paths.ensure(Paths.caches.appendingPathComponent("dxvk", isDirectory: true))
         env["MVK_CONFIG_LOG_LEVEL"] = "1"
         if engine.d3dmetalVersion != nil {
             env["CX_APPLEGPTK_LIBD3DSHARED_PATH"] = engine.gptk.appendingPathComponent("external/libd3dshared.dylib").path
@@ -116,10 +120,13 @@ enum WineEnvironment {
 }
 
 enum WineProcess {
-    /// Starts wine; output goes to `log`. `onExit` gets the exit status.
+    /// Starts wine; output goes to `log`. `onExit` gets the exit status. A program starts in
+    /// `directory` (its own folder, as Explorer and Steam start them: games open their files
+    /// relative to it); without one, in the folder this app was started in.
     static func start(engine: Engine, arguments: [String], environment: [String: String], log: URL,
-                      onExit: @escaping @Sendable (Int32) -> Void) throws -> Process {
-        try startLogged(executable: engine.wine, arguments: arguments, environment: environment, log: log, onExit: onExit)
+                      directory: URL? = nil, onExit: @escaping @Sendable (Int32) -> Void) throws -> Process {
+        try startLogged(executable: engine.wine, arguments: arguments, environment: environment, log: log,
+                        directory: directory, onExit: onExit)
     }
 
     /// Any program with its output appended to `log` (winetricks, for one)
@@ -136,7 +143,7 @@ enum WineProcess {
     }
 
     private static func startLogged(executable: URL, arguments: [String], environment: [String: String], log: URL,
-                                    onExit: @escaping @Sendable (Int32) -> Void) throws -> Process {
+                                    directory: URL? = nil, onExit: @escaping @Sendable (Int32) -> Void) throws -> Process {
         try Paths.ensure(log.deletingLastPathComponent())
         // appending: a launcher and what it starts, or a relaunch, may write to one log at once
         let fd = open(log.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
@@ -146,6 +153,7 @@ enum WineProcess {
         process.executableURL = executable
         process.arguments = arguments
         process.environment = environment
+        if let directory, FileManager.default.fileExists(atPath: directory.path) { process.currentDirectoryURL = directory }
         process.standardOutput = handle
         process.standardError = handle
         process.standardInput = FileHandle.nullDevice
@@ -157,10 +165,11 @@ enum WineProcess {
         return process
     }
 
-    static func run(engine: Engine, arguments: [String], environment: [String: String], log: URL) async throws -> Int32 {
+    static func run(engine: Engine, arguments: [String], environment: [String: String], log: URL,
+                    directory: URL? = nil) async throws -> Int32 {
         try await withCheckedThrowingContinuation { continuation in
             do {
-                _ = try start(engine: engine, arguments: arguments, environment: environment, log: log) { status in
+                _ = try start(engine: engine, arguments: arguments, environment: environment, log: log, directory: directory) { status in
                     continuation.resume(returning: status)
                 }
             } catch {

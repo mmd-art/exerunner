@@ -20,10 +20,11 @@ extension AppState {
         stoppedByUser.remove(item.id)
         let (env, log) = try await prepare(item, engine: engine)
         let arguments = [item.executable] + item.arguments
-        var status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log)
+        let folder = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)?.deletingLastPathComponent()
+        var status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log, directory: folder)
         // Steam exits with 42 after applying an update and expects to be started again
         if status == 42, recipe(item.recipeID)?.discoversSteamGames == true {
-            status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log)
+            status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log, directory: folder)
         }
         finished(item.id, status: status)
         return status
