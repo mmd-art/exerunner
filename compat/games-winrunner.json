@@ -1,0 +1,74 @@
+{
+  "source": "WinRunner's own tests",
+  "games": [
+    {
+      "id": "black-myth-wukong-benchmark-tool",
+      "title": "Black Myth: Wukong Benchmark Tool",
+      "aliases": [
+        "Black Myth Wukong Benchmark"
+      ],
+      "store": "steam",
+      "steamAppID": 3132990,
+      "exeNames": [
+        "b1-Win64-Shipping.exe",
+        "b1_benchmark.exe"
+      ],
+      "rating": "playable",
+      "antiCheat": null,
+      "notes": [
+        "Проверено 10/10/2026: Wine 11.16 + D3DMetal 4.0 beta 2, M2 Pro (19 ядер GPU), 16 ГБ, macOS 27.2. Steam сам ставит DirectX при первом запуске, потом несколько минут собираются шейдеры.",
+        "Результат: пресет Low, 1920×1080 без рамки, FSR 66%, генерация кадров выкл — в среднем 40 FPS, низкие 5% 31, максимум 51. Упирается в видеочип (загрузка 99%), игровой поток занят ~10 мс из 24. Минимум 2 FPS — разовые подвисания в первые 3 секунды и три раза по 0,3–0,8 с (сборка шейдеров).",
+        "Замер не чистый: два монитора (4K 120 Гц и встроенный), открыты VS Code, Mail, WhatsApp и Steam для Mac, своп занят на 22 ГБ."
+      ],
+      "issues": [
+        {
+          "severity": "high",
+          "text": "С генерацией кадров (по умолчанию она включена) игра падает на первом кадре: D3DMetal 4 beta 2 её не выдерживает.",
+          "workaround": "Выключи генерацию кадров в настройках бенчмарка. Если до них не дойти: в b1/Saved/Config/Windows/GameUserSettings.ini поставь (\"InsertFrame\", \"0\")."
+        }
+      ],
+      "recommended": {
+        "label": "D3DMetal",
+        "whenToUse": null,
+        "graphics": "automatic",
+        "environment": {},
+        "dllOverrides": {},
+        "winetricks": []
+      },
+      "alternatives": []
+    },
+    {
+      "id": "black-myth-wukong",
+      "title": "Black Myth: Wukong",
+      "aliases": [
+        "Wukong"
+      ],
+      "store": "steam",
+      "steamAppID": 2358720,
+      "exeNames": [
+        "b1-Win64-Shipping.exe"
+      ],
+      "rating": "unverified",
+      "antiCheat": null,
+      "notes": [
+        "Не проверено. Бенчмарк на том же движке игры работает с выключенной генерацией кадров."
+      ],
+      "issues": [
+        {
+          "severity": "high",
+          "text": "Как у бенчмарка: с генерацией кадров вероятно падение на первом кадре.",
+          "workaround": "Выключи генерацию кадров в настройках игры."
+        }
+      ],
+      "recommended": {
+        "label": "D3DMetal",
+        "whenToUse": null,
+        "graphics": "automatic",
+        "environment": {},
+        "dllOverrides": {},
+        "winetricks": []
+      },
+      "alternatives": []
+    }
+  ]
+}
