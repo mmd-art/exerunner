@@ -42,6 +42,9 @@ enum Snapshots {
             state.diagnoses[game.id] = CrashClassifier.shared.classify(
                 "err:module:import_dll Library MSVCP140_ATOMIC_WAIT.dll (which is needed by L\"game.exe\") not found")
             await capture("15-library-finding", AnyView(MainView(section: .library)), state: state, to: dir)
+            // the card itself, which the library may show below the fold
+            await capture("16-card-finding", AnyView(ItemTile(item: game).frame(width: 240).padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)), state: state, to: dir)
             state.diagnoses[game.id] = nil
         }
     }

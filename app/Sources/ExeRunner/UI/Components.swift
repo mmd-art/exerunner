@@ -49,6 +49,8 @@ struct Badge: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.medium))
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Capsule().fill(tint.opacity(0.14)))
@@ -177,6 +179,9 @@ struct ActivityBar: View {
 struct PillButtonStyle: ButtonStyle {
     var prominent = false
     var compact = false
+    /// Text and a light fill in this colour (a finding on a card); the style's own colours win
+    /// over a foregroundStyle set around the button
+    var tint: Color?
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -185,8 +190,8 @@ struct PillButtonStyle: ButtonStyle {
             .labelStyle(.titleAndIcon)
             .padding(.horizontal, compact ? 11 : 16)
             .padding(.vertical, compact ? 4 : 7)
-            .foregroundStyle(prominent ? Color.white : Color.primary)
-            .background(Capsule().fill(prominent ? Color.accentColor : Color.secondary.opacity(0.16)))
+            .foregroundStyle(prominent ? Color.white : (tint ?? Color.primary))
+            .background(Capsule().fill(prominent ? Color.accentColor : (tint ?? Color.secondary).opacity(0.16)))
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
             .contentShape(Capsule())
     }

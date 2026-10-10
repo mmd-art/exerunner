@@ -82,8 +82,7 @@ struct ItemTile: View {
                     Label(diagnosis.primary?.pattern.category.shortTitle ?? t("Ошибка"), systemImage: "exclamationmark.triangle.fill")
                         .lineLimit(1)
                 }
-                .buttonStyle(.pillCompact)
-                .foregroundStyle(.orange)
+                .buttonStyle(PillButtonStyle(compact: true, tint: .orange))
                 .help(t("\(diagnosis.headline). Открыть помощника"))
             }
             HStack(spacing: 8) {
