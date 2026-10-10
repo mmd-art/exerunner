@@ -273,10 +273,13 @@ enum Redactor {
         return result
     }
 
-    /// Names that hint at a secret are dropped; the rest keep their values, home folder hidden
+    /// Names that hint at a secret are dropped; the rest keep their values, with the home folder
+    /// and the account name (USER, LOGNAME) hidden
     static func environment(_ env: [String: String]) -> [String: String] {
         let sensitive = ["TOKEN", "KEY", "SECRET", "PASSWORD", "AUTH"]
-        return env.filter { key, _ in !sensitive.contains { key.uppercased().contains($0) } }.mapValues(homePaths)
+        let user = NSUserName()
+        return env.filter { key, _ in !sensitive.contains { key.uppercased().contains($0) } }
+            .mapValues { $0 == user ? placeholder : homePaths($0) }
     }
 }
 

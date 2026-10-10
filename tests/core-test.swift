@@ -98,8 +98,9 @@ check("bearer", secret.contains("Bearer <redacted>"), secret)
 check("url credentials", secret.contains("https://<redacted>@example.com"), secret)
 check("query signature", secret.contains("?sig=<redacted>&x=1"), secret)
 check("jwt", !secret.contains("eyJhbGciOiJIUzI1"), secret)
-let env = Redactor.environment(["STEAM_AUTH": "x", "API_KEY": "y", "HOME": home, "LANG": "en_US.UTF-8"])
-check("environment", env.keys.sorted() == ["HOME", "LANG"] && env["HOME"] == "/Users/<redacted>", "\(env)")
+let env = Redactor.environment(["STEAM_AUTH": "x", "API_KEY": "y", "HOME": home, "LANG": "en_US.UTF-8", "USER": user])
+check("environment", env.keys.sorted() == ["HOME", "LANG", "USER"] && env["HOME"] == "/Users/<redacted>"
+      && env["USER"] == "<redacted>", "\(env)")
 
 // recipes: a load order with a comma stays one mode
 if let recipe = try? Recipe.parse(id: "t", text: "dll Some Game.exe nvapi64=,msvcp140=native,builtin,vcruntime140=n,b,d3d11=native") {

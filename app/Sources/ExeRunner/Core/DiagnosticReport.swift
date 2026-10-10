@@ -51,7 +51,8 @@ enum DiagnosticReport {
 
         let zip = folder.appendingPathComponent(name + ".zip")
         try? FileManager.default.removeItem(at: zip)
-        let result = await Shell.run("/usr/bin/ditto", ["-c", "-k", "--keepParent", work.path, zip.path])
+        // no AppleDouble files: the zip goes to people on other systems
+        let result = await Shell.run("/usr/bin/ditto", ["-c", "-k", "--norsrc", "--noextattr", "--noqtn", "--keepParent", work.path, zip.path])
         guard result.status == 0 else { throw AppError("ditto: \(result.output)") }
         return zip
     }

@@ -17,3 +17,4 @@ tests/winlist
 # screenshots carry local paths; regenerated for the public release
 docs/screens/
 tests/sendkey.exe
+tests/discord-client.exe
