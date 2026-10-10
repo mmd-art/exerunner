@@ -10,6 +10,7 @@ kind launcher
 status experimental
 symbol a.circle
 about Лаунчер EA (бывший Origin). Интерфейс через DXVK. Ставится и открывает вход (10/10/2026), вход и игры ещё не проверены.
+about-en EA's launcher (formerly Origin). Its window draws through DXVK. Installs and opens the sign-in page (10/10/2026); signing in and games are not tested yet.
 bottle ea
 installer https://origin-a.akamaihd.net/EA-Desktop-Client-Download/installer-releases/EAappInstaller.exe /quiet
 exe C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EADesktop.exe

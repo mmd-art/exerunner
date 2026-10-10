@@ -9,6 +9,7 @@ kind launcher
 status tested
 symbol gamecontroller
 about Магазин и лаунчер Valve. Интерфейс рисуется через DXVK, игры получают D3DMetal.
+about-en Valve's store and launcher. Its window draws through DXVK, games get D3DMetal.
 bottle steam
 installer https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe /S
 exe C:\Program Files (x86)\Steam\Steam.exe

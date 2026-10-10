@@ -140,7 +140,7 @@ enum WineProcess {
         try Paths.ensure(log.deletingLastPathComponent())
         // appending: a launcher and what it starts, or a relaunch, may write to one log at once
         let fd = open(log.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
-        guard fd >= 0 else { throw AppError("Не открывается журнал \(log.path)") }
+        guard fd >= 0 else { throw AppError(t("Не открывается журнал \(log.path)")) }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         let process = Process()
         process.executableURL = executable

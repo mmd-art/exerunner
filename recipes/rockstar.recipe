@@ -11,6 +11,7 @@ kind launcher
 status experimental
 symbol r.circle
 about Лаунчер Rockstar (GTA, Red Dead). Ставится сам, при первом запуске докачивает Social Club.
+about-en Rockstar's launcher (GTA, Red Dead). Installs by itself and fetches Social Club on its first start.
 bottle rockstar
 installer https://gamedownloads.rockstargames.com/public/installer/Rockstar-Games-Launcher.exe /s /f
 exe C:\Program Files\Rockstar Games\Launcher\Launcher.exe

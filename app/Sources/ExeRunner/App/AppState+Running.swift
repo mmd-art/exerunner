@@ -11,7 +11,7 @@ extension AppState {
     /// Starts `item` and returns once wine is done with it: a program when it exits, a Steam game
     /// once its Steam client has it (the game itself is then followed in the process table).
     func run(_ item: LibraryItem) async throws -> Int32 {
-        guard let engine else { throw AppError("Движок не найден. Укажи его папку в настройках.") }
+        guard let engine else { throw AppError(t("Движок не найден. Укажи его папку в настройках.")) }
         if item.isSteamGame, let client = steamClient(for: item) {
             return try await runThroughSteam(item, client: client, engine: engine)
         }
@@ -40,7 +40,7 @@ extension AppState {
         followsClient[item.id] = nil
         diagnoses[item.id] = nil
         launchTimes[item.id] = Date()
-        let token = beginActivity("Готовлю «\(item.name)»…")
+        let token = beginActivity(t("Готовлю «\(item.name)»…"))
         defer { endActivity(token) }
 
         let compat = try await prepareBottle(bottle, log: log, engine: engine, progress: reporter(token))
@@ -60,7 +60,7 @@ extension AppState {
         if !Winetricks.missing(verbs, in: bottle).isEmpty {
             // winetricks waits for the bottle to go idle, which a running Steam never lets happen
             if !WineProcesses.list().filter({ $0.prefix == bottle.prefixPath }).isEmpty {
-                progress("Закрываю программы бутылки «\(bottle.name)», чтобы поставить компоненты Windows…")
+                progress(t("Закрываю программы бутылки «\(bottle.name)», чтобы поставить компоненты Windows…"))
                 await quitBottle(bottle.name)
             }
             try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: progress)

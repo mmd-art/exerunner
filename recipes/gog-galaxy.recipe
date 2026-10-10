@@ -12,6 +12,7 @@ kind launcher
 status planned
 symbol g.circle
 about Лаунчер GOG. Ставится, но окно остаётся пустым (10/10/2026): его веб-часть на Qt 6 не может показать страницы через DXVK и D3DMetal. Пока выключен.
+about-en GOG's launcher. It installs, but its window stays empty (10/10/2026): its Qt 6 web view cannot show pages through DXVK or D3DMetal. Off for now.
 bottle gog-galaxy
 installer https://content-system.gog.com/open_link/download?path=/open/galaxy/client/setup_galaxy_2.1.10.56.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
 exe C:\Program Files\GOG Galaxy\GalaxyClient.exe

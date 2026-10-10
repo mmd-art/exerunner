@@ -5,7 +5,10 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var settings: AppSettings {
-        didSet { if settings != oldValue { settings.save() } }
+        didSet {
+            if settings.language != oldValue.language { L10n.use(settings.language) }
+            if settings != oldValue { settings.save() }
+        }
     }
     @Published private(set) var engine: Engine?
     @Published private(set) var engineVersion: String?
@@ -59,6 +62,7 @@ final class AppState: ObservableObject {
 
     init() {
         settings = AppSettings.load()
+        L10n.use(settings.language)
         recipes = Recipe.loadAll()
         items = LibraryStore.load()
         bottleSettings = BottleSettingsStore.load()
@@ -306,8 +310,8 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func install(_ recipe: Recipe) async -> Bool {
-        guard let engine else { errorMessage = "Движок не найден"; return false }
-        let token = beginActivity("Устанавливаю \(recipe.name)…")
+        guard let engine else { errorMessage = t("Движок не найден"); return false }
+        let token = beginActivity(t("Устанавливаю \(recipe.name)…"))
         defer { endActivity(token) }
         // installers often start their launcher at the end (EA does): it has to find the bottle
         // ready, its web helpers on DXVK and off D3DMetal, as a launch from the app would
@@ -317,7 +321,7 @@ final class AppState: ObservableObject {
         do {
             let bottle = Bottle(name: recipe.bottle, root: bottlesRoot)
             let log = Paths.logFile("install-\(recipe.id)")
-            reporter(token)("Готовлю бутылку «\(recipe.bottle)»…")
+            reporter(token)(t("Готовлю бутылку «\(recipe.bottle)»…"))
             let compat = try await prepareBottle(bottle, log: log, engine: engine, progress: reporter(token))
             let item = try await Installer.install(recipe, engine: engine, bottlesRoot: bottlesRoot, log: log,
                                                    environment: ["EXERUNNER_COMPAT_FILE": compat.path], progress: reporter(token))
@@ -335,8 +339,8 @@ final class AppState: ObservableObject {
     }
 
     func runInstaller(_ file: URL, bottle: String) async -> [URL] {
-        guard let engine else { errorMessage = "Движок не найден"; return [] }
-        let token = beginActivity("Запускаю установщик…")
+        guard let engine else { errorMessage = t("Движок не найден"); return [] }
+        let token = beginActivity(t("Запускаю установщик…"))
         defer { endActivity(token) }
         do {
             return try await Installer.runInstaller(file, bottle: Bottle(name: bottle, root: bottlesRoot), engine: engine,
@@ -372,8 +376,8 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func importD3DMetal(from url: URL) async -> String? {
-        guard let engine else { errorMessage = "Сначала нужен движок"; return nil }
-        let token = beginActivity("Подключаю D3DMetal…")
+        guard let engine else { errorMessage = t("Сначала нужен движок"); return nil }
+        let token = beginActivity(t("Подключаю D3DMetal…"))
         defer { endActivity(token) }
         do {
             let version = try await D3DMetalImporter.importPayload(from: url, into: engine, progress: reporter(token))
@@ -392,19 +396,19 @@ final class AppState: ObservableObject {
     }
 
     func installRosetta() async {
-        let token = beginActivity("Устанавливаю Rosetta…")
+        let token = beginActivity(t("Устанавливаю Rosetta…"))
         defer { endActivity(token) }
         let result = await Rosetta.install()
         rosettaInstalled = await Rosetta.isInstalled()
         if !rosettaInstalled, !result.output.contains("User canceled") {
-            errorMessage = "Rosetta не установилась: \(result.output)"
+            errorMessage = t("Rosetta не установилась: \(result.output)")
         }
         if rosettaInstalled, let engine { engineVersion = await engine.version() }
     }
 
     func setEngine(_ url: URL) async {
         guard Engine(root: url).isValid else {
-            errorMessage = "В папке «\(url.lastPathComponent)» нет движка (bin/wine)"
+            errorMessage = t("В папке «\(url.lastPathComponent)» нет движка (bin/wine)")
             return
         }
         settings.enginePath = url.path

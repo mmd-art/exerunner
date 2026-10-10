@@ -25,11 +25,11 @@ struct RootView: View {
             await state.refresh()
             state.watchProcesses()
         }
-        .alert("Что-то пошло не так", isPresented: Binding(
+        .alert(t("Что-то пошло не так"), isPresented: Binding(
             get: { state.errorMessage != nil },
             set: { if !$0 { state.errorMessage = nil } }
         )) {
-            Button("Понятно") { state.errorMessage = nil }
+            Button(t("Понятно")) { state.errorMessage = nil }
         } message: {
             Text(state.errorMessage ?? "")
         }
@@ -48,9 +48,9 @@ struct MainView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $section) {
-                Label("Библиотека", systemImage: "square.grid.2x2").tag(Section.library)
-                Label("Каталог", systemImage: "bag").tag(Section.catalog)
-                Label("Настройки", systemImage: "gearshape").tag(Section.settings)
+                Label(t("Библиотека"), systemImage: "square.grid.2x2").tag(Section.library)
+                Label(t("Каталог"), systemImage: "bag").tag(Section.catalog)
+                Label(t("Настройки"), systemImage: "gearshape").tag(Section.settings)
             }
             .navigationSplitViewColumnWidth(min: 190, ideal: 210)
             .safeAreaInset(edge: .bottom) { EngineFooter().padding(14) }
@@ -63,6 +63,8 @@ struct MainView: View {
                 }
                 ActivityBar()
             }
+            // every text is read again in the new language
+            .id(state.settings.language)
         }
     }
 }
@@ -72,8 +74,8 @@ private struct EngineFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label(state.engine == nil ? "Движок не найден" : (state.engineVersion ?? "Движок"), systemImage: "cpu")
-            Label(state.engine?.d3dmetalVersion.map { "D3DMetal \($0)" } ?? "D3DMetal не подключён", systemImage: "cube.transparent")
+            Label(state.engine == nil ? t("Движок не найден") : (state.engineVersion ?? t("Движок")), systemImage: "cpu")
+            Label(state.engine?.d3dmetalVersion.map { "D3DMetal \($0)" } ?? t("D3DMetal не подключён"), systemImage: "cube.transparent")
         }
         .font(.caption)
         .foregroundStyle(.secondary)

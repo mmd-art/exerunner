@@ -38,11 +38,11 @@ struct TroubleshootView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(symptom.title).font(.title2.weight(.semibold))
-                            Text(item.map { "«\($0.name)», бутылка «\($0.bottle)»" } ?? "").foregroundStyle(.secondary)
+                            Text(item.map { t("«\($0.name)», бутылка «\($0.bottle)»") } ?? "").foregroundStyle(.secondary)
                         }
                         .padding(.bottom, 6)
                         if loading && checks.isEmpty {
-                            ProgressView("Проверяю…").frame(maxWidth: .infinity).padding(.top, 60)
+                            ProgressView(t("Проверяю…")).frame(maxWidth: .infinity).padding(.top, 60)
                         }
                         ForEach(checks) { check in
                             CheckRow(check: check, working: working) { remedy in Task { await apply(remedy) } }
@@ -54,14 +54,14 @@ struct TroubleshootView: View {
             }
             Divider()
             HStack(spacing: 10) {
-                Button { Task { await saveReport() } } label: { Label("Сохранить отчёт для помощи", systemImage: "doc.zipper") }
+                Button { Task { await saveReport() } } label: { Label(t("Сохранить отчёт для помощи"), systemImage: "doc.zipper") }
                 if let report {
-                    Button("Показать в Finder") { NSWorkspace.shared.activateFileViewerSelecting([report]) }
+                    Button(t("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([report]) }
                     Text(report.lastPathComponent).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer()
-                Button("Проверить снова") { Task { await load() } }.disabled(loading)
-                Button("Готово") { dismiss() }
+                Button(t("Проверить снова")) { Task { await load() } }.disabled(loading)
+                Button(t("Готово")) { dismiss() }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
             }

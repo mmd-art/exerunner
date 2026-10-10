@@ -9,6 +9,7 @@ kind launcher
 status planned
 symbol b.circle
 about Лаунчер Blizzard. Ставится и запускается, но страница входа не грузится: его встроенный браузер падает (10/10/2026). Пока выключен.
+about-en Blizzard's launcher. It installs and starts, but the sign-in page does not load: its built-in browser crashes (10/10/2026). Off for now.
 bottle battlenet
 installer https://downloader.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live --lang=enUS
 exe C:\Program Files (x86)\Battle.net\Battle.net Launcher.exe

@@ -26,9 +26,9 @@ enum Winetricks {
         guard !missing.isEmpty else { return }
         let script = script(in: engine)
         guard FileManager.default.fileExists(atPath: script.path) else {
-            throw AppError("В движке нет winetricks, а он нужен для: \(missing.joined(separator: ", "))")
+            throw AppError(t("В движке нет winetricks, а он нужен для: \(missing.joined(separator: ", "))"))
         }
-        progress("Ставлю компоненты Windows: \(missing.joined(separator: ", "))… Первый раз это несколько минут.")
+        progress(t("Ставлю компоненты Windows: \(missing.joined(separator: ", "))… Первый раз это несколько минут."))
         var env = WineEnvironment.make(engine: engine, prefix: bottle.url)
         env["EXERUNNER_WINE"] = engine.wine.path
         env["EXERUNNER_DYLD_FALLBACK_LIBRARY_PATH"] = env["DYLD_FALLBACK_LIBRARY_PATH"]
@@ -42,7 +42,7 @@ enum Winetricks {
         let status = try await WineProcess.runLogged(executable: URL(fileURLWithPath: "/bin/sh"),
                                                      arguments: [script.path, "-q"] + missing, environment: env, log: log)
         guard status == 0 else {
-            throw AppError("winetricks не поставил \(missing.joined(separator: ", ")) (код \(status)). Журнал: \(log.path)")
+            throw AppError(t("winetricks не поставил \(missing.joined(separator: ", ")) (код \(status)). Журнал: \(log.path)"))
         }
         try done.union(missing).sorted().joined(separator: "\n").write(to: stamp(bottle), atomically: true, encoding: .utf8)
     }

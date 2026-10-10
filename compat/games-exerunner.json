@@ -24,7 +24,9 @@
         {
           "severity": "high",
           "text": "С генерацией кадров (по умолчанию она включена) игра падает на первом кадре: D3DMetal 4 beta 2 её не выдерживает.",
-          "workaround": "Выключи генерацию кадров в настройках бенчмарка. Если до них не дойти: в b1/Saved/Config/Windows/GameUserSettings.ini поставь (\"InsertFrame\", \"0\")."
+          "workaround": "Выключи генерацию кадров в настройках бенчмарка. Если до них не дойти: в b1/Saved/Config/Windows/GameUserSettings.ini поставь (\"InsertFrame\", \"0\").",
+          "textEn": "With frame generation (on by default) the game crashes on the first frame: D3DMetal 4 beta 2 cannot handle it.",
+          "workaroundEn": "Turn frame generation off in the benchmark's settings. If you cannot get to them, set (\"InsertFrame\", \"0\") in b1/Saved/Config/Windows/GameUserSettings.ini."
         }
       ],
       "recommended": {
@@ -35,7 +37,12 @@
         "dllOverrides": {},
         "winetricks": []
       },
-      "alternatives": []
+      "alternatives": [],
+      "notesEn": [
+        "Tested 10/10/2026: Wine 11.16 + D3DMetal 4.0 beta 2, M2 Pro (19-core GPU), 16 GB, macOS 27.2. Steam installs DirectX itself on the first launch, then shaders build for a few minutes.",
+        "Result: Low preset, 1920×1080 borderless, FSR 66%, frame generation off: 40 FPS on average, 31 for the low 5%, 51 at most. Limited by the GPU (99% busy); the game thread is busy ~10 ms out of 24. The minimum of 2 FPS comes from one-off stalls in the first 3 seconds and three of 0.3–0.8 s (shader building).",
+        "Not a clean measurement: two displays (4K 120 Hz and the built-in one), VS Code, Mail, WhatsApp and Steam for Mac open, 22 GB of swap in use."
+      ]
     },
     {
       "id": "black-myth-wukong",
@@ -57,7 +64,9 @@
         {
           "severity": "high",
           "text": "Как у бенчмарка: с генерацией кадров вероятно падение на первом кадре.",
-          "workaround": "Выключи генерацию кадров в настройках игры."
+          "workaround": "Выключи генерацию кадров в настройках игры.",
+          "textEn": "As with the benchmark: with frame generation a crash on the first frame is likely.",
+          "workaroundEn": "Turn frame generation off in the game's settings."
         }
       ],
       "recommended": {
@@ -68,7 +77,10 @@
         "dllOverrides": {},
         "winetricks": []
       },
-      "alternatives": []
+      "alternatives": [],
+      "notesEn": [
+        "Not tested. The benchmark on the same game engine works with frame generation off."
+      ]
     }
   ]
 }

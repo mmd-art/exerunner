@@ -9,9 +9,9 @@ struct BottleSettings: Codable, Equatable {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .automatic: "Автоматически"
+            case .automatic: t("Автоматически")
             case .coreaudio: "CoreAudio"
-            case .disabled: "Выключен"
+            case .disabled: t("Выключен")
             }
         }
     }
@@ -23,9 +23,9 @@ struct BottleSettings: Codable, Equatable {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .standard: "Обычный"
-            case .low: "Низкая задержка"
-            case .stable: "Большой, без треска"
+            case .standard: t("Обычный")
+            case .low: t("Низкая задержка")
+            case .stable: t("Большой, без треска")
             }
         }
         var bufferLength: Int? {
@@ -234,11 +234,11 @@ enum PrefixCheck {
 
     static func describe(_ problem: Problem) -> String {
         switch problem {
-        case .missingPrefix: "Бутылка ещё не создана или не дописана (нет system.reg)"
-        case .missingDriveC: "В бутылке нет диска C:"
-        case .missingUsers: "В бутылке нет папки пользователей"
-        case .missingUserProfile: "В бутылке нет профиля пользователя"
-        case .missingAppData(let path): "В профиле нет папки \(path.replacingOccurrences(of: "/", with: "\\"))"
+        case .missingPrefix: t("Бутылка ещё не создана или не дописана (нет system.reg)")
+        case .missingDriveC: t("В бутылке нет диска C:")
+        case .missingUsers: t("В бутылке нет папки пользователей")
+        case .missingUserProfile: t("В бутылке нет профиля пользователя")
+        case .missingAppData(let path): t("В профиле нет папки \(path.replacingOccurrences(of: "/", with: "\\"))")
         }
     }
 }

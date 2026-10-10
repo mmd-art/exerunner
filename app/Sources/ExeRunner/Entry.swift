@@ -7,7 +7,7 @@ import Foundation
 /// helper's report zip; `--components <bottle> <verb,verb>` installs Windows components;
 /// `--import-d3dmetal <dmg or
 /// folder>` imports D3DMetal from Apple's download;
-/// `--self-test` prints a status report; `--snapshot <dir>` renders screens to PNG.
+/// `--self-test` prints a status report; `--snapshot <dir> [--language en|ru]` renders screens to PNG.
 @main
 enum Entry {
     static func main() {
@@ -28,7 +28,10 @@ enum Entry {
         } else if args.contains("--self-test") {
             Headless.selfTest()
         } else if let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count {
-            Headless.snapshot(to: URL(fileURLWithPath: args[index + 1], isDirectory: true))
+            // --language en|ru renders in that language whatever the settings say
+            let language = args.firstIndex(of: "--language").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+                .map { $0.hasPrefix("ru") ? InterfaceLanguage.russian : InterfaceLanguage.english }
+            Headless.snapshot(to: URL(fileURLWithPath: args[index + 1], isDirectory: true), language: language)
         } else {
             ExeRunnerApp.main()
         }
@@ -145,12 +148,12 @@ enum Headless {
         dispatchMain()
     }
 
-    static func snapshot(to dir: URL) -> Never {
+    static func snapshot(to dir: URL, language: InterfaceLanguage?) -> Never {
         // an app object without a window: views need NSApplication, nothing shows on screen
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         Task { @MainActor in
-            await Snapshots.render(to: dir)
+            await Snapshots.render(to: dir, language: language)
             exit(0)
         }
         app.run()

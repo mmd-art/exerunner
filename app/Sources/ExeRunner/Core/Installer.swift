@@ -5,20 +5,20 @@ enum Installer {
     /// `environment` comes on top of the recipe's, for the installer and what it starts.
     static func install(_ recipe: Recipe, engine: Engine, bottlesRoot: URL, log: URL? = nil, environment: [String: String] = [:],
                         progress: @escaping (String) -> Void) async throws -> LibraryItem {
-        guard let exe = recipe.executable else { throw AppError("В рецепте «\(recipe.name)» не указано, что запускать") }
+        guard let exe = recipe.executable else { throw AppError(t("В рецепте «\(recipe.name)» не указано, что запускать")) }
         let bottle = Bottle(name: recipe.bottle, root: bottlesRoot)
         let log = log ?? Paths.logFile("install-\(recipe.id)")
-        progress("Готовлю бутылку «\(recipe.bottle)»…")
+        progress(t("Готовлю бутылку «\(recipe.bottle)»…"))
         try await BottleManager.ensure(bottle, engine: engine, log: log)
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
         if let found = installedPath(exe, in: bottle) {
-            progress("\(recipe.name) уже установлен")
+            progress(t("\(recipe.name) уже установлен"))
             return item(for: recipe, executable: found)
         }
-        guard let url = recipe.installerURL else { throw AppError("Для «\(recipe.name)» пока нет установщика") }
-        progress("Скачиваю установщик \(recipe.name)…")
+        guard let url = recipe.installerURL else { throw AppError(t("Для «\(recipe.name)» пока нет установщика")) }
+        progress(t("Скачиваю установщик \(recipe.name)…"))
         let file = try await download(url, sha256: recipe.installerSHA256)
-        progress("Устанавливаю \(recipe.name)…")
+        progress(t("Устанавливаю \(recipe.name)…"))
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: recipe.environment.merging(environment) { $1 })
         let command = file.pathExtension.lowercased() == "msi" ? ["msiexec", "/i", file.path] : [file.path]
         let status = try await WineProcess.run(engine: engine, arguments: command + recipe.installerArguments,
@@ -31,7 +31,7 @@ enum Installer {
             try? await Task.sleep(for: .seconds(2))
         }
         if let found = installedPath(exe, in: bottle) { return item(for: recipe, executable: found) }
-        throw AppError("Установщик «\(recipe.name)» завершился с кодом \(status), но программа не появилась. Журнал: \(log.path)")
+        throw AppError(t("Установщик «\(recipe.name)» завершился с кодом \(status), но программа не появилась. Журнал: \(log.path)"))
     }
 
     /// The recipe's program where the installer put it: 64-bit installers use Program Files,
@@ -61,10 +61,10 @@ enum Installer {
         }
         let (temp, response) = try await URLSession.shared.download(from: url)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw AppError("Не удалось скачать \(url.lastPathComponent): HTTP \(http.statusCode)")
+            throw AppError(t("Не удалось скачать \(url.lastPathComponent): HTTP \(http.statusCode)"))
         }
         if let sha256, try sha256Hex(of: temp) != sha256 {
-            throw AppError("Контрольная сумма \(url.lastPathComponent) не совпала, файл не используется")
+            throw AppError(t("Контрольная сумма \(url.lastPathComponent) не совпала, файл не используется"))
         }
         // some download links carry no file name (Battle.net's); wine needs the extension
         if !installerTypes.contains((name as NSString).pathExtension.lowercased()) {
@@ -82,11 +82,11 @@ enum Installer {
     static func runInstaller(_ file: URL, bottle: Bottle, engine: Engine,
                              progress: @escaping (String) -> Void) async throws -> [URL] {
         let log = Paths.logFile("install-\(file.deletingPathExtension().lastPathComponent)")
-        progress("Готовлю бутылку «\(bottle.name)»…")
+        progress(t("Готовлю бутылку «\(bottle.name)»…"))
         try await BottleManager.ensure(bottle, engine: engine, log: log)
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
         let before = executables(in: bottle)
-        progress("Идёт установка: пройди шаги в окне установщика")
+        progress(t("Идёт установка: пройди шаги в окне установщика"))
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
         let arguments = file.pathExtension.lowercased() == "msi" ? ["msiexec", "/i", file.path] : [file.path]
         // not waiting for the bottle to go idle: many installers start the program at the end

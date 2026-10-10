@@ -6,7 +6,8 @@ name Ubisoft Connect
 kind launcher
 status experimental
 symbol u.circle
-about Лаунчер Ubisoft. Интерфейс через DXVK. Ещё не проверен на нашем движке.
+about Лаунчер Ubisoft. Интерфейс через DXVK. Ставится и открывает вход (10/10/2026), вход и игры ещё не проверены.
+about-en Ubisoft's launcher. Its window draws through DXVK. Installs and opens the sign-in page (10/10/2026); signing in and games are not tested yet.
 bottle ubisoft
 installer https://static3.cdn.ubi.com/orbit/launcher_installer/UbisoftConnectInstaller.exe /S
 exe C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\UbisoftConnect.exe

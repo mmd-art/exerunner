@@ -50,8 +50,8 @@ extension AppState {
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         switch remedy {
         case .install(let verbs):
-            guard let engine else { errorMessage = "Движок не найден"; return }
-            let token = beginActivity("Ставлю компоненты Windows: \(verbs.joined(separator: ", "))…")
+            guard let engine else { errorMessage = t("Движок не найден"); return }
+            let token = beginActivity(t("Ставлю компоненты Windows: \(verbs.joined(separator: ", "))…"))
             defer { endActivity(token) }
             let log = Paths.logFile("\(item.id)-components")
             do {
@@ -95,7 +95,7 @@ extension AppState {
             await refreshProcesses()
         case .testAudio:
             guard let engine, FileManager.default.fileExists(atPath: engine.audioTest.path) else { return }
-            let token = beginActivity("Проигрываю тестовый звук…")
+            let token = beginActivity(t("Проигрываю тестовый звук…"))
             defer { endActivity(token) }
             let output = FileManager.default.temporaryDirectory.appendingPathComponent("exerunner-audio-\(UUID().uuidString).log")
             defer { try? FileManager.default.removeItem(at: output) }
@@ -160,51 +160,51 @@ extension AppState {
     }
 
     private func engineCheck() -> Check {
-        let title = "Движок"
-        guard let engine else { return Check(title: title, status: .problem, detail: "Движок не найден. Укажи его папку в настройках.") }
+        let title = t("Движок")
+        guard let engine else { return Check(title: title, status: .problem, detail: t("Движок не найден. Укажи его папку в настройках.")) }
         guard rosettaInstalled else {
-            return Check(title: title, status: .problem, detail: "Нет Rosetta, а без неё движок (x86_64) не запустится. Поставь её в настройках.")
+            return Check(title: title, status: .problem, detail: t("Нет Rosetta, а без неё движок (x86_64) не запустится. Поставь её в настройках."))
         }
         var missing: [String] = []
-        if !engine.hasCompatModule { missing.append("модуля совместимости") }
+        if !engine.hasCompatModule { missing.append(t("модуля совместимости")) }
         if !engine.hasDXVK { missing.append("DXVK") }
         if !engine.hasMoltenVK { missing.append("MoltenVK") }
         let version = engineVersion ?? "Wine"
-        if !missing.isEmpty { return Check(title: title, status: .warning, detail: "\(version): нет \(missing.joined(separator: ", ")).") }
-        return Check(title: title, status: .ok, detail: "\(version) с DXVK, MoltenVK и модулем совместимости.")
+        if !missing.isEmpty { return Check(title: title, status: .warning, detail: t("\(version): нет \(missing.joined(separator: ", ")).")) }
+        return Check(title: title, status: .ok, detail: t("\(version) с DXVK, MoltenVK и модулем совместимости."))
     }
 
     private func d3dmetalCheck() -> Check {
         if let version = engine?.d3dmetalVersion {
-            return Check(title: "D3DMetal", status: .ok, detail: "Подключён, версия \(version): DirectX 11 и 12 идут через Metal.")
+            return Check(title: "D3DMetal", status: .ok, detail: t("Подключён, версия \(version): DirectX 11 и 12 идут через Metal."))
         }
         return Check(title: "D3DMetal", status: .warning,
-                     detail: "Не подключён: DirectX 11 и 12 идут через DXVK или встроенный wined3d, это медленнее, а DirectX 12 почти не работает. Подключи его в настройках.")
+                     detail: t("Не подключён: DirectX 11 и 12 идут через DXVK или встроенный wined3d, это медленнее, а DirectX 12 почти не работает. Подключи его в настройках."))
     }
 
     private func prefixCheck(_ bottle: Bottle) -> Check {
-        let title = "Бутылка «\(bottle.name)»"
-        guard bottle.exists else { return Check(title: title, status: .info, detail: "Ещё не создана: появится при первом запуске.") }
+        let title = t("Бутылка «\(bottle.name)»")
+        guard bottle.exists else { return Check(title: title, status: .info, detail: t("Ещё не создана: появится при первом запуске.")) }
         let problems = PrefixCheck.problems(in: bottle)
-        if problems.isEmpty { return Check(title: title, status: .ok, detail: "Цела: диск C:, профиль пользователя и AppData на месте.") }
+        if problems.isEmpty { return Check(title: title, status: .ok, detail: t("Цела: диск C:, профиль пользователя и AppData на месте.")) }
         return Check(title: title, status: .problem, detail: problems.map(PrefixCheck.describe).joined(separator: ". ") + ".",
                      remedies: [.note(Remedy.advice["prefix"]!)])
     }
 
     /// The last launch's output through the crash patterns, optionally only some categories
     private func outputCheck(_ item: LibraryItem, only categories: Set<CrashPattern.Category>? = nil) -> Check {
-        let title = followsClient[item.id] != nil || item.isSteamGame ? "Журнал запуска (общий со Steam)" : "Журнал запуска"
+        let title = followsClient[item.id] != nil || item.isSteamGame ? t("Журнал запуска (общий со Steam)") : t("Журнал запуска")
         guard let text = segment(for: item.id)?.window() else {
-            return Check(title: title, status: .info, detail: "Журнала пока нет: запусти программу и проверь снова.")
+            return Check(title: title, status: .info, detail: t("Журнала пока нет: запусти программу и проверь снова."))
         }
         var diagnosis = CrashClassifier.shared.classify(text)
         if let categories { diagnosis = CrashDiagnosis(matches: diagnosis.matches.filter { categories.contains($0.pattern.category) }) }
         guard let primary = diagnosis.primary else {
-            return Check(title: title, status: .ok, detail: "Известных ошибок нет.")
+            return Check(title: title, status: .ok, detail: t("Известных ошибок нет."))
         }
-        let more = diagnosis.matches.count > 1 ? " Всего находок: \(diagnosis.matches.count)." : ""
+        let more = diagnosis.matches.count > 1 ? t(" Всего находок: \(diagnosis.matches.count).") : ""
         return Check(title: title, status: primary.pattern.severity >= .error ? .problem : .warning,
-                     detail: "\(diagnosis.headline), \(diagnosis.confidenceTitle). Строка \(primary.lineNumber): \(primary.line.prefix(180))\(more)",
+                     detail: t("\(diagnosis.headline), \(diagnosis.confidenceTitle). Строка \(primary.lineNumber): \(primary.line.prefix(180))\(more)"),
                      remedies: remedies(for: diagnosis, item: item))
     }
 
@@ -213,7 +213,7 @@ extension AppState {
         guard let report = UnrealCrashReport.latest(in: crashReportRoots(for: item), since: launchTimes[item.id]) else { return [] }
         let diagnosis = UnrealCrashReport.diagnosis(report)
         let when = report.date.formatted(date: .abbreviated, time: .shortened)
-        return [Check(title: "Отчёт о вылете Unreal", status: .problem, detail: "\(when): \(diagnosis.primary?.line ?? report.error)",
+        return [Check(title: t("Отчёт о вылете Unreal"), status: .problem, detail: "\(when): \(diagnosis.primary?.line ?? report.error)",
                       remedies: remedies(for: diagnosis, item: item))]
     }
 
@@ -221,97 +221,97 @@ extension AppState {
         guard let profile = profile(for: item), !profile.recommended.winetricks.isEmpty else { return [] }
         let installed = Winetricks.installed(in: bottle)
         let missing = profile.recommended.winetricks.filter { !installed.contains($0) }
-        let title = "Компоненты из базы"
+        let title = t("Компоненты из базы")
         if missing.isEmpty {
-            return [Check(title: title, status: .ok, detail: "Стоят: \(profile.recommended.winetricks.joined(separator: ", ")).")]
+            return [Check(title: title, status: .ok, detail: t("Стоят: \(profile.recommended.winetricks.joined(separator: ", "))."))]
         }
-        let when = item.useRecommended ? "Поставятся при следующем запуске, или сейчас." : "Рекомендации базы для этой игры выключены."
-        return [Check(title: title, status: .warning, detail: "«\(profile.title)» нужны \(missing.joined(separator: ", ")). \(when)",
+        let when = item.useRecommended ? t("Поставятся при следующем запуске, или сейчас.") : t("Рекомендации базы для этой игры выключены.")
+        return [Check(title: title, status: .warning, detail: t("«\(profile.title)» нужны \(missing.joined(separator: ", ")). \(when)"),
                       remedies: [.install(missing)])]
     }
 
     private func missingLibrariesCheck(_ item: LibraryItem) -> Check {
-        let title = "Недостающие DLL"
+        let title = t("Недостающие DLL")
         guard let text = segment(for: item.id)?.window() else {
-            return Check(title: title, status: .info, detail: "Журнала пока нет: после запуска здесь будет видно, каких библиотек не хватило.")
+            return Check(title: title, status: .info, detail: t("Журнала пока нет: после запуска здесь будет видно, каких библиотек не хватило."))
         }
         let failures = CrashDiagnosis(matches: CrashClassifier.shared.classify(text).matches
             .filter { $0.pattern.category == .dependenciesLoading })
         let names = failures.missingLibraries
-        guard !names.isEmpty else { return Check(title: title, status: .ok, detail: "В журнале нет ошибок загрузки библиотек.") }
-        var detail = "Не загрузились: \(names.joined(separator: ", "))."
+        guard !names.isEmpty else { return Check(title: title, status: .ok, detail: t("В журнале нет ошибок загрузки библиотек.")) }
+        var detail = t("Не загрузились: \(names.joined(separator: ", ")).")
         let unknown = names.filter { MissingLibrary.verb(for: $0) == nil }
-        if !unknown.isEmpty { detail += " Для \(unknown.joined(separator: ", ")) готового компонента нет: проверь, что программа установлена целиком." }
+        if !unknown.isEmpty { detail += t(" Для \(unknown.joined(separator: ", ")) готового компонента нет: проверь, что программа установлена целиком.") }
         return Check(title: title, status: .problem, detail: detail, remedies: remedies(for: failures, item: item))
     }
 
     private func antiCheatChecks(_ item: LibraryItem) -> [Check] {
         guard let antiCheat = profile(for: item)?.antiCheat else { return [] }
-        return [Check(title: "Античит", status: .warning, detail: "В игре \(antiCheat). \(Remedy.advice["anticheat"]!)")]
+        return [Check(title: t("Античит"), status: .warning, detail: t("В игре \(antiCheat). \(Remedy.advice["anticheat"]!)"))]
     }
 
     private func graphicsCheck(_ item: LibraryItem) -> Check {
         let current = effectiveGraphics(item)
-        var detail = "Сейчас: \(current.title)."
+        var detail = t("Сейчас: \(current.title).")
         var remedies: [Remedy] = []
         if let profile = profile(for: item), profile.recommended.graphics != current {
-            detail += " База рекомендует: \(profile.recommended.graphics.title)."
+            detail += t(" База рекомендует: \(profile.recommended.graphics.title).")
             if canTargetExecutables(item) { remedies.append(.graphics(profile.recommended.graphics)) }
         }
         if let other = otherGraphics(for: item), !remedies.contains(.graphics(other)) { remedies.append(.graphics(other)) }
         if item.isSteamGame, !canTargetExecutables(item) {
-            detail += " Её .exe нет в базе, поэтому графика переключается, только когда Steam запускается вместе с игрой."
+            detail += t(" Её .exe нет в базе, поэтому графика переключается, только когда Steam запускается вместе с игрой.")
         }
-        return Check(title: "Графика", status: .info, detail: detail, remedies: remedies)
+        return Check(title: t("Графика"), status: .info, detail: detail, remedies: remedies)
     }
 
     private func raytracingChecks(_ item: LibraryItem) -> [Check] {
         guard itemEnvironment(item)["D3DM_SUPPORT_DXR"] == "1" else { return [] }
-        return [Check(title: "Трассировка лучей", status: .warning,
-                      detail: "Включена. На Mac она часто роняет игру или даёт артефакты.", remedies: [.raytracingOff])]
+        return [Check(title: t("Трассировка лучей"), status: .warning,
+                      detail: t("Включена. На Mac она часто роняет игру или даёт артефакты."), remedies: [.raytracingOff])]
     }
 
     private func gpuCheck() -> Check {
-        Check(title: "Видеочип", status: .info, detail: GPUProbe.summary() ?? "Metal не отвечает.")
+        Check(title: t("Видеочип"), status: .info, detail: GPUProbe.summary() ?? t("Metal не отвечает."))
     }
 
     private func launcherChecks(_ item: LibraryItem, _ bottle: Bottle) -> [Check] {
         var result: [Check] = []
         if let detected = detectedLauncher(for: item) {
-            result.append(Check(title: "Тип лаунчера", status: .problem,
-                                detail: "Похоже на \(detected.name), но его настройки не применены. Без них интерфейс лаунчера обычно чёрный или падает.",
+            result.append(Check(title: t("Тип лаунчера"), status: .problem,
+                                detail: t("Похоже на \(detected.name), но его настройки не применены. Без них интерфейс лаунчера обычно чёрный или падает."),
                                 remedies: [.linkLauncher(id: detected.id, name: detected.name)]))
         }
         let launcher = item.isSteamGame ? steamClient(for: item) : item
         guard let launcher, let recipe = recipe(launcher.recipeID), recipe.kind == .launcher else {
             if result.isEmpty {
-                result.append(Check(title: "Тип лаунчера", status: .info, detail: "Это не лаунчер из каталога. Общие проверки собраны в разделе «Не запускается»."))
+                result.append(Check(title: t("Тип лаунчера"), status: .info, detail: t("Это не лаунчер из каталога. Общие проверки собраны в разделе «Не запускается».")))
             }
             return result
         }
-        result.append(Check(title: "Тип лаунчера", status: .ok,
-                            detail: "\(recipe.name): его окна рисуются через DXVK (\(recipe.dxvkExecutables.joined(separator: ", ")))."))
+        result.append(Check(title: t("Тип лаунчера"), status: .ok,
+                            detail: t("\(recipe.name): его окна рисуются через DXVK (\(recipe.dxvkExecutables.joined(separator: ", "))).")))
         if bottle.exists, let engine {
             let shipped = engine.dxvk.appendingPathComponent("x64/d3d11.dll").path
             let inBottle = bottle.driveC.appendingPathComponent("windows/system32/d3d11.dll").path
             if !FileManager.default.contentsEqual(atPath: shipped, andPath: inBottle) {
-                result.append(Check(title: "DXVK в бутылке", status: .warning, detail: "Ещё не скопирован: появится при следующем запуске из приложения."))
+                result.append(Check(title: t("DXVK в бутылке"), status: .warning, detail: t("Ещё не скопирован: появится при следующем запуске из приложения.")))
             }
         }
         let own = processes(of: launcher, in: processTable)
         if recipe.discoversSteamGames {
             let helpers = processTable.filter { $0.prefix == bottle.prefixPath && $0.name.lowercased() == "steamwebhelper.exe" }
             if own.isEmpty {
-                result.append(Check(title: "Steam", status: .info, detail: "Сейчас не запущен."))
+                result.append(Check(title: "Steam", status: .info, detail: t("Сейчас не запущен.")))
             } else if helpers.isEmpty {
                 result.append(Check(title: "Steam", status: .problem,
-                                    detail: "Запущен, но его интерфейс (steamwebhelper) не поднялся: окно будет чёрным или пустым.",
+                                    detail: t("Запущен, но его интерфейс (steamwebhelper) не поднялся: окно будет чёрным или пустым."),
                                     remedies: [.restartBottle]))
             } else {
-                result.append(Check(title: "Steam", status: .ok, detail: "Запущен, интерфейс работает (steamwebhelper: \(helpers.count))."))
+                result.append(Check(title: "Steam", status: .ok, detail: t("Запущен, интерфейс работает (steamwebhelper: \(helpers.count)).")))
             }
         } else {
-            result.append(Check(title: recipe.name, status: .info, detail: own.isEmpty ? "Сейчас не запущен." : "Запущен."))
+            result.append(Check(title: recipe.name, status: .info, detail: own.isEmpty ? t("Сейчас не запущен.") : t("Запущен.")))
         }
         return result
     }
@@ -323,66 +323,66 @@ extension AppState {
             var notes: [String] = []
             if output.channels == 0 {
                 status = .problem
-                notes.append("у него нет выходных каналов")
+                notes.append(t("у него нет выходных каналов"))
             }
             if output.sampleRate > 0, output.sampleRate < 22050 {
                 status = .problem
-                notes.append("гарнитура в режиме разговора: выбери её как наушники без микрофона")
+                notes.append(t("гарнитура в режиме разговора: выбери её как наушники без микрофона"))
             } else if output.sampleRate > 0, output.sampleRate < 44100 {
                 status = max(status, .warning)
-                notes.append("лучше 44100 или 48000 Гц")
+                notes.append(t("лучше 44100 или 48000 Гц"))
             }
             if output.isBluetooth {
                 status = max(status, .warning)
-                notes.append("Bluetooth добавляет задержку, проводные надёжнее")
+                notes.append(t("Bluetooth добавляет задержку, проводные надёжнее"))
             }
-            let rate = output.sampleRate > 0 ? ", \(Int(output.sampleRate)) Гц" : ""
-            result.append(Check(title: "Выход звука на Mac", status: status,
+            let rate = output.sampleRate > 0 ? t(", \(Int(output.sampleRate)) Гц") : ""
+            result.append(Check(title: t("Выход звука на Mac"), status: status,
                                 detail: "\(output.name)\(rate)" + (notes.isEmpty ? "." : ": " + notes.joined(separator: "; ") + ".")))
         } else {
-            result.append(Check(title: "Выход звука на Mac", status: .problem,
-                                detail: "macOS не отдаёт устройство вывода. Выбери его в Настройках системы → Звук."))
+            result.append(Check(title: t("Выход звука на Mac"), status: .problem,
+                                detail: t("macOS не отдаёт устройство вывода. Выбери его в Настройках системы → Звук.")))
         }
 
         let settings = settings(forBottle: item.bottle)
         let registry = BottleManager.registryValues(in: bottle, hive: "user.reg", key: "Software\\\\Wine\\\\Drivers")
         if settings.audioDriver == .disabled {
-            result.append(Check(title: "Звук в бутылке", status: .problem, detail: "Выключен в настройках бутылки «\(item.bottle)».",
+            result.append(Check(title: t("Звук в бутылке"), status: .problem, detail: t("Выключен в настройках бутылки «\(item.bottle)»."),
                                 remedies: [.audioDriver(.automatic)]))
         } else if registry?["audio"] == "" {
-            result.append(Check(title: "Звук в бутылке", status: .problem, detail: "В реестре бутылки звук выключен, хотя в настройках включён.",
+            result.append(Check(title: t("Звук в бутылке"), status: .problem, detail: t("В реестре бутылки звук выключен, хотя в настройках включён."),
                                 remedies: [.audioDriver(settings.audioDriver)]))
         } else {
-            result.append(Check(title: "Звук в бутылке", status: .ok, detail: "Драйвер: \(settings.audioDriver.title.lowercased()).",
+            result.append(Check(title: t("Звук в бутылке"), status: .ok, detail: t("Драйвер: \(settings.audioDriver.title.lowercased())."),
                                 remedies: settings.audioDriver == .automatic ? [.audioDriver(.coreaudio)] : []))
         }
-        result.append(Check(title: "Буфер звука", status: settings.audioLatency == .low ? .warning : .info,
+        result.append(Check(title: t("Буфер звука"), status: settings.audioLatency == .low ? .warning : .info,
                             detail: settings.audioLatency == .low
-                                ? "Низкая задержка: под нагрузкой даёт треск."
-                                : "\(settings.audioLatency.title). Если звук трещит или заикается, поможет буфер побольше.",
+                                ? t("Низкая задержка: под нагрузкой даёт треск.")
+                                : t("\(settings.audioLatency.title). Если звук трещит или заикается, поможет буфер побольше."),
                             remedies: settings.audioLatency == .stable ? [] : [.audioLatency(.stable)]))
         if let test = audioTests[item.bottle] {
-            result.append(Check(title: "Тестовый звук", status: test.ok ? .ok : .problem, detail: test.detail, remedies: [.testAudio]))
+            result.append(Check(title: t("Тестовый звук"), status: test.ok ? .ok : .problem, detail: test.detail, remedies: [.testAudio]))
         } else if engine.map({ FileManager.default.fileExists(atPath: $0.audioTest.path) }) == true {
-            result.append(Check(title: "Тестовый звук", status: .info,
-                                detail: "Проиграет короткий сигнал через звук Windows в этой бутылке: так видно, доходит ли звук до Mac.",
+            result.append(Check(title: t("Тестовый звук"), status: .info,
+                                detail: t("Проиграет короткий сигнал через звук Windows в этой бутылке: так видно, доходит ли звук до Mac."),
                                 remedies: [.testAudio]))
         }
-        result.append(Check(title: "Звуковые устройства Windows", status: .info,
-                            detail: "Если звук ушёл не туда или пропал после смены наушников, сбрось устройства: бутылка остановится и найдёт их заново.",
+        result.append(Check(title: t("Звуковые устройства Windows"), status: .info,
+                            detail: t("Если звук ушёл не туда или пропал после смены наушников, сбрось устройства: бутылка остановится и найдёт их заново."),
                             remedies: [.resetAudio]))
         return result
     }
 
     private func controllerChecks(_ item: LibraryItem) -> [Check] {
         let pads = ControllerProbe.connected()
-        var result = [Check(title: "Геймпады", status: pads.isEmpty ? .warning : .ok,
+        var result = [Check(title: t("Геймпады"), status: pads.isEmpty ? .warning : .ok,
                             detail: pads.isEmpty
-                                ? "macOS не видит ни одного. Подключи геймпад кабелем или по Bluetooth и проверь в Настройках системы → Игровые контроллеры."
-                                : "Подключены: \(pads.joined(separator: ", ")). Игра видит их как контроллеры XInput.")]
+                                ? t("macOS не видит ни одного. Подключи геймпад кабелем или по Bluetooth и проверь в Настройках системы → Игровые контроллеры.")
+                                : t("Подключены: \(pads.joined(separator: ", ")). Игра видит их как контроллеры XInput."))]
         if item.isSteamGame {
             result.append(Check(title: "Steam Input", status: .info,
-                                detail: "Если игра не видит геймпад, включи Steam Input в свойствах игры в Steam (раздел «Контроллер»)."))
+                                detail: t("Если игра не видит геймпад, включи Steam Input в свойствах игры в Steam (раздел «Контроллер»).")))
         }
         return result
     }
@@ -392,20 +392,20 @@ extension AppState {
         let keys = ["System\\\\CurrentControlSet\\\\Services\\\\Tcpip\\\\Parameters", "System\\\\ControlSet001\\\\Services\\\\Tcpip\\\\Parameters"]
         let dns = keys.compactMap { BottleManager.registryValues(in: bottle, hive: "system.reg", key: $0)?["nameserver"] }.first { !$0.isEmpty }
         if let dns {
-            result.append(Check(title: "DNS", status: .problem, detail: "В бутылке прописан свой DNS (\(dns)), из-за него лаунчеры не находят серверы.",
+            result.append(Check(title: "DNS", status: .problem, detail: t("В бутылке прописан свой DNS (\(dns)), из-за него лаунчеры не находят серверы."),
                                 remedies: [.clearDNSOverride]))
         } else {
-            result.append(Check(title: "DNS", status: .ok, detail: "Бутылка берёт DNS у Mac."))
+            result.append(Check(title: "DNS", status: .ok, detail: t("Бутылка берёт DNS у Mac.")))
         }
         let client = item.isSteamGame ? steamClient(for: item) : (recipe(item.recipeID)?.discoversSteamGames == true ? item : nil)
         if let client {
             if processes(of: client, in: processTable).isEmpty {
-                result.append(Check(title: "Загрузки Steam", status: .info, detail: "Steam не запущен."))
+                result.append(Check(title: t("Загрузки Steam"), status: .info, detail: t("Steam не запущен.")))
             } else if let minutes = stalledDownloadMinutes(SteamLibrary.root(in: bottle).appendingPathComponent("steamapps/downloading")) {
-                result.append(Check(title: "Загрузки Steam", status: .warning, detail: "Загрузка не двигается \(minutes) мин.",
+                result.append(Check(title: t("Загрузки Steam"), status: .warning, detail: t("Загрузка не двигается \(minutes) мин."),
                                     remedies: [.note(Remedy.advice["steam-download"]!)]))
             } else {
-                result.append(Check(title: "Загрузки Steam", status: .ok, detail: "Зависших загрузок нет."))
+                result.append(Check(title: t("Загрузки Steam"), status: .ok, detail: t("Зависших загрузок нет.")))
             }
         }
         return result
@@ -432,26 +432,26 @@ extension AppState {
         var result: [Check] = []
         let info = ProcessInfo.processInfo
         result.append(info.isLowPowerModeEnabled
-            ? Check(title: "Энергосбережение", status: .warning, detail: "Включено: macOS снижает частоты. Выключи его в Настройках системы → Аккумулятор.")
-            : Check(title: "Энергосбережение", status: .ok, detail: "Выключено."))
+            ? Check(title: t("Энергосбережение"), status: .warning, detail: t("Включено: macOS снижает частоты. Выключи его в Настройках системы → Аккумулятор."))
+            : Check(title: t("Энергосбережение"), status: .ok, detail: t("Выключено.")))
         switch info.thermalState {
         case .serious, .critical:
-            result.append(Check(title: "Температура", status: .warning, detail: "Mac перегрет, частоты уже снижены."))
+            result.append(Check(title: t("Температура"), status: .warning, detail: t("Mac перегрет, частоты уже снижены.")))
         default:
-            result.append(Check(title: "Температура", status: .ok, detail: "Перегрева нет."))
+            result.append(Check(title: t("Температура"), status: .ok, detail: t("Перегрева нет.")))
         }
-        result.append(Check(title: "Память", status: system.memoryGB < 16 ? .warning : .ok,
+        result.append(Check(title: t("Память"), status: system.memoryGB < 16 ? .warning : .ok,
                             detail: system.memoryGB < 16
-                                ? "\(system.memoryGB) ГБ: игре и Rosetta тесно. Закрой браузер и другие тяжёлые программы."
-                                : "\(system.memoryGB) ГБ."))
+                                ? t("\(system.memoryGB) ГБ: игре и Rosetta тесно. Закрой браузер и другие тяжёлые программы.")
+                                : t("\(system.memoryGB) ГБ.")))
         if engine?.d3dmetalVersion == nil { result.append(d3dmetalCheck()) }
         if effectiveGraphics(item) == .dxvk, environment(for: item)["DXVK_ASYNC"] != "1" {
-            result.append(Check(title: "Шейдеры DXVK", status: .info,
-                                detail: "Без асинхронной сборки шейдеров игра дёргается, когда впервые показывает эффект.",
+            result.append(Check(title: t("Шейдеры DXVK"), status: .info,
+                                detail: t("Без асинхронной сборки шейдеров игра дёргается, когда впервые показывает эффект."),
                                 remedies: [.variable(name: "DXVK_ASYNC", value: "1")]))
         }
         if !item.performanceHUD {
-            result.append(Check(title: "Замер", status: .info, detail: "Счётчик FPS покажет кадры в секунду и время кадра прямо в игре.",
+            result.append(Check(title: t("Замер"), status: .info, detail: t("Счётчик FPS покажет кадры в секунду и время кадра прямо в игре."),
                                 remedies: [.performanceHUD]))
         }
         return result
@@ -489,7 +489,7 @@ extension AppState {
             let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? Paths.home
             return try await DiagnosticReport.export(input, to: downloads)
         } catch {
-            errorMessage = "Отчёт не сохранился: \(error.localizedDescription)"
+            errorMessage = t("Отчёт не сохранился: \(error.localizedDescription)")
             return nil
         }
     }

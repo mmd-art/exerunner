@@ -16,6 +16,12 @@ struct GameProfile: Codable, Identifiable, Hashable {
         var severity: String?
         var text: String?
         var workaround: String?
+        /// English beside this app's own entries, which are written in Russian
+        var textEn: String?
+        var workaroundEn: String?
+
+        var localizedText: String? { L10n.english ? (textEn ?? text) : text }
+        var localizedWorkaround: String? { L10n.english ? (workaroundEn ?? workaround) : workaround }
     }
 
     enum Verdict { case good, caution, bad, unknown }
@@ -29,9 +35,12 @@ struct GameProfile: Codable, Identifiable, Hashable {
     var rating: String
     var antiCheat: String?
     var notes: [String]
+    var notesEn: [String]?
     var issues: [Issue]
     var recommended: Variant
     var alternatives: [Variant]
+
+    var localizedNotes: [String] { L10n.english ? (notesEn ?? notes) : notes }
 
     var verdict: Verdict {
         switch rating {
@@ -43,11 +52,11 @@ struct GameProfile: Codable, Identifiable, Hashable {
 
     var ratingTitle: String {
         switch rating {
-        case "playable": "Играбельно"
-        case "works": "Работает"
-        case "broken": "Не работает"
-        case "notSupported": "Не поддерживается"
-        default: "Не проверено"
+        case "playable": t("Играбельно")
+        case "works": t("Работает")
+        case "broken": t("Не работает")
+        case "notSupported": t("Не поддерживается")
+        default: t("Не проверено")
         }
     }
 
@@ -57,7 +66,7 @@ struct GameProfile: Codable, Identifiable, Hashable {
         case "epic": "Epic"
         case "gog": "GOG"
         case "battlenet": "Battle.net"
-        default: "другой магазин"
+        default: t("другой магазин")
         }
     }
 

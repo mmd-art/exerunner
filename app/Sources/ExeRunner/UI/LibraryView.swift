@@ -14,18 +14,18 @@ struct LibraryView: View {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 30) {
-                    section("Лаунчеры", state.launchers)
-                    section("Игры", state.games)
-                    section("Программы", state.programs)
+                    section(t("Лаунчеры"), state.launchers)
+                    section(t("Игры"), state.games)
+                    section(t("Программы"), state.programs)
                 }
                 .padding(24)
             }
         }
-        .navigationTitle("Библиотека")
+        .navigationTitle(t("Библиотека"))
         .toolbar {
             ToolbarItemGroup {
-                Button { addingProgram = true } label: { Label("Добавить программу", systemImage: "plus") }
-                Button { Task { await state.refresh() } } label: { Label("Обновить", systemImage: "arrow.clockwise") }
+                Button { addingProgram = true } label: { Label(t("Добавить программу"), systemImage: "plus") }
+                Button { Task { await state.refresh() } } label: { Label(t("Обновить"), systemImage: "arrow.clockwise") }
             }
         }
         .sheet(isPresented: $addingProgram) { AddProgramSheet() }
@@ -34,11 +34,11 @@ struct LibraryView: View {
     private var empty: some View {
         VStack(spacing: 14) {
             Image(systemName: "square.grid.2x2").font(.system(size: 44, weight: .light)).foregroundStyle(.secondary)
-            Text("Библиотека пока пустая").font(.title2.weight(.semibold))
-            Text("Поставь лаунчер или добавь свою программу").foregroundStyle(.secondary)
+            Text(t("Библиотека пока пустая")).font(.title2.weight(.semibold))
+            Text(t("Поставь лаунчер или добавь свою программу")).foregroundStyle(.secondary)
             HStack {
-                Button("Открыть каталог", action: openCatalog).buttonStyle(.pillProminent)
-                Button("Добавить программу…") { addingProgram = true }
+                Button(t("Открыть каталог"), action: openCatalog).buttonStyle(.pillProminent)
+                Button(t("Добавить программу…")) { addingProgram = true }
             }
             .buttonStyle(.pill)
         }
@@ -73,31 +73,31 @@ struct ItemTile: View {
                 HStack(spacing: 6) {
                     VerdictBadge(profile: profile)
                     if !profile.recommended.winetricks.isEmpty, item.useRecommended {
-                        Badge(text: "+ компоненты")
+                        Badge(text: t("+ компоненты"))
                     }
                 }
             }
             if let diagnosis = state.diagnoses[item.id] {
                 Button { troubleshooting = .launch } label: {
-                    Label(diagnosis.primary?.pattern.category.shortTitle ?? "Ошибка", systemImage: "exclamationmark.triangle.fill")
+                    Label(diagnosis.primary?.pattern.category.shortTitle ?? t("Ошибка"), systemImage: "exclamationmark.triangle.fill")
                         .lineLimit(1)
                 }
                 .buttonStyle(.pillCompact)
                 .foregroundStyle(.orange)
-                .help("\(diagnosis.headline). Открыть помощника")
+                .help(t("\(diagnosis.headline). Открыть помощника"))
             }
             HStack(spacing: 8) {
                 if state.running.contains(item.id) {
                     let active = state.active.contains(item.id)
                     Button { Task { await state.stop(item) } } label: {
-                        Label(active ? "Остановить" : "Запускается…", systemImage: active ? "stop.fill" : "hourglass")
+                        Label(active ? t("Остановить") : t("Запускается…"), systemImage: active ? "stop.fill" : "hourglass")
                     }
                     .buttonStyle(.pillCompact)
-                    .help(active ? (item.kind == .launcher ? "Закрыть лаунчер и всё, что он запустил" : "Закрыть только эту программу")
-                                 : "Отменить запуск")
+                    .help(active ? (item.kind == .launcher ? t("Закрыть лаунчер и всё, что он запустил") : t("Закрыть только эту программу"))
+                                 : t("Отменить запуск"))
                 } else {
                     Button { state.launch(item) } label: {
-                        Label(item.kind == .game ? "Играть" : "Открыть", systemImage: "play.fill")
+                        Label(item.kind == .game ? t("Играть") : t("Открыть"), systemImage: "play.fill")
                     }
                     .buttonStyle(.pillCompactProminent)
                 }
@@ -140,16 +140,16 @@ struct ItemTile: View {
 
     @ViewBuilder
     private var menuItems: some View {
-        Button("Настройки запуска…") { editing = true }
-        Button("Помощник по проблемам…") { troubleshooting = state.diagnoses[item.id] == nil ? (item.kind == .launcher ? .launcher : .launch) : .launch }
-        Button(state.hasShortcut(item) ? "Убрать из Программ на Mac" : "Добавить в Программы на Mac") { state.toggleShortcut(item) }
-        Button("Показать в Finder") { state.reveal(item) }
-        Button("Открыть журнал") { state.openLog(item) }
+        Button(t("Настройки запуска…")) { editing = true }
+        Button(t("Помощник по проблемам…")) { troubleshooting = state.diagnoses[item.id] == nil ? (item.kind == .launcher ? .launcher : .launch) : .launch }
+        Button(state.hasShortcut(item) ? t("Убрать из Программ на Mac") : t("Добавить в Программы на Mac")) { state.toggleShortcut(item) }
+        Button(t("Показать в Finder")) { state.reveal(item) }
+        Button(t("Открыть журнал")) { state.openLog(item) }
         Divider()
-        Button("Остановить всё в бутылке «\(item.bottle)»") { Task { await state.stopBottle(item) } }
+        Button(t("Остановить всё в бутылке «\(item.bottle)»")) { Task { await state.stopBottle(item) } }
         if state.isSaved(item) {
             Divider()
-            Button(item.isSteamGame ? "Сбросить настройки игры" : "Убрать из библиотеки", role: .destructive) { state.remove(item) }
+            Button(item.isSteamGame ? t("Сбросить настройки игры") : t("Убрать из библиотеки"), role: .destructive) { state.remove(item) }
         }
     }
 }
@@ -167,12 +167,12 @@ struct ItemSettingsView: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    TextField("Название", text: $item.name)
+                    TextField(t("Название"), text: $item.name)
                     if item.recipeID == nil, let detected = state.detectedLauncher(for: item) {
                         HStack {
-                            Text("Похоже на \(detected.name), но его настройки не применены.").foregroundStyle(.secondary)
+                            Text(t("Похоже на \(detected.name), но его настройки не применены.")).foregroundStyle(.secondary)
                             Spacer()
-                            Button("Применить") {
+                            Button(t("Применить")) {
                                 item.recipeID = detected.id
                                 item.kind = .launcher
                             }
@@ -181,60 +181,60 @@ struct ItemSettingsView: View {
                     }
                 }
                 if let profile = state.profile(for: item) {
-                    Section("База совместимости") {
-                        Toggle("Применять рекомендованные настройки", isOn: $item.useRecommended)
+                    Section(t("База совместимости")) {
+                        Toggle(t("Применять рекомендованные настройки"), isOn: $item.useRecommended)
                         GameProfileDetails(profile: profile)
                     }
                 }
-                Section("Графика") {
+                Section(t("Графика")) {
                     if state.canTargetExecutables(item) {
                         Picker("DirectX", selection: $item.graphics) {
                             ForEach(LibraryItem.Graphics.allCases) { Text($0.title).tag($0) }
                         }
                     }
-                    Toggle("DLSS через MetalFX", isOn: $item.metalFX)
-                    Toggle("Трассировка лучей (DXR)", isOn: $item.raytracing)
-                    Toggle("Счётчик FPS (Metal HUD)", isOn: $item.performanceHUD)
+                    Toggle(t("DLSS через MetalFX"), isOn: $item.metalFX)
+                    Toggle(t("Трассировка лучей (DXR)"), isOn: $item.raytracing)
+                    Toggle(t("Счётчик FPS (Metal HUD)"), isOn: $item.performanceHUD)
                 }
-                Section("Запуск") {
-                    TextField(item.isSteamGame ? "Параметры запуска игры" : "Аргументы", text: $argumentsText,
-                              prompt: Text("например -dx12"))
-                    TextField("Переменные окружения", text: $environmentText,
-                              prompt: Text("ИМЯ=значение, по одной на строку"), axis: .vertical)
+                Section(t("Запуск")) {
+                    TextField(item.isSteamGame ? t("Параметры запуска игры") : t("Аргументы"), text: $argumentsText,
+                              prompt: Text(t("например -dx12")))
+                    TextField(t("Переменные окружения"), text: $environmentText,
+                              prompt: Text(t("ИМЯ=значение, по одной на строку")), axis: .vertical)
                         .lineLimit(3...6)
-                    TextField("Переопределения DLL", text: $overridesText,
-                              prompt: Text("dll=native, builtin или пусто, чтобы выключить"), axis: .vertical)
+                    TextField(t("Переопределения DLL"), text: $overridesText,
+                              prompt: Text(t("dll=native, builtin или пусто, чтобы выключить")), axis: .vertical)
                         .lineLimit(1...4)
-                    Picker("Язык программы", selection: $item.locale) {
-                        Text("По умолчанию").tag(String?.none)
+                    Picker(t("Язык программы"), selection: $item.locale) {
+                        Text(t("По умолчанию")).tag(String?.none)
                         ForEach(ProgramLocale.all, id: \.id) { Text($0.title).tag(String?.some($0.id)) }
                     }
-                    Picker("Журнал", selection: $item.logging) {
+                    Picker(t("Журнал"), selection: $item.logging) {
                         ForEach(LibraryItem.Logging.allCases) { Text($0.title).tag($0) }
                     }
                 }
                 Section {
-                    Picker("Звук", selection: $bottle.audioDriver) {
+                    Picker(t("Звук"), selection: $bottle.audioDriver) {
                         ForEach(BottleSettings.AudioDriver.allCases) { Text($0.title).tag($0) }
                     }
-                    Picker("Буфер звука", selection: $bottle.audioLatency) {
+                    Picker(t("Буфер звука"), selection: $bottle.audioLatency) {
                         ForEach(BottleSettings.AudioLatency.allCases) { Text($0.title).tag($0) }
                     }
                     Toggle(isOn: $bottle.discordBridge) {
-                        Text("Статус игры в Discord")
-                        Text("Игра сможет показывать в Discord на Mac, во что ты играешь.")
+                        Text(t("Статус игры в Discord"))
+                        Text(t("Игра сможет показывать в Discord на Mac, во что ты играешь."))
                     }
                     .disabled(state.engine?.hasDiscordBridge != true)
                 } header: {
-                    Text("Бутылка «\(item.bottle)»")
+                    Text(t("Бутылка «\(item.bottle)»"))
                 } footer: {
-                    Text("Эти настройки общие для всех программ этой бутылки.").foregroundStyle(.secondary)
+                    Text(t("Эти настройки общие для всех программ этой бутылки.")).foregroundStyle(.secondary)
                 }
                 if item.isSteamGame {
                     Section {
                         Text(state.canTargetExecutables(item)
-                             ? "Графика, переменные и DLL доходят до игры, даже если её запускает уже открытый Steam: приложение знает её .exe из базы. Параметры запуска действуют при запуске отсюда. Язык и подробный журнал Wine читает при старте, поэтому они действуют, когда Steam запускается вместе с игрой."
-                             : "Этой игры нет в базе, её .exe неизвестен. Настройки дойдут до неё, если Steam запускается вместе с игрой: закрой Steam и запусти игру отсюда.")
+                             ? t("Графика, переменные и DLL доходят до игры, даже если её запускает уже открытый Steam: приложение знает её .exe из базы. Параметры запуска действуют при запуске отсюда. Язык и подробный журнал Wine читает при старте, поэтому они действуют, когда Steam запускается вместе с игрой.")
+                             : t("Этой игры нет в базе, её .exe неизвестен. Настройки дойдут до неё, если Steam запускается вместе с игрой: закрой Steam и запусти игру отсюда."))
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
@@ -242,8 +242,8 @@ struct ItemSettingsView: View {
             .formStyle(.grouped)
             HStack {
                 Spacer()
-                Button("Отмена") { dismiss() }
-                Button("Сохранить") { save(); dismiss() }
+                Button(t("Отмена")) { dismiss() }
+                Button(t("Сохранить")) { save(); dismiss() }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
             }
@@ -298,7 +298,7 @@ struct ItemSettingsView: View {
 /// Locales a program can be started in; Wine takes the Windows language from LC_ALL
 enum ProgramLocale {
     static let all: [(id: String, title: String)] = [
-        ("en_US.UTF-8", "English"), ("ru_RU.UTF-8", "Русский"), ("uk_UA.UTF-8", "Українська"),
+        ("en_US.UTF-8", "English"), ("ru_RU.UTF-8", "Русский"), ("uk_UA.UTF-8", "Українська"),  // l10n: own names
         ("de_DE.UTF-8", "Deutsch"), ("fr_FR.UTF-8", "Français"), ("es_ES.UTF-8", "Español"),
         ("it_IT.UTF-8", "Italiano"), ("pt_BR.UTF-8", "Português (Brasil)"), ("pl_PL.UTF-8", "Polski"),
         ("tr_TR.UTF-8", "Türkçe"), ("ja_JP.UTF-8", "日本語"), ("ko_KR.UTF-8", "한국어"),

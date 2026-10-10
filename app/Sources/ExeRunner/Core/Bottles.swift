@@ -94,7 +94,7 @@ enum BottleManager {
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
         _ = try await WineProcess.run(engine: engine, arguments: ["wineboot", "--init"], environment: env, log: log)
         await WineProcess.server("-w", engine: engine, environment: env)
-        guard bottle.exists else { throw AppError("Не удалось создать бутылку «\(bottle.name)». Подробности в журнале.") }
+        guard bottle.exists else { throw AppError(t("Не удалось создать бутылку «\(bottle.name)». Подробности в журнале.")) }
     }
 
     static func stop(_ bottle: Bottle, engine: Engine) async {
@@ -109,7 +109,7 @@ enum BottleManager {
 
     /// DXVK's DLLs inside the bottle; only programs with a native override load them
     static func installDXVK(_ bottle: Bottle, engine: Engine) throws {
-        guard engine.hasDXVK else { throw AppError("В движке нет DXVK") }
+        guard engine.hasDXVK else { throw AppError(t("В движке нет DXVK")) }
         for (arch, dir) in [("x64", "system32"), ("x32", "syswow64")] {
             let source = engine.dxvk.appendingPathComponent(arch, isDirectory: true)
             let target = bottle.driveC.appendingPathComponent("windows/\(dir)", isDirectory: true)

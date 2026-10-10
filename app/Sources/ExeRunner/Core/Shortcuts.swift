@@ -16,7 +16,7 @@ enum Shortcuts {
     @discardableResult
     static func create(for item: LibraryItem, icon: NSImage?) throws -> URL {
         guard Bundle.main.bundleURL.pathExtension == "app", let app = Bundle.main.executablePath else {
-            throw AppError("Ярлыки создаёт только собранное приложение (\(AppInfo.name).app)")
+            throw AppError(t("Ярлыки создаёт только собранное приложение (\(AppInfo.name).app)"))
         }
         let bundle = url(for: item)
         try? FileManager.default.removeItem(at: bundle)

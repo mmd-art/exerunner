@@ -96,7 +96,7 @@ if [ -n "$RECIPE" ]; then
     case "$line" in
       ''|'#'*) continue ;;
     esac
-    if [[ "$line" =~ ^(name|kind|status|about|symbol|bottle|installer|sha256|exe|games|shutdown)\ .*$ ]]; then
+    if [[ "$line" =~ ^(name|kind|status|about|about-en|symbol|bottle|installer|sha256|exe|games|shutdown)\ .*$ ]]; then
       :  # catalog metadata, read by the app
     elif [[ "$line" =~ ^env\ ([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
       export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"

@@ -61,9 +61,9 @@ struct RecipeStatusBadge: View {
 
     var body: some View {
         switch status {
-        case .tested: Badge(text: "Проверено", tint: .green)
-        case .experimental: Badge(text: "Экспериментально", tint: .orange)
-        case .planned: Badge(text: "Скоро")
+        case .tested: Badge(text: t("Проверено"), tint: .green)
+        case .experimental: Badge(text: t("Экспериментально"), tint: .orange)
+        case .planned: Badge(text: t("Скоро"))
         }
     }
 }
@@ -74,7 +74,7 @@ struct VerdictBadge: View {
     var body: some View {
         switch profile.verdict {
         case .good: Badge(text: profile.ratingTitle, tint: .green)
-        case .caution: Badge(text: profile.antiCheat.map { "Античит \($0)" } ?? profile.ratingTitle, tint: .orange)
+        case .caution: Badge(text: profile.antiCheat.map { t("Античит \($0)") } ?? profile.ratingTitle, tint: .orange)
         case .bad: Badge(text: profile.ratingTitle, tint: .red)
         case .unknown: Badge(text: profile.ratingTitle)
         }
@@ -89,38 +89,38 @@ struct GameProfileDetails: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 VerdictBadge(profile: profile)
-                if let antiCheat = profile.antiCheat, profile.verdict != .caution { Badge(text: "Античит \(antiCheat)", tint: .orange) }
+                if let antiCheat = profile.antiCheat, profile.verdict != .caution { Badge(text: t("Античит \(antiCheat)"), tint: .orange) }
                 Badge(text: profile.storeTitle)
             }
             if let label = profile.recommended.label {
                 Text(label).font(.headline)
             }
             if let when = profile.recommended.whenToUse { Text(when).foregroundStyle(.secondary) }
-            Text("Графика: \(profile.recommended.graphics.title)")
+            Text(t("Графика: \(profile.recommended.graphics.title)"))
             if !profile.recommended.winetricks.isEmpty {
-                Text("Компоненты Windows: \(profile.recommended.winetricks.joined(separator: ", "))")
+                Text(t("Компоненты Windows: \(profile.recommended.winetricks.joined(separator: ", "))"))
             }
             if !profile.recommended.environment.isEmpty {
-                Text("Переменные: " + profile.recommended.environment.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+                Text(t("Переменные: ") + profile.recommended.environment.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
                     .font(.callout.monospaced())
             }
-            if !profile.notes.isEmpty {
+            if !profile.localizedNotes.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(profile.notes, id: \.self) { Text("· \($0)").foregroundStyle(.secondary) }
+                    ForEach(profile.localizedNotes, id: \.self) { Text("· \($0)").foregroundStyle(.secondary) }
                 }
             }
             if !profile.issues.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Известные проблемы").font(.headline)
+                    Text(t("Известные проблемы")).font(.headline)
                     ForEach(profile.issues, id: \.self) { issue in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(issue.text ?? "")
-                            if let fix = issue.workaround { Text("Что делать: \(fix)").font(.callout).foregroundStyle(.secondary) }
+                            Text(issue.localizedText ?? "")
+                            if let fix = issue.localizedWorkaround { Text(t("Что делать: \(fix)")).font(.callout).foregroundStyle(.secondary) }
                         }
                     }
                 }
             }
-            Text("Источник: база игр Whisky (frankea/Whisky, GPL-3). Оценки там во многом не проверены.")
+            Text(t("Источник: база игр Whisky (frankea/Whisky, GPL-3). Оценки там во многом не проверены."))
                 .font(.caption).foregroundStyle(.tertiary)
         }
         .textSelection(.enabled)
@@ -213,7 +213,7 @@ struct Card<Content: View>: View {
 /// NSOpenPanel instead of SwiftUI's fileImporter: several pickers per screen, and a start folder.
 @MainActor
 enum FilePicker {
-    static func choose(files: Bool = true, folders: Bool = false, startAt: URL? = nil, prompt: String = "Выбрать") -> URL? {
+    static func choose(files: Bool = true, folders: Bool = false, startAt: URL? = nil, prompt: String = t("Выбрать")) -> URL? {
         let panel = NSOpenPanel()
         panel.canChooseFiles = files
         panel.canChooseDirectories = folders

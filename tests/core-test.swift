@@ -141,6 +141,17 @@ check("junction", viaJunction == versioned.appendingPathComponent("app.exe").sta
 check("plain path unchanged", linkBottle.hostURL(forWindowsPath: "C:\\Program Files\\Vendor\\Other\\x.exe")?.path
       == linkBottle.driveC.appendingPathComponent("Program Files/Vendor/Other/x.exe").path)
 
+// interface language: texts written in Russian, values kept apart for the English lookup
+L10n.use(.english)
+check("english text", t("Устанавливаю \("Steam")…") == "Installing Steam…", t("Устанавливаю \("Steam")…"))
+check("text without english", t("Такого текста нет \(1)") == "Такого текста нет 1")
+check("reordered values", L10n.fill("%2$@ then %1$@", ["a", "b"]) == "b then a")
+L10n.use(.russian)
+check("russian text", t("Устанавливаю \("Steam")…") == "Устанавливаю Steam…")
+let saved = try? JSONDecoder().decode(AppSettings.self, from: Data(#"{"onboardingCompleted":true}"#.utf8))
+check("settings from before keep russian", saved?.language == .russian && saved?.onboardingCompleted == true)
+check("new settings follow the mac", AppSettings().language == .system)
+
 // processes: fake wine processes started by tests/core-test.sh, arguments shifted the way wine does
 if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
     let prefix = URL(fileURLWithPath: expected).standardizedFileURL.path

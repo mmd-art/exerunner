@@ -8,9 +8,9 @@ struct LibraryItem: Codable, Identifiable, Hashable {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .automatic: "Авто (D3DMetal)"
+            case .automatic: t("Авто (D3DMetal)")
             case .dxvk: "DXVK (Vulkan)"
-            case .wine: "Встроенная в Wine"
+            case .wine: t("Встроенная в Wine")
             }
         }
     }
@@ -22,10 +22,10 @@ struct LibraryItem: Codable, Identifiable, Hashable {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .normal: "Обычный (ошибки)"
-            case .crash: "Вылеты: исключения и потоки"
-            case .dllLoad: "Загрузка DLL"
-            case .verbose: "Всё подряд (медленно, огромный)"
+            case .normal: t("Обычный (ошибки)")
+            case .crash: t("Вылеты: исключения и потоки")
+            case .dllLoad: t("Загрузка DLL")
+            case .verbose: t("Всё подряд (медленно, огромный)")
             }
         }
         var wineDebug: String {

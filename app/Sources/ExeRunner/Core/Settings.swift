@@ -4,6 +4,19 @@ struct AppSettings: Codable, Equatable {
     var enginePath: String?
     var bottlesPath: String?
     var onboardingCompleted = false
+    var language: InterfaceLanguage = .system
+
+    init() {}
+
+    // settings saved before a field existed keep their other values
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        enginePath = try c.decodeIfPresent(String.self, forKey: .enginePath)
+        bottlesPath = try c.decodeIfPresent(String.self, forKey: .bottlesPath)
+        onboardingCompleted = try c.decodeIfPresent(Bool.self, forKey: .onboardingCompleted) ?? false
+        // settings from before the choice of language: the interface was Russian then
+        language = (try? c.decodeIfPresent(InterfaceLanguage.self, forKey: .language)) ?? .russian
+    }
 
     var bottlesRoot: URL {
         bottlesPath.map { URL(fileURLWithPath: $0, isDirectory: true) } ?? Paths.defaultBottles

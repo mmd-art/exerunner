@@ -13,14 +13,14 @@ enum Symptom: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .launch: "Не запускается или вылетает"
-        case .launcher: "Лаунчер не работает"
-        case .graphics: "Чёрный экран, артефакты"
-        case .audio: "Нет звука или он трещит"
-        case .controller: "Геймпад не работает"
-        case .dependencies: "Просит компоненты Windows"
-        case .network: "Сеть и загрузки"
-        case .performance: "Тормозит"
+        case .launch: t("Не запускается или вылетает")
+        case .launcher: t("Лаунчер не работает")
+        case .graphics: t("Чёрный экран, артефакты")
+        case .audio: t("Нет звука или он трещит")
+        case .controller: t("Геймпад не работает")
+        case .dependencies: t("Просит компоненты Windows")
+        case .network: t("Сеть и загрузки")
+        case .performance: t("Тормозит")
         }
     }
 
@@ -84,42 +84,42 @@ enum Remedy: Hashable, Identifiable {
     /// The button's title; nil for advice
     var action: String? {
         switch self {
-        case .install(let verbs): "Установить \(verbs.joined(separator: ", "))"
-        case .graphics(let graphics): "Графика: \(graphics.title)"
-        case .raytracingOff: "Выключить трассировку лучей"
-        case .metalFXOff: "Выключить DLSS через MetalFX"
-        case .logging(let logging): "Журнал: \(logging.title.lowercased())"
-        case .linkLauncher(_, let name): "Применить настройки \(name)"
+        case .install(let verbs): t("Установить \(verbs.joined(separator: ", "))")
+        case .graphics(let graphics): t("Графика: \(graphics.title)")
+        case .raytracingOff: t("Выключить трассировку лучей")
+        case .metalFXOff: t("Выключить DLSS через MetalFX")
+        case .logging(let logging): t("Журнал: \(logging.title.lowercased())")
+        case .linkLauncher(_, let name): t("Применить настройки \(name)")
         case .audioDriver(let driver):
             switch driver {
-            case .automatic: "Включить звук"
-            case .coreaudio: "Звук напрямую через CoreAudio"
-            case .disabled: "Выключить звук"
+            case .automatic: t("Включить звук")
+            case .coreaudio: t("Звук напрямую через CoreAudio")
+            case .disabled: t("Выключить звук")
             }
         case .audioLatency(let latency):
             switch latency {
-            case .standard: "Вернуть обычный буфер"
-            case .low: "Уменьшить задержку"
-            case .stable: "Увеличить буфер"
+            case .standard: t("Вернуть обычный буфер")
+            case .low: t("Уменьшить задержку")
+            case .stable: t("Увеличить буфер")
             }
-        case .resetAudio: "Сбросить звуковые устройства"
-        case .testAudio: "Проиграть тестовый звук"
-        case .restartBottle: "Перезапустить бутылку"
-        case .clearDNSOverride: "Убрать подмену DNS"
-        case .performanceHUD: "Включить счётчик FPS"
-        case .variable(let name, let value): "Задать \(name)=\(value)"
+        case .resetAudio: t("Сбросить звуковые устройства")
+        case .testAudio: t("Проиграть тестовый звук")
+        case .restartBottle: t("Перезапустить бутылку")
+        case .clearDNSOverride: t("Убрать подмену DNS")
+        case .performanceHUD: t("Включить счётчик FPS")
+        case .variable(let name, let value): t("Задать \(name)=\(value)")
         case .note: nil
         }
     }
 
     /// Advice for the crash patterns' info:<topic> remedies
     static let advice: [String: String] = [
-        "prefix": "Бутылка могла повредиться. Если проверка бутылки в разделе «Не запускается» нашла ошибки, поможет новая бутылка; программы в ней придётся поставить заново.",
-        "network": "Сетевая ошибка внутри Windows-программы. Проверь интернет, VPN и время на Mac; лаунчеры через Wine иногда не проходят проверку TLS, тогда помогает повтор позже.",
-        "anticheat": "Античит (EasyAntiCheat, BattlEye) не пускает Wine на Mac. Это ограничение античита, настройками его не обойти.",
-        "steam-download": "Загрузка в Steam застряла: смени регион загрузки (Steam → Настройки → Загрузки) и очисти там же кэш загрузок.",
-        "path": "Wine не нашёл или не смог открыть файл программы. Проверь путь в настройках запуска или переустанови программу.",
-        "frame-generation": "Если в игре включена генерация кадров (Frame Generation, FSR 3, DLSS 3), выключи её в настройках игры: на D3DMetal 4 beta она роняет некоторые игры на первом кадре, так было с Black Myth: Wukong.",
+        "prefix": t("Бутылка могла повредиться. Если проверка бутылки в разделе «Не запускается» нашла ошибки, поможет новая бутылка; программы в ней придётся поставить заново."),
+        "network": t("Сетевая ошибка внутри Windows-программы. Проверь интернет, VPN и время на Mac; лаунчеры через Wine иногда не проходят проверку TLS, тогда помогает повтор позже."),
+        "anticheat": t("Античит (EasyAntiCheat, BattlEye) не пускает Wine на Mac. Это ограничение античита, настройками его не обойти."),
+        "steam-download": t("Загрузка в Steam застряла: смени регион загрузки (Steam → Настройки → Загрузки) и очисти там же кэш загрузок."),
+        "path": t("Wine не нашёл или не смог открыть файл программы. Проверь путь в настройках запуска или переустанови программу."),
+        "frame-generation": t("Если в игре включена генерация кадров (Frame Generation, FSR 3, DLSS 3), выключи её в настройках игры: на D3DMetal 4 beta она роняет некоторые игры на первом кадре, так было с Black Myth: Wukong."),
     ]
 }
 
@@ -185,7 +185,7 @@ enum GPUProbe {
     static func summary() -> String? {
         guard let device = MTLCreateSystemDefaultDevice() else { return nil }
         let budget = Double(device.recommendedMaxWorkingSetSize) / 1_073_741_824
-        return "\(device.name), до \(String(format: "%.0f", budget)) ГБ памяти под графику"
+        return t("\(device.name), до \(String(format: "%.0f", budget)) ГБ памяти под графику")
     }
 }
 
@@ -201,11 +201,11 @@ struct AudioTestResult {
         ok = json["status"] as? String == "ok"
         if ok {
             let rate = json["sampleRate"] as? Int ?? 44100, channels = json["channels"] as? Int ?? 2
-            detail = "Звук Windows работает: сигнал прозвучал (\(rate / 1000),\(rate % 1000 / 100) кГц, \(channels == 2 ? "стерео" : "\(channels) канала")). Не услышал — проверь громкость и выход звука на Mac."
+            detail = t("Звук Windows работает: сигнал прозвучал (\(rate / 1000),\(rate % 1000 / 100) кГц, \(channels == 2 ? t("стерео") : t("\(channels) канала"))). Не услышал — проверь громкость и выход звука на Mac.")
         } else if let api = json["api"] as? String {
-            detail = "Звук не открылся: \(api) вернул код \(json["code"] as? Int ?? -1)."
+            detail = t("Звук не открылся: \(api) вернул код \(json["code"] as? Int ?? -1).")
         } else {
-            detail = "Проверка звука не ответила."
+            detail = t("Проверка звука не ответила.")
         }
         date = Date()
     }

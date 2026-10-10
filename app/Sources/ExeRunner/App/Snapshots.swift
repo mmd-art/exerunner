@@ -5,8 +5,9 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
-    static func render(to dir: URL) async {
+    static func render(to dir: URL, language: InterfaceLanguage? = nil) async {
         let state = AppState()
+        if let language { L10n.use(language) }
         await state.refresh()
         try? Paths.ensure(dir)
         let screens: [(String, AnyView)] = [

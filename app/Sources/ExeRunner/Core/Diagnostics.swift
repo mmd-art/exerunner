@@ -9,26 +9,26 @@ struct CrashPattern: Decodable {
 
         var title: String {
             switch self {
-            case .coreCrashFatal: "Вылет"
-            case .graphics: "Графика"
-            case .dependenciesLoading: "Не хватает компонентов"
-            case .prefixFilesystem: "Бутылка или файлы"
-            case .networkingLaunchers: "Сеть или лаунчер"
-            case .antiCheatUnsupported: "Античит"
-            case .otherUnknown: "Другое"
+            case .coreCrashFatal: t("Вылет")
+            case .graphics: t("Графика")
+            case .dependenciesLoading: t("Не хватает компонентов")
+            case .prefixFilesystem: t("Бутылка или файлы")
+            case .networkingLaunchers: t("Сеть или лаунчер")
+            case .antiCheatUnsupported: t("Античит")
+            case .otherUnknown: t("Другое")
             }
         }
 
         /// For a tile's badge, where the full headline does not fit
         var shortTitle: String {
             switch self {
-            case .coreCrashFatal: "Вылет"
-            case .graphics: "Ошибка графики"
-            case .dependenciesLoading: "Нет компонента"
-            case .prefixFilesystem: "Ошибка бутылки"
-            case .networkingLaunchers: "Ошибка сети"
-            case .antiCheatUnsupported: "Античит"
-            case .otherUnknown: "Ошибка"
+            case .coreCrashFatal: t("Вылет")
+            case .graphics: t("Ошибка графики")
+            case .dependenciesLoading: t("Нет компонента")
+            case .prefixFilesystem: t("Ошибка бутылки")
+            case .networkingLaunchers: t("Ошибка сети")
+            case .antiCheatUnsupported: t("Античит")
+            case .otherUnknown: t("Ошибка")
             }
         }
     }
@@ -70,11 +70,11 @@ struct CrashDiagnosis {
 
     var confidenceTitle: String {
         guard let confidence = primary?.pattern.confidence else { return "" }
-        return confidence >= 0.8 ? "уверенно" : confidence >= 0.5 ? "вероятно" : "возможно"
+        return confidence >= 0.8 ? t("уверенно") : confidence >= 0.5 ? t("вероятно") : t("возможно")
     }
 
     var headline: String {
-        guard let primary else { return "В журнале нет известных ошибок" }
+        guard let primary else { return t("В журнале нет известных ошибок") }
         let detail = primary.captures.isEmpty ? "" : ": " + primary.captures.joined(separator: ", ")
         return primary.pattern.category.title + detail
     }
@@ -328,7 +328,7 @@ enum UnrealCrashReport {
         let thread = text.range(of: "<IsCrashed>true</IsCrashed>\\s*<ThreadID>[0-9]+</ThreadID>\\s*<ThreadName>[^<]+</ThreadName>",
                                 options: .regularExpression)
             .flatMap { match in text[match].range(of: "(?<=<ThreadName>)[^<]+", options: .regularExpression).map { String(text[$0]) } }
-        return Report(error: field("ErrorMessage") ?? "без описания", thread: thread, renderer: field("RHI.RHIName"),
+        return Report(error: field("ErrorMessage") ?? t("без описания"), thread: thread, renderer: field("RHI.RHIName"),
                       adapter: field("RHI.AdapterName"), date: date, file: file)
     }
 
@@ -338,8 +338,8 @@ enum UnrealCrashReport {
 
     static func diagnosis(_ report: Report) -> CrashDiagnosis {
         var line = report.error
-        if let thread = report.thread { line += " (поток \(thread))" }
-        if let renderer = report.renderer { line += ", \(renderer)" + (report.adapter.map { " на «\($0)»" } ?? "") }
+        if let thread = report.thread { line += t(" (поток \(thread))") }
+        if let renderer = report.renderer { line += ", \(renderer)" + (report.adapter.map { t(" на «\($0)»") } ?? "") }
         return CrashDiagnosis(matches: [.init(pattern: pattern, lineNumber: 0, line: line, captures: [report.error])])
     }
 }

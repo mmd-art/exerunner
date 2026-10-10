@@ -12,23 +12,23 @@ struct CatalogView: View {
                     HStack(spacing: 14) {
                         Image(systemName: "shippingbox").font(.title2).frame(width: 34)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Своя Windows-программа").font(.headline)
-                            Text("Установщик .exe или .msi, или программа, которой не нужна установка").font(.callout).foregroundStyle(.secondary)
+                            Text(t("Своя Windows-программа")).font(.headline)
+                            Text(t("Установщик .exe или .msi, или программа, которой не нужна установка")).font(.callout).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Добавить…") { addingProgram = true }
+                        Button(t("Добавить…")) { addingProgram = true }
                             .buttonStyle(.pillProminent)
                             .disabled(state.engine == nil)
                     }
                 }
-                group("Лаунчеры", kind: .launcher)
-                group("Программы", kind: .program)
+                group(t("Лаунчеры"), kind: .launcher)
+                group(t("Программы"), kind: .program)
                 CompatibilityList()
             }
             .padding(24)
             .frame(maxWidth: 780, alignment: .leading)
         }
-        .navigationTitle("Каталог")
+        .navigationTitle(t("Каталог"))
         .sheet(isPresented: $addingProgram) { AddProgramSheet() }
     }
 
@@ -58,12 +58,12 @@ struct CompatibilityList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Совместимость игр").font(.title3.weight(.semibold))
-                Text("\(state.gameProfiles.count) в базе").foregroundStyle(.secondary)
+                Text(t("Совместимость игр")).font(.title3.weight(.semibold))
+                Text(t("\(state.gameProfiles.count) в базе")).foregroundStyle(.secondary)
             }
-            Text("Проверь игру до покупки. Оценки из базы Whisky, многие ещё не проверены. Игры с античитом уровня ядра не запустятся.")
+            Text(t("Проверь игру до покупки. Оценки из базы Whisky, многие ещё не проверены. Игры с античитом уровня ядра не запустятся."))
                 .font(.callout).foregroundStyle(.secondary)
-            TextField("Найти игру", text: $query)
+            TextField(t("Найти игру"), text: $query)
                 .textFieldStyle(.roundedBorder)
             Card {
                 VStack(spacing: 0) {
@@ -82,7 +82,7 @@ struct CompatibilityList: View {
                         if profile.id != results.prefix(60).last?.id { Divider() }
                     }
                     if results.isEmpty {
-                        Text("Такой игры в базе нет. Это не значит, что она не пойдёт: база маленькая.")
+                        Text(t("Такой игры в базе нет. Это не значит, что она не пойдёт: база маленькая."))
                             .foregroundStyle(.secondary).padding(.vertical, 8)
                     }
                 }
@@ -94,7 +94,7 @@ struct CompatibilityList: View {
                 ScrollView { GameProfileDetails(profile: profile).frame(maxWidth: .infinity, alignment: .leading) }
                 HStack {
                     Spacer()
-                    Button("Закрыть") { shown = nil }.buttonStyle(.pillProminent).keyboardShortcut(.defaultAction)
+                    Button(t("Закрыть")) { shown = nil }.buttonStyle(.pillProminent).keyboardShortcut(.defaultAction)
                 }
             }
             .padding(24)
@@ -114,13 +114,13 @@ struct RecipeRow: View {
                 Image(systemName: recipe.symbol).font(.title2).frame(width: 34)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack { Text(recipe.name).font(.headline); RecipeStatusBadge(status: recipe.status) }
-                    Text(recipe.about).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(recipe.localizedAbout).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 if state.isInstalled(recipe) {
-                    Label("Установлено", systemImage: "checkmark").foregroundStyle(.secondary)
+                    Label(t("Установлено"), systemImage: "checkmark").foregroundStyle(.secondary)
                 } else if recipe.status != .planned {
-                    Button(working ? "Устанавливаю…" : "Установить") {
+                    Button(working ? t("Устанавливаю…") : t("Установить")) {
                         working = true
                         Task {
                             await state.install(recipe)
@@ -142,7 +142,7 @@ struct AddProgramSheet: View {
     enum Mode: String, CaseIterable, Identifiable {
         case installer, portable
         var id: String { rawValue }
-        var title: String { self == .installer ? "Это установщик" : "Запускать как есть" }
+        var title: String { self == .installer ? t("Это установщик") : t("Запускать как есть") }
     }
 
     enum Phase { case form, installing, choose }
@@ -157,7 +157,7 @@ struct AddProgramSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Своя Windows-программа").font(.title2.weight(.semibold))
+            Text(t("Своя Windows-программа")).font(.title2.weight(.semibold))
             switch phase {
             case .form: form
             case .installing: installing
@@ -171,13 +171,13 @@ struct AddProgramSheet: View {
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Button("Выбрать файл…") {
+                Button(t("Выбрать файл…")) {
                     if let url = FilePicker.choose(startAt: Paths.home.appendingPathComponent("Downloads")) { pick(url) }
                 }
                 .buttonStyle(.pill)
-                Text(file?.lastPathComponent ?? "файл .exe или .msi").foregroundStyle(file == nil ? .secondary : .primary).lineLimit(1)
+                Text(file?.lastPathComponent ?? t("файл .exe или .msi")).foregroundStyle(file == nil ? .secondary : .primary).lineLimit(1)
             }
-            TextField("Название в библиотеке", text: $name)
+            TextField(t("Название в библиотеке"), text: $name)
             Picker("", selection: $mode) {
                 ForEach(Mode.allCases) { Text($0.title).tag($0) }
             }
@@ -185,17 +185,17 @@ struct AddProgramSheet: View {
             .labelsHidden()
             .disabled(file?.pathExtension.lowercased() == "msi")
             if mode == .installer {
-                TextField("Бутылка", text: $bottle)
-                Text("Установщик откроется в своём окне, пройди его шаги. Программы можно держать в одной общей бутылке «programs» или дать программе отдельную.")
+                TextField(t("Бутылка"), text: $bottle)
+                Text(t("Установщик откроется в своём окне, пройди его шаги. Программы можно держать в одной общей бутылке «programs» или дать программе отдельную."))
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Text("Программа запускается прямо с того места, где лежит, без копирования. Не перемещай её потом.")
+                Text(t("Программа запускается прямо с того места, где лежит, без копирования. Не перемещай её потом."))
                     .font(.callout).foregroundStyle(.secondary)
             }
             HStack {
                 Spacer()
-                Button("Отмена") { dismiss() }
-                Button(mode == .installer ? "Установить" : "Добавить") { start() }
+                Button(t("Отмена")) { dismiss() }
+                Button(mode == .installer ? t("Установить") : t("Добавить")) { start() }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(file == nil || name.isEmpty || bottle.isEmpty)
@@ -207,17 +207,17 @@ struct AddProgramSheet: View {
     private var installing: some View {
         HStack(spacing: 12) {
             ProgressView().controlSize(.small)
-            Text(state.activity ?? "Идёт установка…").foregroundStyle(.secondary)
+            Text(state.activity ?? t("Идёт установка…")).foregroundStyle(.secondary)
         }
     }
 
     private var choose: some View {
         VStack(alignment: .leading, spacing: 14) {
             if candidates.isEmpty {
-                Text("Установщик закончил, но новых программ я не нашёл. Укажи файл программы вручную.")
+                Text(t("Установщик закончил, но новых программ я не нашёл. Укажи файл программы вручную."))
                     .foregroundStyle(.secondary)
             } else {
-                Text("Какой файл запускать?").font(.headline)
+                Text(t("Какой файл запускать?")).font(.headline)
                 Picker("", selection: $chosen) {
                     ForEach(candidates, id: \.self) { url in
                         Text(url.lastPathComponent + "  ·  " + url.deletingLastPathComponent().lastPathComponent).tag(Optional(url))
@@ -227,13 +227,13 @@ struct AddProgramSheet: View {
                 .labelsHidden()
             }
             HStack {
-                Button("Выбрать вручную…") {
+                Button(t("Выбрать вручную…")) {
                     let start = Bottle(name: bottle, root: state.bottlesRoot).driveC
                     if let url = FilePicker.choose(startAt: start) { finish(url) }
                 }
                 Spacer()
-                Button("Отмена") { dismiss() }
-                Button("Добавить в библиотеку") { if let chosen { finish(chosen) } }
+                Button(t("Отмена")) { dismiss() }
+                Button(t("Добавить в библиотеку")) { if let chosen { finish(chosen) } }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(chosen == nil)

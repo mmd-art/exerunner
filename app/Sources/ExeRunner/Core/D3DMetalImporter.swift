@@ -12,13 +12,13 @@ enum D3DMetalImporter {
 
     static func importPayload(from source: URL, into engine: Engine, progress: @escaping (String) -> Void) async throws -> String {
         guard engine.hasCompatModule else {
-            throw AppError("В движке нет модуля совместимости (cxcompatdb.so), без него D3DMetal не включится")
+            throw AppError(t("В движке нет модуля совместимости (cxcompatdb.so), без него D3DMetal не включится"))
         }
         var mounts: [URL] = []
         do {
-            progress("Ищу D3DMetal в «\(source.lastPathComponent)»…")
+            progress(t("Ищу D3DMetal в «\(source.lastPathComponent)»…"))
             guard let lib = try await findRedist(in: source, mounts: &mounts, depth: 0) else {
-                throw AppError("Не нашёл D3DMetal. Нужен файл Game Porting Toolkit с сайта Apple: Game_Porting_Toolkit_*.dmg")
+                throw AppError(t("Не нашёл D3DMetal. Нужен файл Game Porting Toolkit с сайта Apple: Game_Porting_Toolkit_*.dmg"))
             }
             let version = try await deploy(lib, into: engine, progress: progress)
             await detach(mounts)
@@ -56,7 +56,7 @@ enum D3DMetalImporter {
         try Paths.ensure(mountpoint)
         let result = await Shell.run("/usr/bin/hdiutil",
                                      ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountpoint.path, image.path])
-        guard result.status == 0 else { throw AppError("Не удалось открыть образ \(image.lastPathComponent): \(result.output)") }
+        guard result.status == 0 else { throw AppError(t("Не удалось открыть образ \(image.lastPathComponent): \(result.output)")) }
         return mountpoint
     }
 
@@ -70,22 +70,22 @@ enum D3DMetalImporter {
     private static func deploy(_ lib: URL, into engine: Engine, progress: (String) -> Void) async throws -> String {
         let fm = FileManager.default
         for path in required where !fm.fileExists(atPath: lib.appendingPathComponent(path).path) {
-            throw AppError("В найденном D3DMetal не хватает \(path)")
+            throw AppError(t("В найденном D3DMetal не хватает \(path)"))
         }
         // the unix modules are symlinks to ../../external/libd3dshared.dylib, which finds the
         // framework through @loader_path; copies of them would not load
         let unix = lib.appendingPathComponent("wine/x86_64-unix/d3d12.so")
         guard (try? fm.attributesOfItem(atPath: unix.path)[.type] as? FileAttributeType) == .typeSymbolicLink else {
-            throw AppError("Файлы D3DMetal скопированы без символических ссылок. Возьми их прямо из DMG Apple.")
+            throw AppError(t("Файлы D3DMetal скопированы без символических ссылок. Возьми их прямо из DMG Apple."))
         }
-        progress("Копирую D3DMetal…")
+        progress(t("Копирую D3DMetal…"))
         // outside the engine, which may sit inside the signed app
         let target = Paths.d3dmetal
         try? fm.removeItem(at: target)
         try Paths.ensure(target)
         for part in ["external", "wine"] {
             let result = await Shell.run("/usr/bin/ditto", [lib.appendingPathComponent(part).path, target.appendingPathComponent(part).path])
-            guard result.status == 0 else { throw AppError("Не удалось скопировать D3DMetal: \(result.output)") }
+            guard result.status == 0 else { throw AppError(t("Не удалось скопировать D3DMetal: \(result.output)")) }
         }
         // DLSS through MetalFX: the payload ships the bridge under another name (Apple's Read Me)
         let windows = target.appendingPathComponent("wine/x86_64-windows")

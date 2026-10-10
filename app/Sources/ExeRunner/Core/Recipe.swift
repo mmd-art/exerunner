@@ -19,6 +19,8 @@ struct Recipe: Identifiable, Hashable {
     var kind: Kind = .program
     var status: Status = .experimental
     var about = ""
+    var aboutEnglish: String?
+    var localizedAbout: String { L10n.english ? (aboutEnglish ?? about) : about }
     var symbol = "app"
     var bottle: String
     var installerURL: URL?
@@ -63,12 +65,13 @@ struct Recipe: Identifiable, Hashable {
             if line.isEmpty || line.hasPrefix("#") { continue }
             let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
             let key = parts[0], value = parts.count > 1 ? parts[1] : ""
-            func bad() -> AppError { AppError("\(id).recipe, строка \(number + 1): не понимаю «\(line)»") }
+            func bad() -> AppError { AppError(t("\(id).recipe, строка \(number + 1): не понимаю «\(line)»")) }
             switch key {
             case "name": recipe.name = value
             case "kind": guard let kind = Kind(rawValue: value) else { throw bad() }; recipe.kind = kind
             case "status": guard let status = Status(rawValue: value) else { throw bad() }; recipe.status = status
             case "about": recipe.about = value
+            case "about-en": recipe.aboutEnglish = value
             case "symbol": recipe.symbol = value
             case "bottle": recipe.bottle = value
             case "installer":

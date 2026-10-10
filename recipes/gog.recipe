@@ -4,4 +4,5 @@ kind launcher
 status planned
 symbol g.circle
 about Игры GOG без лаунчера, через открытый загрузчик gogdl. В работе.
+about-en GOG games without the launcher, through the open downloader gogdl. In the works.
 bottle gog
