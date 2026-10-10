@@ -52,14 +52,18 @@ Built by `scripts/build-engine.sh`; nothing below is modified here unless said s
 - `engine/compat/cxcompatdb.c` is ours. It implements the module name and the two functions
   CrossOver's Wine exports for it (`prepend_dll_path`, `add_load_order_override`); CrossOver's
   own module is closed and is not used.
-- `lib/exerunner/discord-bridge.exe` is built with MinGW-w64 from `engine/discord-bridge/bridge.c`
-  (Whisky's, above).
+- `lib/exerunner/discord-bridge.exe` and `lib/exerunner/audio-test.exe` are built with MinGW-w64
+  from `engine/discord-bridge/bridge.c` and `engine/audio-test/audio-test.c` (Whisky's, above).
+- **FFmpeg** 7.1.2 (LGPL-2.1-or-later, decoders only, no GPL parts) and GStreamer's **gst-libav**
+  1.26.0 (LGPL-2.1-or-later) are built here by `scripts/build-engine.sh media`, from their release
+  tarballs, so that game video has decoders.
 - The engine inside the app (`scripts/build-engine.sh portable`) also carries libraries wine
-  opens and links: FreeType, GnuTLS and what it needs, SDL2, GStreamer with a set of plugins, and
-  FFmpeg, copied from x86_64 Homebrew by `tools/bundle-libs.py`. Their formulas, versions and
-  licences are listed in the engine's `LICENSES.md`; most are LGPL or permissive, FFmpeg as
-  Homebrew builds it is GPL-3.0-or-later. Sources are at https://formulae.brew.sh and with each
-  project.
+  opens and links: FreeType, GnuTLS and what it needs, SDL2, and GStreamer with the plugins
+  winegstreamer uses, copied from x86_64 Homebrew by `tools/bundle-libs.py`, with the FFmpeg
+  build above, and Homebrew's own FFmpeg, which wine's media module (`winedmo`) links. Their
+  formulas, versions and licences are listed in the engine's `LICENSES.md`; most are LGPL or
+  permissive, Homebrew's FFmpeg is GPL-3.0-or-later. Sources are at https://formulae.brew.sh and
+  with each project.
 
 ## D3DMetal
 
