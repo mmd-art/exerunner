@@ -30,9 +30,13 @@ PLUGINS = [
     "coreelements", "app", "playback", "typefindfunctions", "videoconvertscale", "audioconvert", "audioresample",
     "volume", "autodetect", "isomp4", "matroska", "avi", "asf", "wavparse", "ogg", "vorbis", "theora", "opus",
     "opusparse", "flac", "audioparsers", "id3demux", "mpg123", "videoparsersbad", "mpegpsdemux", "mpegtsdemux",
-    "libav", "applemedia",
+    "applemedia",
 ]
 PLUGIN_DIR = Path("/usr/local/lib/gstreamer-1.0")
+# FFmpeg's decoders for GStreamer come from our own build (scripts/build-engine.sh media): Homebrew's
+# gst-libav is linked against an older FFmpeg than it ships
+MEDIA = Path(__file__).resolve().parent.parent / "engine/deps/media"
+OWN_PLUGINS = [MEDIA / "lib/gstreamer-1.0/libgstlibav.dylib"]
 
 
 def is_macho(path: Path) -> bool:
@@ -80,7 +84,8 @@ def resolve(reference: str, loader: Path) -> Path | None:
 
 
 def foreign(reference: str) -> bool:
-    return reference.startswith(HOMEBREW) or reference.startswith("@rpath/") or reference.startswith("@loader_path/")
+    return (reference.startswith(HOMEBREW) or reference.startswith(str(MEDIA) + "/")
+            or reference.startswith("@rpath/") or reference.startswith("@loader_path/"))
 
 
 def main() -> None:
@@ -127,6 +132,7 @@ def main() -> None:
 
     plugins_out.mkdir(parents=True, exist_ok=True)
     plugin_files: list[Path] = []
+    plugin_sources: dict[str, Path] = {}
     for plugin in PLUGINS:
         source = PLUGIN_DIR / f"libgst{plugin}.dylib"
         if not source.exists():
@@ -142,6 +148,17 @@ def main() -> None:
         target = plugins_out / source.name
         shutil.copy2(source.resolve(), target)
         plugin_files.append(target)
+        plugin_sources[target.name] = source.resolve()
+
+    for source in OWN_PLUGINS:
+        if not source.exists():
+            print(f"skip {source.name}: not built (scripts/build-engine.sh media)")
+            continue
+        collect(source, f"plugin {source.name}")
+        target = plugins_out / source.name
+        shutil.copy2(source.resolve(), target)
+        plugin_files.append(target)
+        plugin_sources[target.name] = source.resolve()
 
     scanner = next(Path("/usr/local/Cellar/gstreamer").glob("*/libexec/gstreamer-1.0/gst-plugin-scanner"), None)
     if scanner:
@@ -182,24 +199,24 @@ def main() -> None:
     leftovers = []
     for path in [p for p in engine.rglob("*") if p.is_file() and not p.is_symlink() and is_macho(p)]:
         for reference in linked(path) + rpaths(path):
-            if reference.startswith(HOMEBREW):
+            if reference.startswith(HOMEBREW) or reference.startswith(str(MEDIA)):
                 leftovers.append(f"{path.relative_to(engine)} -> {reference}")
     size = sum(p.stat().st_size for p in copied + plugin_files) / 1e6
     print(f"bundled {len(copied)} libraries and {len(plugin_files)} plugins ({size:.0f} MB)")
-    write_licenses(engine, {name: source for name, source in wanted.items()}, plugin_files)
+    write_licenses(engine, {name: source for name, source in wanted.items()}, plugin_sources)
     if leftovers:
         print("still pointing at Homebrew:")
         print("\n".join(leftovers))
         sys.exit(1)
 
 
-def write_licenses(engine: Path, libraries: dict[str, Path], plugins: list[Path]) -> None:
+def write_licenses(engine: Path, libraries: dict[str, Path], plugins: dict[str, Path]) -> None:
     """LICENSES.md: which Homebrew formula and version each copied file comes from, with its
     licence, so whoever passes the engine on can name the sources"""
     import json
     formulas: dict[str, tuple[str, list[str]]] = {}
     sources = [(name, path.resolve()) for name, path in libraries.items()]
-    sources += [(plugin.name, (PLUGIN_DIR / plugin.name).resolve()) for plugin in plugins]
+    sources += [(name, path) for name, path in plugins.items()]
     for name, real in sources:
         parts = real.parts
         if "Cellar" not in parts:
@@ -219,6 +236,10 @@ def write_licenses(engine: Path, libraries: dict[str, Path], plugins: list[Path]
              "| Formula | Version | Licence | Files |", "|---|---|---|---|"]
     for formula, (version, files) in sorted(formulas.items()):
         lines.append(f"| {formula} | {version} | {licences.get(formula, '?')} | {', '.join(sorted(files))} |")
+    own = sorted(name for name, path in sources if str(path).startswith(str(MEDIA)))
+    if own:
+        lines += ["", "Built here by `scripts/build-engine.sh media`, LGPL-2.1-or-later: FFmpeg (decoders only, "
+                  "no GPL parts) and GStreamer's gst-libav: " + ", ".join(own) + "."]
     (engine / "LICENSES.md").write_text("\n".join(lines) + "\n")
     print(f"wrote LICENSES.md ({len(formulas)} formulas)")
 

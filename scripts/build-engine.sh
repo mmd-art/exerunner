@@ -191,6 +191,58 @@ dxvk() {
   echo "DXVK: $(ls "$DIST/lib/dxvk/x64" | tr '\n' ' ')"
 }
 
+# GStreamer's FFmpeg plugin (gst-libav) for game videos in WMV, WMA, MPEG-2 and the like.
+# Homebrew's x86_64 copy is built against an older FFmpeg than the one it ships, so it does not
+# load; this builds FFmpeg 7.1 ourselves, LGPL and decoders only (no encoders, network or
+# devices), and gst-libav 1.26.0 against it and Homebrew's GStreamer 1.26.0, into deps/media.
+# tools/bundle-libs.py then carries them into the portable engine.
+FFMPEG_VERSION=7.1.2
+FFMPEG_SHA256=089bc60fb59d6aecc5d994ff530fd0dcb3ee39aa55867849a2bbc4e555f9c304
+GSTLIBAV_VERSION=1.26.0
+GSTLIBAV_SHA256=707a8b687ff5fddcee5b02415e2ec9b71b4ac44d0b7aec3b477364ceecbf1ecf
+media() {
+  step "media: FFmpeg $FFMPEG_VERSION + gst-libav $GSTLIBAV_VERSION"
+  local deps="$ROOT/engine/deps" prefix="$ROOT/engine/deps/media" work="$ROOT/engine/build/media"
+  fetch_addon "$deps" "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz" "$FFMPEG_SHA256"
+  fetch_addon "$deps" "https://gstreamer.freedesktop.org/src/gst-libav/gst-libav-$GSTLIBAV_VERSION.tar.xz" "$GSTLIBAV_SHA256"
+  rm -rf "$work" "$prefix"
+  mkdir -p "$work"
+  tar -xf "$deps/ffmpeg-$FFMPEG_VERSION.tar.xz" -C "$work"
+  tar -xf "$deps/gst-libav-$GSTLIBAV_VERSION.tar.xz" -C "$work"
+  (cd "$work/ffmpeg-$FFMPEG_VERSION" && ./configure --prefix="$prefix" --enable-cross-compile --arch=x86_64 \
+      --target-os=darwin --cc="clang -arch x86_64" --cxx="clang++ -arch x86_64" \
+      --extra-cflags="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" --extra-ldflags="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" \
+      --enable-shared --disable-static --disable-programs --disable-doc --disable-network --disable-x86asm \
+      --disable-encoders --disable-muxers --disable-devices --disable-avdevice --disable-postproc \
+      --disable-iconv --disable-securetransport --disable-videotoolbox --disable-audiotoolbox --disable-sdl2 \
+      --disable-lzma --disable-xlib --disable-libxcb \
+    && make -j"$(sysctl -n hw.ncpu)" && make install)
+  # meson and ninja for gst-libav, in a venv of their own
+  local venv="$ROOT/engine/build-tools/venv"
+  [ -x "$venv/bin/meson" ] || { python3 -m venv "$venv" && "$venv/bin/pip" install -q meson ninja; }
+  cat > "$work/x86_64.ini" <<INI
+[binaries]
+c = ['clang', '-arch', 'x86_64', '-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET']
+cpp = ['clang++', '-arch', 'x86_64', '-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET']
+objc = ['clang', '-arch', 'x86_64', '-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET']
+ar = 'ar'
+strip = 'strip'
+pkg-config = '$X86/bin/pkg-config'
+[properties]
+pkg_config_libdir = ['$prefix/lib/pkgconfig', '$X86_PC']
+[host_machine]
+system = 'darwin'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
+INI
+  (cd "$work/gst-libav-$GSTLIBAV_VERSION" \
+    && PATH="$venv/bin:$PATH" meson setup build --cross-file "$work/x86_64.ini" --prefix="$prefix" \
+         -Ddoc=disabled -Dtests=disabled \
+    && PATH="$venv/bin:$PATH" ninja -C build && PATH="$venv/bin:$PATH" ninja -C build install)
+  echo "installed $prefix/lib/gstreamer-1.0/libgstlibav.dylib"
+}
+
 # A copy of dist/ that runs on a Mac without Homebrew, for the app to carry: tools/bundle-libs.py
 # brings in the libraries wine opens and links, with a set of GStreamer plugins; cabextract comes
 # along for winetricks. D3DMetal stays out (every user imports their own), and so do the static
@@ -211,13 +263,17 @@ portable() {
   echo "engine at $out ($(du -sh "$out" | cut -f1))"
 }
 
-# Relays a game's Discord pipe to the Discord app on the Mac (engine/discord-bridge/bridge.c)
+# Windows helpers of our own: the Discord bridge, which relays a game's Discord pipe to the
+# Discord app on the Mac (engine/discord-bridge/bridge.c), and the audio check that plays a short
+# tone through Windows audio (engine/audio-test/audio-test.c)
 discord() {
-  step "discord bridge"
+  step "windows helpers"
   mkdir -p "$DIST/lib/exerunner"
   x86_64-w64-mingw32-gcc -O2 -Wall -Wextra -mwindows -static -s \
     -o "$DIST/lib/exerunner/discord-bridge.exe" "$ROOT/engine/discord-bridge/bridge.c"
-  echo "installed $DIST/lib/exerunner/discord-bridge.exe"
+  x86_64-w64-mingw32-gcc -O2 -Wall -static -s \
+    -o "$DIST/lib/exerunner/audio-test.exe" "$ROOT/engine/audio-test/audio-test.c" -lwinmm -lm
+  echo "installed $DIST/lib/exerunner/discord-bridge.exe and audio-test.exe"
 }
 
 fetch_addon() {
@@ -242,8 +298,9 @@ case "${1:-all}" in
   dxvk) dxvk ;;
   compat) compat ;;
   discord) discord ;;
+  media) media ;;
   portable) portable ;;
   winetricks) winetricks ;;
-  all) [ -f "$SRC/VERSION" ] || fetch; tools; configure_x86; build_x86; addons; moltenvk; dxvk; winetricks; compat; discord; portable ;;
-  *) echo "usage: $0 [fetch|tools|configure|make|addons|moltenvk|dxvk|winetricks|compat|discord|portable|all]"; exit 2 ;;
+  all) [ -f "$SRC/VERSION" ] || fetch; tools; configure_x86; build_x86; addons; moltenvk; dxvk; winetricks; compat; discord; media; portable ;;
+  *) echo "usage: $0 [fetch|tools|configure|make|addons|moltenvk|dxvk|winetricks|compat|discord|media|portable|all]"; exit 2 ;;
 esac
