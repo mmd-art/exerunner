@@ -101,6 +101,41 @@ check("jwt", !secret.contains("eyJhbGciOiJIUzI1"), secret)
 let env = Redactor.environment(["STEAM_AUTH": "x", "API_KEY": "y", "HOME": home, "LANG": "en_US.UTF-8"])
 check("environment", env.keys.sorted() == ["HOME", "LANG"] && env["HOME"] == "/Users/<redacted>", "\(env)")
 
+// recipes: a load order with a comma stays one mode
+if let recipe = try? Recipe.parse(id: "t", text: "dll Some Game.exe nvapi64=,msvcp140=native,builtin,vcruntime140=n,b,d3d11=native") {
+    check("dll modes", recipe.dllOverrides == ["Some Game.exe": ["nvapi64": "", "msvcp140": "native,builtin",
+                                                                  "vcruntime140": "n,b", "d3d11": "native"]],
+          "\(recipe.dllOverrides)")
+} else { check("recipe parses", false) }
+check("dll mode without a name", (try? Recipe.parse(id: "t", text: "dll a.exe native,builtin")) == nil)
+
+// Windows links as wine keeps them: "<name>?" with the reparse data in user.WINEREPARSE
+func reparseData(tag: UInt32, target: String, relative: Bool) -> [UInt8] {
+    let name = Array(target.utf16).flatMap { [UInt8($0 & 0xff), UInt8($0 >> 8)] }
+    func le16(_ v: Int) -> [UInt8] { [UInt8(v & 0xff), UInt8(v >> 8)] }
+    let symlink = tag == 0xA000_000C
+    var body = le16(0) + le16(name.count) + le16(name.count) + le16(name.count)   // substitute, then print name
+    if symlink { body += [relative ? 1 : 0, 0, 0, 0] }
+    body += name + name
+    return [UInt8(tag & 0xff), UInt8((tag >> 8) & 0xff), UInt8((tag >> 16) & 0xff), UInt8(tag >> 24)] + le16(body.count) + [0, 0] + body
+}
+let linkBottle = Bottle(name: "links", root: work)
+let versioned = linkBottle.driveC.appendingPathComponent("Program Files/Vendor/1.2.3/App")
+try? FileManager.default.createDirectory(at: versioned, withIntermediateDirectories: true)
+FileManager.default.createFile(atPath: versioned.appendingPathComponent("app.exe").path, contents: Data())
+for (name, data) in [("App", reparseData(tag: 0xA000_000C, target: "1.2.3\\App", relative: true)),
+                     ("Junction", reparseData(tag: 0xA000_0003, target: "\\??\\C:\\Program Files\\Vendor\\1.2.3\\App", relative: false))] {
+    let entry = linkBottle.driveC.appendingPathComponent("Program Files/Vendor/\(name)?")
+    try? FileManager.default.createDirectory(at: entry, withIntermediateDirectories: true)
+    _ = data.withUnsafeBufferPointer { setxattr(entry.path, "user.WINEREPARSE", $0.baseAddress, $0.count, 0, 0) }
+}
+let viaLink = linkBottle.hostURL(forWindowsPath: "C:\\Program Files\\Vendor\\App\\app.exe")?.standardizedFileURL.path
+check("relative windows link", viaLink == versioned.appendingPathComponent("app.exe").standardizedFileURL.path, viaLink ?? "nil")
+let viaJunction = linkBottle.hostURL(forWindowsPath: "C:\\Program Files\\Vendor\\Junction\\app.exe")?.standardizedFileURL.path
+check("junction", viaJunction == versioned.appendingPathComponent("app.exe").standardizedFileURL.path, viaJunction ?? "nil")
+check("plain path unchanged", linkBottle.hostURL(forWindowsPath: "C:\\Program Files\\Vendor\\Other\\x.exe")?.path
+      == linkBottle.driveC.appendingPathComponent("Program Files/Vendor/Other/x.exe").path)
+
 // processes: fake wine processes started by tests/core-test.sh, arguments shifted the way wine does
 if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
     let prefix = URL(fileURLWithPath: expected).standardizedFileURL.path

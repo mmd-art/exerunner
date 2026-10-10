@@ -139,7 +139,13 @@ if [ -n "$RECIPE" ]; then
         for entry in ${dll_lines[@]+"${dll_lines[@]}"}; do
           echo
           echo "[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\${entry%%$'\t'*}\\DllOverrides]"
-          IFS=, read -ra pairs <<< "${entry#*$'\t'}"
+          # a word without "=" continues the mode before it (msvcp140=native,builtin)
+          IFS=, read -ra words <<< "${entry#*$'\t'}"
+          pairs=()
+          for word in "${words[@]}"; do
+            if [[ "$word" == *=* ]] || [ "${#pairs[@]}" -eq 0 ]; then pairs+=("$word")
+            else pairs[${#pairs[@]}-1]+=",$word"; fi
+          done
           for pair in "${pairs[@]}"; do echo "\"${pair%%=*}\"=\"${pair#*=}\""; done
         done
       } > "$reg"

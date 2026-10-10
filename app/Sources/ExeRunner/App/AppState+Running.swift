@@ -43,29 +43,35 @@ extension AppState {
         let token = beginActivity("Готовлю «\(item.name)»…")
         defer { endActivity(token) }
 
-        try await BottleManager.ensure(bottle, engine: engine, log: log)
-        let verbs = winetricksVerbs(in: item.bottle)
-        if !Winetricks.missing(verbs, in: bottle).isEmpty {
-            // winetricks waits for the bottle to go idle, which a running Steam never lets happen
-            if !WineProcesses.list().filter({ $0.prefix == bottle.prefixPath }).isEmpty {
-                reporter(token)("Закрываю программы бутылки «\(item.bottle)», чтобы поставить компоненты Windows…")
-                await quitBottle(item.bottle)
-            }
-            try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: reporter(token))
-        }
-        if !dxvkExecutables(in: item.bottle).isEmpty { try BottleManager.installDXVK(bottle, engine: engine) }
-        try await BottleManager.applyOverrides(bottle, engine: engine, overrides: dllOverrides(in: item.bottle, engine: engine), log: log)
-        BottleManager.installMetalFXFiles(bottle, engine: engine)
-        try await BottleManager.applyFonts(bottle, engine: engine, log: log)
-        let bottleSettings = settings(forBottle: item.bottle)
-        try await BottleManager.applyAudio(bottleSettings, to: bottle, engine: engine, log: log)
-        let compat = try BottleManager.writeCompatEnvironment(bottle, perProgram: perProgramEnvironment(in: item.bottle),
-                                                              d3dmetalOff: skipList(in: item.bottle))
+        let compat = try await prepareBottle(bottle, log: log, engine: engine, progress: reporter(token))
         var extra = environment(for: item)
         extra["EXERUNNER_COMPAT_FILE"] = compat.path
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
-        if bottleSettings.discordBridge { BottleManager.startDiscordBridge(bottle, engine: engine, environment: env) }
+        if settings(forBottle: item.bottle).discordBridge { BottleManager.startDiscordBridge(bottle, engine: engine, environment: env) }
         return (env, log)
+    }
+
+    /// What every program of a bottle shares: the bottle itself, Windows components, DXVK and
+    /// DLL overrides, fonts, audio and the per-program file cxcompatdb.so reads, returned
+    func prepareBottle(_ bottle: Bottle, log: URL, engine: Engine, progress: @escaping (String) -> Void) async throws -> URL {
+        try await BottleManager.ensure(bottle, engine: engine, log: log)
+        try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
+        let verbs = winetricksVerbs(in: bottle.name)
+        if !Winetricks.missing(verbs, in: bottle).isEmpty {
+            // winetricks waits for the bottle to go idle, which a running Steam never lets happen
+            if !WineProcesses.list().filter({ $0.prefix == bottle.prefixPath }).isEmpty {
+                progress("Закрываю программы бутылки «\(bottle.name)», чтобы поставить компоненты Windows…")
+                await quitBottle(bottle.name)
+            }
+            try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: progress)
+        }
+        if !dxvkExecutables(in: bottle.name).isEmpty { try BottleManager.installDXVK(bottle, engine: engine) }
+        try await BottleManager.applyOverrides(bottle, engine: engine, overrides: dllOverrides(in: bottle.name, engine: engine), log: log)
+        BottleManager.installMetalFXFiles(bottle, engine: engine)
+        try await BottleManager.applyFonts(bottle, engine: engine, log: log)
+        try await BottleManager.applyAudio(settings(forBottle: bottle.name), to: bottle, engine: engine, log: log)
+        return try BottleManager.writeCompatEnvironment(bottle, perProgram: perProgramEnvironment(in: bottle.name),
+                                                        d3dmetalOff: skipList(in: bottle.name))
     }
 
     /// A Steam game goes through its bottle's Steam client. A running client is handed the game;

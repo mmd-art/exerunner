@@ -29,6 +29,7 @@ struct Engine: Equatable {
     var dxvk: URL { lib.appendingPathComponent("dxvk", isDirectory: true) }
     var compatModule: URL { lib.appendingPathComponent("wine/x86_64-unix/cxcompatdb.so") }
     var discordBridge: URL { lib.appendingPathComponent("exerunner/discord-bridge.exe") }
+    var audioTest: URL { lib.appendingPathComponent("exerunner/audio-test.exe") }
 
     var isValid: Bool { FileManager.default.isExecutableFile(atPath: wine.path) }
     var hasCompatModule: Bool { FileManager.default.fileExists(atPath: compatModule.path) }

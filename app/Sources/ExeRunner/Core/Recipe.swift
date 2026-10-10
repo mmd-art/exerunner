@@ -7,7 +7,8 @@ import Foundation
 ///   about <one line for the catalog>  symbol <SF Symbol>          bottle <bottle name>
 ///   installer <url> [args...]       sha256 <hex>                  exe <Windows path>
 ///   games steam                     env NAME=value                dxvk program.exe
-///   dll program.exe name=mode,...   (an empty mode disables)      shutdown <args to quit the client>
+///   dll program.exe name=mode,...   (an empty mode disables; msvcp140=native,builtin keeps wine's order)
+///   shutdown <args to quit the client>
 struct Recipe: Identifiable, Hashable {
     enum Kind: String { case launcher, program, game }
     enum Status: String { case tested, experimental, planned }
@@ -30,6 +31,9 @@ struct Recipe: Identifiable, Hashable {
     var dllOverrides: [String: [String: String]] = [:]
     /// Arguments that make a running client quit by itself (Steam's -shutdown)
     var shutdownArguments: [String] = []
+
+    static func == (a: Recipe, b: Recipe) -> Bool { a.id == b.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     static func parse(id: String, text: String) throws -> Recipe {
         var recipe = Recipe(id: id, name: id, bottle: id)
@@ -62,9 +66,18 @@ struct Recipe: Identifiable, Hashable {
                 // the program's name may hold spaces; the overrides are the last word
                 guard let space = value.lastIndex(of: " ") else { throw bad() }
                 let exe = String(value[..<space])
-                for pair in value[value.index(after: space)...].split(separator: ",") {
-                    guard let eq = pair.firstIndex(of: "="), eq != pair.startIndex else { throw bad() }
-                    recipe.dllOverrides[exe, default: [:]][String(pair[..<eq])] = String(pair[pair.index(after: eq)...])
+                // pairs are split on commas, as wine writes a load order with them: a word
+                // without "=" continues the mode before it (msvcp140=native,builtin)
+                var last: String?
+                for pair in value[value.index(after: space)...].split(separator: ",", omittingEmptySubsequences: false) {
+                    guard let eq = pair.firstIndex(of: "=") else {
+                        guard let dll = last, !pair.isEmpty else { throw bad() }
+                        recipe.dllOverrides[exe]![dll]! += "," + pair
+                        continue
+                    }
+                    guard eq != pair.startIndex else { throw bad() }
+                    last = String(pair[..<eq])
+                    recipe.dllOverrides[exe, default: [:]][last!] = String(pair[pair.index(after: eq)...])
                 }
             case "shutdown": recipe.shutdownArguments = value.split(separator: " ").map(String.init)
             default: throw bad()

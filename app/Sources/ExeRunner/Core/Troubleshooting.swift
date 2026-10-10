@@ -71,6 +71,7 @@ enum Remedy: Hashable, Identifiable {
     case audioDriver(BottleSettings.AudioDriver)
     case audioLatency(BottleSettings.AudioLatency)
     case resetAudio
+    case testAudio
     case restartBottle
     case clearDNSOverride
     case performanceHUD
@@ -102,6 +103,7 @@ enum Remedy: Hashable, Identifiable {
             case .stable: "Увеличить буфер"
             }
         case .resetAudio: "Сбросить звуковые устройства"
+        case .testAudio: "Проиграть тестовый звук"
         case .restartBottle: "Перезапустить бутылку"
         case .clearDNSOverride: "Убрать подмену DNS"
         case .performanceHUD: "Включить счётчик FPS"
@@ -184,5 +186,27 @@ enum GPUProbe {
         guard let device = MTLCreateSystemDefaultDevice() else { return nil }
         let budget = Double(device.recommendedMaxWorkingSetSize) / 1_073_741_824
         return "\(device.name), до \(String(format: "%.0f", budget)) ГБ памяти под графику"
+    }
+}
+
+/// What the audio check printed: {"status":"ok","api":"waveOut",...} or {"status":"error",...}
+struct AudioTestResult {
+    let ok: Bool
+    let detail: String
+    let date: Date
+
+    init(output: String) {
+        let line = output.split(separator: "\n").first { $0.hasPrefix("{\"") }.map(String.init) ?? ""
+        let json = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any] ?? [:]
+        ok = json["status"] as? String == "ok"
+        if ok {
+            let rate = json["sampleRate"] as? Int ?? 44100, channels = json["channels"] as? Int ?? 2
+            detail = "Звук Windows работает: сигнал прозвучал (\(rate / 1000),\(rate % 1000 / 100) кГц, \(channels == 2 ? "стерео" : "\(channels) канала")). Не услышал — проверь громкость и выход звука на Mac."
+        } else if let api = json["api"] as? String {
+            detail = "Звук не открылся: \(api) вернул код \(json["code"] as? Int ?? -1)."
+        } else {
+            detail = "Проверка звука не ответила."
+        }
+        date = Date()
     }
 }

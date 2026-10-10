@@ -1,13 +1,16 @@
 # Battle.net. Environment and helper from frankea/Whisky's LauncherPresets.swift
 # (GPL-3.0-or-later). The download link has no file name, the app names it after the response.
 # Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+# Tested 10/10/2026: installs (the setup waits for its Continue button) and starts, but the
+# login page's renderer (32-bit Battle.net.exe --type=renderer, Chromium 108) breaks at the same
+# int3 every time, with or without hardware acceleration; planned until that is solved.
 name Battle.net
 kind launcher
-status experimental
+status planned
 symbol b.circle
-about Лаунчер Blizzard. Интерфейс через DXVK. Ещё не проверен на нашем движке.
+about Лаунчер Blizzard. Ставится и запускается, но страница входа не грузится: его встроенный браузер падает (10/10/2026). Пока выключен.
 bottle battlenet
-installer https://downloader.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live
+installer https://downloader.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live --lang=enUS
 exe C:\Program Files (x86)\Battle.net\Battle.net Launcher.exe
 env LC_ALL=en_US.UTF-8
 env CEF_DISABLE_SANDBOX=1

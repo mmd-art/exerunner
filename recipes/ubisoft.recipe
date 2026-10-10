@@ -1,5 +1,7 @@
 # Ubisoft Connect. Environment from frankea/Whisky's LauncherPresets.swift (GPL-3.0-or-later).
 # Chromium's NVIDIA probe would load D3DMetal's nvapi into the DXVK processes: off there.
+# Everything here is 32-bit, so D3DMetal never applies; UplayWebCore.exe is the Chromium that
+# draws the window, white on wine's own OpenGL path (tested 10/10/2026).
 name Ubisoft Connect
 kind launcher
 status experimental
@@ -12,5 +14,7 @@ env DXVK_ASYNC=1
 env CEF_DISABLE_SANDBOX=1
 dxvk UbisoftConnect.exe
 dxvk upc.exe
+dxvk UplayWebCore.exe
 dll UbisoftConnect.exe nvapi64=,nvapi=,nvngx=
 dll upc.exe nvapi64=,nvapi=,nvngx=
+dll UplayWebCore.exe nvapi64=,nvapi=,nvngx=

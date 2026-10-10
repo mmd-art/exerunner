@@ -84,6 +84,27 @@ extension BottleManager {
         _ = try await WineProcess.run(engine: engine, arguments: ["regedit", "/S", "C:\\\(name)"], environment: env, log: log)
     }
 
+    /// Settings every bottle gets once. Wine's crash debugger is off: its console and "Program
+    /// Error" windows mean nothing to the user, and a program it holds stays half alive, which
+    /// keeps Chromium-based launchers waiting on a renderer that never answers. The crash still
+    /// reaches the log ("wine: Unhandled exception ..."), where the app reads it.
+    static func applyDefaults(_ bottle: Bottle, engine: Engine, log: URL) async throws {
+        let stamp = bottle.url.appendingPathComponent(".exerunner-defaults")
+        let version = "1"
+        if (try? String(contentsOf: stamp, encoding: .utf8)) == version { return }
+        try await importRegistry("""
+
+            [HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AeDebug]
+            "Debugger"=""
+            "Auto"="0"
+
+            [HKEY_CURRENT_USER\\Software\\Wine\\WineDbg]
+            "ShowCrashDialog"=dword:00000000
+
+            """, into: bottle, engine: engine, log: log)
+        try version.write(to: stamp, atomically: true, encoding: .utf8)
+    }
+
     /// The audio driver and buffer, written only when they changed since the last launch. From
     /// frankea/Whisky's WineAudioRegistry.swift (GPL-3.0-or-later).
     static func applyAudio(_ settings: BottleSettings, to bottle: Bottle, engine: Engine, log: URL) async throws {

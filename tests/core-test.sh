@@ -35,7 +35,8 @@ mkdir -p "$WORK/bin"
 ln -s "$ROOT/scripts" "$WORK/scripts"
 ln -s "$ROOT/compat" "$WORK/compat"
 swiftc -O -o "$WORK/bin/core-test" "$WORK/main.swift" "$SRC/Basics.swift" "$SRC/Settings.swift" "$SRC/VDF.swift" \
-  "$SRC/Processes.swift" "$SRC/Diagnostics.swift" "$SRC/Library.swift" "$SRC/Bottles.swift" "$SRC/Engine.swift" 2>&1 \
+  "$SRC/Processes.swift" "$SRC/Diagnostics.swift" "$SRC/Library.swift" "$SRC/Bottles.swift" "$SRC/Engine.swift" \
+  "$SRC/Recipe.swift" 2>&1 \
   | grep -v "^$" || true
 sleep 0.5
 EXPECT_PREFIX="$WORK/bottles/steam" "$WORK/bin/core-test"

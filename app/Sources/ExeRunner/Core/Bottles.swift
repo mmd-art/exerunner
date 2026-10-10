@@ -14,24 +14,77 @@ struct Bottle {
     var driveC: URL { url.appendingPathComponent("drive_c", isDirectory: true) }
 
     /// C:\Program Files (x86)\Steam\Steam.exe -> <bottle>/drive_c/Program Files (x86)/Steam/Steam.exe.
-    /// Other drive letters go through the bottle's dosdevices links (Z: is the Mac's /).
-    func hostURL(forWindowsPath path: String) -> URL? {
+    /// Other drive letters go through the bottle's dosdevices links (Z: is the Mac's /), and Windows
+    /// links inside the bottle are followed (EA's installer links EA Desktop\EA Desktop to the
+    /// folder of the current version).
+    func hostURL(forWindowsPath path: String) -> URL? { hostURL(forWindowsPath: path, depth: 0) }
+
+    private func hostURL(forWindowsPath path: String, depth: Int) -> URL? {
         if path.hasPrefix("/") { return URL(fileURLWithPath: path) }
         let chars = Array(path)
         guard chars.count >= 3, chars[1] == ":", chars[2] == "\\" || chars[2] == "/" else { return nil }
         let drive = chars[0].lowercased()
-        let rest = String(chars.dropFirst(3)).replacingOccurrences(of: "\\", with: "/")
+        let rest = String(chars.dropFirst(3)).split(whereSeparator: { $0 == "\\" || $0 == "/" }).map(String.init)
         var base = driveC
         if drive != "c" {
             let link = url.appendingPathComponent("dosdevices/\(drive):")
             guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: link.path) else { return nil }
             base = URL(fileURLWithPath: target, relativeTo: link.deletingLastPathComponent()).standardizedFileURL
         }
-        return rest.isEmpty ? base : base.appendingPathComponent(rest)
+        return following(rest, from: base, depth: depth)
+    }
+
+    /// Appends the parts of a path, going through the Windows links on the way. Wine keeps such a
+    /// link as an entry named "<name>?" with the target in its user.WINEREPARSE attribute
+    /// (server/fd.c); the Mac sees only that entry.
+    private func following(_ parts: [String], from base: URL, depth: Int) -> URL {
+        var current = base
+        for (index, name) in parts.enumerated() {
+            let next = current.appendingPathComponent(name)
+            guard depth < 8, !FileManager.default.fileExists(atPath: next.path),
+                  let link = WindowsLink(at: current.appendingPathComponent(name + "?")) else {
+                current = next
+                continue
+            }
+            let target = link.relative
+                ? following(link.target.split(separator: "\\").map(String.init), from: current, depth: depth + 1).standardizedFileURL
+                : hostURL(forWindowsPath: link.target, depth: depth + 1)
+            guard let target else { current = next; continue }
+            return following(Array(parts[(index + 1)...]), from: target, depth: depth + 1)
+        }
+        return current
     }
 
     /// The bottle as WINEPREFIX names it in a running process's environment
     var prefixPath: String { url.standardizedFileURL.path }
+}
+
+/// A Windows symbolic link or junction as wine stores it: the reparse data buffer
+/// (REPARSE_DATA_BUFFER) of the link in the user.WINEREPARSE attribute.
+struct WindowsLink {
+    let target: String
+    let relative: Bool
+
+    init?(at url: URL) {
+        let name = "user.WINEREPARSE"
+        let size = getxattr(url.path, name, nil, 0, 0, 0)
+        guard size >= 20 else { return nil }
+        var data = [UInt8](repeating: 0, count: size)
+        guard getxattr(url.path, name, &data, size, 0, 0) == size else { return nil }
+        func u16(_ at: Int) -> Int { Int(data[at]) | Int(data[at + 1]) << 8 }
+        let tag = UInt32(u16(0)) | UInt32(u16(2)) << 16
+        let names: Int
+        switch tag {
+        case 0xA000_000C: names = 20; relative = u16(16) & 1 != 0   // IO_REPARSE_TAG_SYMLINK
+        case 0xA000_0003: names = 16; relative = false              // IO_REPARSE_TAG_MOUNT_POINT
+        default: return nil
+        }
+        let start = names + u16(8), length = u16(10)
+        guard length > 0, start + length <= data.count,
+              var target = String(bytes: data[start..<start + length], encoding: .utf16LittleEndian) else { return nil }
+        if target.hasPrefix("\\??\\") { target.removeFirst(4) }
+        self.target = target
+    }
 }
 
 enum BottleManager {
@@ -113,6 +166,9 @@ enum BottleManager {
         return file
     }
 
+    /// The recipes' links, each to the newest folder matching its pattern (EA keeps its app in
+    /// <version>\EA Desktop and expects EA Desktop\EA Desktop to be a junction to it). A real
+    /// folder at the link's place is left alone.
     static func compatFile(_ bottle: Bottle) -> URL { bottle.url.appendingPathComponent(".exerunner-compat-env") }
 
     /// DLSS through MetalFX needs nvngx.dll and nvapi64.dll inside the bottle (Apple's Read Me).

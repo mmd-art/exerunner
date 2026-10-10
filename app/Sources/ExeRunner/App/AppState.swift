@@ -49,6 +49,10 @@ final class AppState: ObservableObject {
     var clientRuns: [String: Task<Int32, Error>] = [:]
     /// Stopped from the app: the end of their run is not a crash
     var stoppedByUser: Set<String> = []
+    /// The last audio check in each bottle
+    var audioTests: [String: AudioTestResult] = [:]
+    /// Launchers being installed: their bottle is set up for them before their installer runs
+    var installing: [LibraryItem] = []
     var watcher: Task<Void, Never>?
 
     var running: Set<String> { launching.union(active).union(starting) }
@@ -68,6 +72,8 @@ final class AppState: ObservableObject {
 
     /// Saved items, then Steam games that have no saved settings of their own
     var allItems: [LibraryItem] { items + steamGames.filter { game in !items.contains { $0.id == game.id } } }
+    /// What a bottle's settings are made for: the library and what is being installed
+    var bottleItems: [LibraryItem] { allItems + installing.filter { new in !items.contains { $0.id == new.id } } }
     var launchers: [LibraryItem] { items.filter { $0.kind == .launcher } }
     var games: [LibraryItem] { allItems.filter { $0.kind == .game } }
     var programs: [LibraryItem] { items.filter { $0.kind == .program } }
@@ -151,7 +157,7 @@ final class AppState: ObservableObject {
     /// launcher's where one of its games or its folder is (Steam starts it for those games)
     func recipes(in bottle: String) -> [Recipe] {
         var result: [Recipe] = []
-        let inBottle = allItems.filter { $0.bottle == bottle }
+        let inBottle = bottleItems.filter { $0.bottle == bottle }
         for item in inBottle {
             if let recipe = recipe(item.recipeID), !result.contains(recipe) { result.append(recipe) }
         }
@@ -195,7 +201,7 @@ final class AppState: ObservableObject {
     /// games ship, and programs set to it
     func dxvkExecutables(in bottle: String) -> Set<String> {
         var names = Set(recipes(in: bottle).flatMap(\.dxvkExecutables) + Launchers.chromiumHelpers)
-        for item in allItems where item.bottle == bottle && effectiveGraphics(item) == .dxvk {
+        for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .dxvk {
             names.formUnion(executables(of: item))
         }
         return names
@@ -204,7 +210,7 @@ final class AppState: ObservableObject {
     /// Executables that keep wine's own DLLs instead of D3DMetal
     func skipList(in bottle: String) -> Set<String> {
         var names = dxvkExecutables(in: bottle)
-        for item in allItems where item.bottle == bottle && effectiveGraphics(item) == .wine {
+        for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .wine {
             names.formUnion(executables(of: item))
         }
         return names
@@ -226,18 +232,18 @@ final class AppState: ObservableObject {
         }
         // without DLSS through MetalFX a game does not find NVIDIA's libraries at all, so it does
         // not load NVIDIA Streamline either, whose hooks some games crash in on D3DMetal
-        for item in allItems where item.bottle == bottle && !item.metalFX {
+        for item in bottleItems where item.bottle == bottle && !item.metalFX {
             for exe in executables(of: item) {
                 for dll in Launchers.nvidiaLibraries { result[exe, default: [:]][dll] = "" }
             }
         }
-        for item in allItems where item.bottle == bottle && item.useRecommended {
+        for item in bottleItems where item.bottle == bottle && item.useRecommended {
             guard let profile = profile(for: item) else { continue }
             for exe in executables(of: item) {
                 for (dll, mode) in profile.recommended.dllOverrides { result[exe, default: [:]][dll] = mode }
             }
         }
-        for item in allItems where item.bottle == bottle && !item.dllOverrides.isEmpty {
+        for item in bottleItems where item.bottle == bottle && !item.dllOverrides.isEmpty {
             for exe in executables(of: item) { result[exe, default: [:]].merge(item.dllOverrides) { $1 } }
         }
         return result
@@ -270,7 +276,7 @@ final class AppState: ObservableObject {
     /// program -> variables, for cxcompatdb.so to set inside processes a launcher starts
     func perProgramEnvironment(in bottle: String) -> [String: [String: String]] {
         var result: [String: [String: String]] = [:]
-        for item in allItems where item.bottle == bottle {
+        for item in bottleItems where item.bottle == bottle {
             let env = itemEnvironment(item)
             guard !env.isEmpty else { continue }
             for exe in executables(of: item) { result[exe, default: [:]].merge(env) { $1 } }
@@ -281,7 +287,7 @@ final class AppState: ObservableObject {
     /// Windows components the database asks for, for every program in the bottle
     func winetricksVerbs(in bottle: String) -> [String] {
         var verbs: [String] = []
-        for item in allItems where item.bottle == bottle && item.useRecommended {
+        for item in bottleItems where item.bottle == bottle && item.useRecommended {
             for verb in profile(for: item)?.recommended.winetricks ?? [] where !verbs.contains(verb) { verbs.append(verb) }
         }
         return verbs
@@ -294,8 +300,18 @@ final class AppState: ObservableObject {
         guard let engine else { errorMessage = "Движок не найден"; return false }
         let token = beginActivity("Устанавливаю \(recipe.name)…")
         defer { endActivity(token) }
+        // installers often start their launcher at the end (EA does): it has to find the bottle
+        // ready, its web helpers on DXVK and off D3DMetal, as a launch from the app would
+        let pending = Installer.item(for: recipe, executable: recipe.executable ?? "")
+        installing.append(pending)
+        defer { installing.removeAll { $0.id == pending.id } }
         do {
-            let item = try await Installer.install(recipe, engine: engine, bottlesRoot: bottlesRoot, progress: reporter(token))
+            let bottle = Bottle(name: recipe.bottle, root: bottlesRoot)
+            let log = Paths.logFile("install-\(recipe.id)")
+            reporter(token)("Готовлю бутылку «\(recipe.bottle)»…")
+            let compat = try await prepareBottle(bottle, log: log, engine: engine, progress: reporter(token))
+            let item = try await Installer.install(recipe, engine: engine, bottlesRoot: bottlesRoot, log: log,
+                                                   environment: ["EXERUNNER_COMPAT_FILE": compat.path], progress: reporter(token))
             upsert(item)
             refreshGames()
             return true

@@ -93,6 +93,21 @@ extension AppState {
                 errorMessage = error.localizedDescription
             }
             await refreshProcesses()
+        case .testAudio:
+            guard let engine, FileManager.default.fileExists(atPath: engine.audioTest.path) else { return }
+            let token = beginActivity("Проигрываю тестовый звук…")
+            defer { endActivity(token) }
+            let output = FileManager.default.temporaryDirectory.appendingPathComponent("exerunner-audio-\(UUID().uuidString).log")
+            defer { try? FileManager.default.removeItem(at: output) }
+            do {
+                try await BottleManager.ensure(bottle, engine: engine, log: Paths.logFile("\(item.bottle)-audio"))
+                try await BottleManager.applyAudio(settings(forBottle: item.bottle), to: bottle, engine: engine, log: output)
+                _ = try await WineProcess.run(engine: engine, arguments: [engine.audioTest.path, "--beep"],
+                                              environment: WineEnvironment.make(engine: engine, prefix: bottle.url), log: output)
+                audioTests[item.bottle] = AudioTestResult(output: (try? String(contentsOf: output, encoding: .utf8)) ?? "")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         case .restartBottle:
             await stopBottle(item)
         case .clearDNSOverride:
@@ -346,6 +361,13 @@ extension AppState {
                                 ? "Низкая задержка: под нагрузкой даёт треск."
                                 : "\(settings.audioLatency.title). Если звук трещит или заикается, поможет буфер побольше.",
                             remedies: settings.audioLatency == .stable ? [] : [.audioLatency(.stable)]))
+        if let test = audioTests[item.bottle] {
+            result.append(Check(title: "Тестовый звук", status: test.ok ? .ok : .problem, detail: test.detail, remedies: [.testAudio]))
+        } else if engine.map({ FileManager.default.fileExists(atPath: $0.audioTest.path) }) == true {
+            result.append(Check(title: "Тестовый звук", status: .info,
+                                detail: "Проиграет короткий сигнал через звук Windows в этой бутылке: так видно, доходит ли звук до Mac.",
+                                remedies: [.testAudio]))
+        }
         result.append(Check(title: "Звуковые устройства Windows", status: .info,
                             detail: "Если звук ушёл не туда или пропал после смены наушников, сбрось устройства: бутылка остановится и найдёт их заново.",
                             remedies: [.resetAudio]))
