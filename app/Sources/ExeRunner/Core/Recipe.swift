@@ -8,6 +8,7 @@ import Foundation
 ///   installer <url> [args...]       sha256 <hex>                  exe <Windows path>
 ///   games steam                     env NAME=value                dxvk program.exe
 ///   dll program.exe name=mode,...   (an empty mode disables; msvcp140=native,builtin keeps wine's order)
+///   d3d program.exe name=value,...  (wine's own Direct3D for the program, off D3DMetal: renderer=gl)
 ///   shutdown <args to quit the client>
 struct Recipe: Identifiable, Hashable {
     enum Kind: String { case launcher, program, game }
@@ -29,11 +30,31 @@ struct Recipe: Identifiable, Hashable {
     var dxvkExecutables: [String] = []
     /// program -> dll -> mode, on top of DXVK's
     var dllOverrides: [String: [String: String]] = [:]
+    /// program -> wined3d setting (Software\Wine\Direct3D) -> value; such programs keep wine's
+    /// Direct3D instead of D3DMetal
+    var direct3D: [String: [String: String]] = [:]
     /// Arguments that make a running client quit by itself (Steam's -shutdown)
     var shutdownArguments: [String] = []
 
     static func == (a: Recipe, b: Recipe) -> Bool { a.id == b.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    /// name=value pairs split on commas, as wine writes a load order with them: a word without
+    /// "=" continues the value before it (msvcp140=native,builtin)
+    private static func pairs(_ text: Substring) -> [String: String]? {
+        var result: [String: String] = [:], last: String?
+        for pair in text.split(separator: ",", omittingEmptySubsequences: false) {
+            guard let eq = pair.firstIndex(of: "=") else {
+                guard let name = last, !pair.isEmpty else { return nil }
+                result[name]! += "," + pair
+                continue
+            }
+            guard eq != pair.startIndex else { return nil }
+            last = String(pair[..<eq])
+            result[last!] = String(pair[pair.index(after: eq)...])
+        }
+        return result
+    }
 
     static func parse(id: String, text: String) throws -> Recipe {
         var recipe = Recipe(id: id, name: id, bottle: id)
@@ -62,23 +83,13 @@ struct Recipe: Identifiable, Hashable {
                 guard let eq = value.firstIndex(of: "="), eq != value.startIndex else { throw bad() }
                 recipe.environment[String(value[..<eq])] = String(value[value.index(after: eq)...])
             case "dxvk": recipe.dxvkExecutables.append(value)
-            case "dll":
-                // the program's name may hold spaces; the overrides are the last word
+            case "dll", "d3d":
+                // the program's name may hold spaces; the settings are the last word
                 guard let space = value.lastIndex(of: " ") else { throw bad() }
                 let exe = String(value[..<space])
-                // pairs are split on commas, as wine writes a load order with them: a word
-                // without "=" continues the mode before it (msvcp140=native,builtin)
-                var last: String?
-                for pair in value[value.index(after: space)...].split(separator: ",", omittingEmptySubsequences: false) {
-                    guard let eq = pair.firstIndex(of: "=") else {
-                        guard let dll = last, !pair.isEmpty else { throw bad() }
-                        recipe.dllOverrides[exe]![dll]! += "," + pair
-                        continue
-                    }
-                    guard eq != pair.startIndex else { throw bad() }
-                    last = String(pair[..<eq])
-                    recipe.dllOverrides[exe, default: [:]][last!] = String(pair[pair.index(after: eq)...])
-                }
+                guard let pairs = Self.pairs(value[value.index(after: space)...]) else { throw bad() }
+                if key == "dll" { recipe.dllOverrides[exe, default: [:]].merge(pairs) { $1 } }
+                else { recipe.direct3D[exe, default: [:]].merge(pairs) { $1 } }
             case "shutdown": recipe.shutdownArguments = value.split(separator: " ").map(String.init)
             default: throw bad()
             }

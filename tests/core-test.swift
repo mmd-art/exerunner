@@ -108,6 +108,10 @@ if let recipe = try? Recipe.parse(id: "t", text: "dll Some Game.exe nvapi64=,msv
           "\(recipe.dllOverrides)")
 } else { check("recipe parses", false) }
 check("dll mode without a name", (try? Recipe.parse(id: "t", text: "dll a.exe native,builtin")) == nil)
+if let recipe = try? Recipe.parse(id: "t", text: "d3d Launcher.exe renderer=gl,csmt=enabled") {
+    check("d3d settings", recipe.direct3D == ["Launcher.exe": ["renderer": "gl", "csmt": "enabled"]] && recipe.dllOverrides.isEmpty,
+          "\(recipe.direct3D)")
+} else { check("d3d parses", false) }
 
 // Windows links as wine keeps them: "<name>?" with the reparse data in user.WINEREPARSE
 func reparseData(tag: UInt32, target: String, relative: Bool) -> [UInt8] {

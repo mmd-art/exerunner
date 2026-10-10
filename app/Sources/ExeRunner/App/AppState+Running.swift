@@ -66,7 +66,8 @@ extension AppState {
             try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: progress)
         }
         if !dxvkExecutables(in: bottle.name).isEmpty { try BottleManager.installDXVK(bottle, engine: engine) }
-        try await BottleManager.applyOverrides(bottle, engine: engine, overrides: dllOverrides(in: bottle.name, engine: engine), log: log)
+        try await BottleManager.applyOverrides(bottle, engine: engine, overrides: dllOverrides(in: bottle.name, engine: engine),
+                                               direct3D: direct3D(in: bottle.name), log: log)
         BottleManager.installMetalFXFiles(bottle, engine: engine)
         try await BottleManager.applyFonts(bottle, engine: engine, log: log)
         try await BottleManager.applyAudio(settings(forBottle: bottle.name), to: bottle, engine: engine, log: log)

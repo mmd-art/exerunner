@@ -207,9 +207,18 @@ final class AppState: ObservableObject {
         return names
     }
 
+    /// Programs that draw through wine's own Direct3D, with its settings for them (renderer=gl)
+    func direct3D(in bottle: String) -> [String: [String: String]] {
+        var result: [String: [String: String]] = [:]
+        for recipe in recipes(in: bottle) {
+            for (exe, values) in recipe.direct3D { result[exe, default: [:]].merge(values) { $1 } }
+        }
+        return result
+    }
+
     /// Executables that keep wine's own DLLs instead of D3DMetal
     func skipList(in bottle: String) -> Set<String> {
-        var names = dxvkExecutables(in: bottle)
+        var names = dxvkExecutables(in: bottle).union(direct3D(in: bottle).keys)
         for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .wine {
             names.formUnion(executables(of: item))
         }

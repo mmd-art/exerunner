@@ -122,11 +122,15 @@ enum BottleManager {
         }
     }
 
-    /// Per-program DLL overrides through AppDefaults (program -> dll -> mode). Exactly these stay
-    /// in place: overrides of programs dropped since the last call are deleted.
-    static func applyOverrides(_ bottle: Bottle, engine: Engine, overrides: [String: [String: String]], log: URL) async throws {
+    /// Per-program DLL overrides through AppDefaults (program -> dll -> mode), and wine's Direct3D
+    /// settings for programs that draw through it (program -> name -> value). Exactly these stay
+    /// in place: those of programs dropped since the last call are deleted.
+    static func applyOverrides(_ bottle: Bottle, engine: Engine, overrides: [String: [String: String]],
+                               direct3D: [String: [String: String]] = [:], log: URL) async throws {
         let stamp = bottle.url.appendingPathComponent(".exerunner-overrides")
-        let wanted = overrides.flatMap { exe, dlls in dlls.map { "\(exe)\t\($0.key)=\($0.value)" } }.sorted().joined(separator: "\n")
+        let wanted = (overrides.flatMap { exe, dlls in dlls.map { "\(exe)\t\($0.key)=\($0.value)" } }
+            + direct3D.flatMap { exe, values in values.map { "\(exe)\t@d3d \($0.key)=\($0.value)" } })
+            .sorted().joined(separator: "\n")
         let previous = (try? String(contentsOf: stamp, encoding: .utf8)) ?? ""
         if previous == wanted { return }
         // the first version kept only DXVK programs, in another file
@@ -135,12 +139,15 @@ enum BottleManager {
         let previousNames = Set(previous.split(separator: "\n").compactMap { $0.split(separator: "\t").first.map(String.init) })
             .union(legacyNames)
         var reg = "REGEDIT4\n"
-        for exe in previousNames.union(overrides.keys).sorted() {
+        for exe in previousNames.union(overrides.keys).union(direct3D.keys).sorted() {
             reg += "\n[-HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\\(exe)\\DllOverrides]\n"
+            reg += "\n[-HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\\(exe)\\Direct3D]\n"
         }
-        for (exe, dlls) in overrides.sorted(by: { $0.key < $1.key }) {
-            reg += "\n[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\\(exe)\\DllOverrides]\n"
-            for (dll, mode) in dlls.sorted(by: { $0.key < $1.key }) { reg += "\"\(dll)\"=\"\(mode)\"\n" }
+        for (key, settings) in [("DllOverrides", overrides), ("Direct3D", direct3D)] {
+            for (exe, values) in settings.sorted(by: { $0.key < $1.key }) {
+                reg += "\n[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\\(exe)\\\(key)]\n"
+                for (name, value) in values.sorted(by: { $0.key < $1.key }) { reg += "\"\(name)\"=\"\(value)\"\n" }
+            }
         }
         let regFile = bottle.driveC.appendingPathComponent("exerunner-overrides.reg")
         try reg.write(to: regFile, atomically: true, encoding: .utf8)

@@ -30,7 +30,10 @@ enum Winetricks {
         }
         progress("Ставлю компоненты Windows: \(missing.joined(separator: ", "))… Первый раз это несколько минут.")
         var env = WineEnvironment.make(engine: engine, prefix: bottle.url)
-        env["WINE"] = engine.wine.path
+        env["EXERUNNER_WINE"] = engine.wine.path
+        env["EXERUNNER_DYLD_FALLBACK_LIBRARY_PATH"] = env["DYLD_FALLBACK_LIBRARY_PATH"]
+        env["WINE"] = try wineWrapper().path
+        env["WINE_BIN"] = engine.wine.path   // what winetricks reads the architecture from
         env["WINESERVER"] = engine.wineserver.path
         env["WINETRICKS_LATEST_VERSION_CHECK"] = "disabled"
         // cabextract comes with a portable engine, a development Mac has it from Homebrew; unzip
@@ -42,5 +45,24 @@ enum Winetricks {
             throw AppError("winetricks не поставил \(missing.joined(separator: ", ")) (код \(status)). Журнал: \(log.path)")
         }
         try done.union(missing).sorted().joined(separator: "\n").write(to: stamp(bottle), atomically: true, encoding: .utf8)
+    }
+
+    /// winetricks is a shell script, and macOS drops DYLD_* variables whenever it starts a system
+    /// binary such as /bin/sh: wine would lose the engine's libraries (FreeType, GnuTLS). The
+    /// wrapper winetricks runs as "wine" sets the library path again from a plain variable.
+    static func wineWrapper() throws -> URL {
+        let wrapper = Paths.caches.appendingPathComponent("winetricks-wine")
+        let script = """
+            #!/bin/sh
+            export DYLD_FALLBACK_LIBRARY_PATH="$EXERUNNER_DYLD_FALLBACK_LIBRARY_PATH"
+            exec "$EXERUNNER_WINE" "$@"
+
+            """
+        try Paths.ensure(Paths.caches)
+        if (try? String(contentsOf: wrapper, encoding: .utf8)) != script {
+            try script.write(to: wrapper, atomically: true, encoding: .utf8)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wrapper.path)
+        return wrapper
     }
 }

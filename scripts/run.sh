@@ -90,7 +90,8 @@ if [ -n "$RECIPE" ]; then
   file="$ROOT/recipes/$RECIPE.recipe"
   [ -f "$file" ] || { echo "no recipe $file"; exit 1; }
   dxvk_exes=()
-  dll_lines=()
+  dll_lines=()   # "<exe>\t<pairs>\tDllOverrides" or "...\tDirect3D"
+  d3d_exes=()
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
       ''|'#'*) continue ;;
@@ -102,12 +103,20 @@ if [ -n "$RECIPE" ]; then
     elif [[ "$line" =~ ^dxvk\ (.+\.exe)$ ]]; then
       dxvk_exes+=("${BASH_REMATCH[1]}")
     elif [[ "$line" =~ ^dll\ (.+\.exe)\ ([A-Za-z0-9_.,=-]+)$ ]]; then
-      dll_lines+=("${BASH_REMATCH[1]}"$'\t'"${BASH_REMATCH[2]}")
+      dll_lines+=("${BASH_REMATCH[1]}"$'\t'"${BASH_REMATCH[2]}"$'\t'DllOverrides)
+    elif [[ "$line" =~ ^d3d\ (.+\.exe)\ ([A-Za-z0-9_.,=-]+)$ ]]; then
+      # wine's own Direct3D for the program, with these settings, so not D3DMetal
+      dll_lines+=("${BASH_REMATCH[1]}"$'\t'"${BASH_REMATCH[2]}"$'\t'Direct3D)
+      d3d_exes+=("${BASH_REMATCH[1]}")
     else
       echo "$file: cannot read line: $line"; exit 1
     fi
   done < "$file"
 
+  if [ "${#d3d_exes[@]}" -gt 0 ]; then
+    skip="$(IFS=,; echo "${d3d_exes[*]}")"
+    export EXERUNNER_D3DMETAL_SKIP="${EXERUNNER_D3DMETAL_SKIP:+$EXERUNNER_D3DMETAL_SKIP,}$skip"
+  fi
   if [ "${#dxvk_exes[@]}" -gt 0 ]; then
     [ -d "$DIST/lib/dxvk/x64" ] || { echo "no DXVK in the engine, run build-engine.sh dxvk"; exit 1; }
     skip="$(IFS=,; echo "${dxvk_exes[*]}")"
@@ -138,9 +147,10 @@ if [ -n "$RECIPE" ]; then
         done
         for entry in ${dll_lines[@]+"${dll_lines[@]}"}; do
           echo
-          echo "[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\${entry%%$'\t'*}\\DllOverrides]"
-          # a word without "=" continues the mode before it (msvcp140=native,builtin)
-          IFS=, read -ra words <<< "${entry#*$'\t'}"
+          IFS=$'\t' read -r program settings key <<< "$entry"
+          echo "[HKEY_CURRENT_USER\\Software\\Wine\\AppDefaults\\$program\\$key]"
+          # a word without "=" continues the value before it (msvcp140=native,builtin)
+          IFS=, read -ra words <<< "$settings"
           pairs=()
           for word in "${words[@]}"; do
             if [[ "$word" == *=* ]] || [ "${#pairs[@]}" -eq 0 ]; then pairs+=("$word")
