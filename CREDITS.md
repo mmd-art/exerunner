@@ -31,6 +31,12 @@ ExeRunner is free software under the GNU General Public License, version 3 or la
 - **frankea/winecx-gptk**: the engine source tree it builds from (below) and the build lessons
   noted in `scripts/build-engine.sh` (gcc for the Windows half, Wine tools built native).
 
+## The icon
+
+`app/Resources/AppIcon.png` was generated with ChatGPT's image generation from our sketch (a page
+with a wine bottle and "EXE") and cut to Apple's icon grid here. It replaces a first icon that
+used an SF Symbol, which Apple's SF Symbols licence does not allow in app icons.
+
 ## The engine
 
 Built by `scripts/build-engine.sh`; nothing below is modified here unless said so.

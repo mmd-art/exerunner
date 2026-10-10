@@ -48,10 +48,14 @@ if [ "$WITH_D3DMETAL" = 1 ]; then
   fi
 fi
 
-# the icon is drawn by the app itself (AppIcon.swift)
+# the icon: app/Resources/AppIcon.png (1024, on Apple's icon grid) at every size macOS asks for
 ICONSET="$ROOT/build/AppIcon.iconset"
 rm -rf "$ICONSET"
-"$APP/Contents/MacOS/$NAME" --make-icon "$ICONSET"
+mkdir -p "$ICONSET"
+for size in 16 32 128 256 512; do
+  sips -z "$size" "$size" "$ROOT/app/Resources/AppIcon.png" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+  sips -z "$((size * 2))" "$((size * 2))" "$ROOT/app/Resources/AppIcon.png" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 rm -rf "$ICONSET"
 

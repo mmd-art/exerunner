@@ -23,8 +23,6 @@ enum Entry {
             Headless.selfTest()
         } else if let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count {
             Headless.snapshot(to: URL(fileURLWithPath: args[index + 1], isDirectory: true))
-        } else if let index = args.firstIndex(of: "--make-icon"), index + 1 < args.count {
-            Headless.makeIcon(at: URL(fileURLWithPath: args[index + 1], isDirectory: true))
         } else {
             ExeRunnerApp.main()
         }
@@ -105,22 +103,6 @@ enum Headless {
         Task { @MainActor in
             await Snapshots.render(to: dir)
             exit(0)
-        }
-        app.run()
-        exit(0)
-    }
-
-    static func makeIcon(at iconset: URL) -> Never {
-        let app = NSApplication.shared
-        app.setActivationPolicy(.prohibited)
-        Task { @MainActor in
-            do {
-                try AppIconRenderer.render(to: iconset)
-                exit(0)
-            } catch {
-                FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
-                exit(1)
-            }
         }
         app.run()
         exit(0)
