@@ -18,3 +18,4 @@ tests/winlist
 docs/screens/
 tests/sendkey.exe
 tests/discord-client.exe
+tests/mfdecode.exe

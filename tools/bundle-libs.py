@@ -23,11 +23,13 @@ HOMEBREW = ("/usr/local/", "/opt/homebrew/")
 # what wine dlopens by name (configure's SONAME_ values); dbus and odbc stay out
 DLOPENED = ["libfreetype.6.dylib", "libgnutls.30.dylib", "libSDL2-2.0.0.dylib"]
 
-# GStreamer plugins winegstreamer needs for game video and audio: pipelines, conversion,
-# containers (MP4, Matroska, AVI, ASF/WMV, Ogg, WAV, MPEG), decoders (FFmpeg's, VideoToolbox's,
-# Vorbis, Theora, Opus, FLAC, MP3)
+# GStreamer plugins winegstreamer needs for game video and audio: pipelines, conversion (its
+# video chain is videoconvert, deinterlace and videoflip, the last two from "good"), containers
+# (MP4, Matroska, AVI, ASF/WMV, Ogg, WAV, MPEG), decoders (FFmpeg's, VideoToolbox's, Vorbis,
+# Theora, Opus, FLAC, MP3)
 PLUGINS = [
-    "coreelements", "app", "playback", "typefindfunctions", "videoconvertscale", "audioconvert", "audioresample",
+    "coreelements", "app", "playback", "typefindfunctions", "videoconvertscale", "deinterlace", "videofilter",
+    "audioconvert", "audioresample",
     "volume", "autodetect", "isomp4", "matroska", "avi", "asf", "wavparse", "ogg", "vorbis", "theora", "opus",
     "opusparse", "flac", "audioparsers", "id3demux", "mpg123", "videoparsersbad", "mpegpsdemux", "mpegtsdemux",
     "applemedia",
