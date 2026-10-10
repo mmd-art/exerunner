@@ -1,0 +1,22 @@
+# GOG Galaxy 2. GOG's remote config names the current full installer
+# (remote-config.gog.com/components/webinstaller?component_version=2.0.0); it is Inno Setup and
+# runs silently. Galaxy updates itself afterwards. It is Qt 6: the window draws with Direct3D 11 and
+# the store with QtWebEngine (Chromium, QtWebEngineProcess.exe); both go on DXVK like Steam's
+# helpers, with NVIDIA's libraries off for the same reason. QtWebEngine hands its pages to the
+# window as shared Direct3D textures (IDXGIResource shared handles). DXVK on MoltenVK has no
+# VK_KHR_external_memory_win32 and D3DMetal's textures have no IDXGIResource, so the sign-in
+# window stays empty; --disable-gpu, QT_QUICK_BACKEND=software and the flags on the command line
+# do not change that (10/10/2026). Parked until one of them can share textures.
+name GOG Galaxy
+kind launcher
+status planned
+symbol g.circle
+about Лаунчер GOG. Ставится, но окно остаётся пустым (10/10/2026): его веб-часть на Qt 6 не может показать страницы через DXVK и D3DMetal. Пока выключен.
+bottle gog-galaxy
+installer https://content-system.gog.com/open_link/download?path=/open/galaxy/client/setup_galaxy_2.1.10.56.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+exe C:\Program Files\GOG Galaxy\GalaxyClient.exe
+env LC_ALL=en_US.UTF-8
+env CEF_DISABLE_SANDBOX=1
+dxvk GalaxyClient.exe
+dxvk QtWebEngineProcess.exe
+dll GalaxyClient.exe nvapi64=,nvapi=,nvngx=
