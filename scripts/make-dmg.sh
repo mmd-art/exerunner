@@ -1,7 +1,8 @@
 #!/bin/bash
 # Packs build/app.noindex/ExeRunner.app (with its engine inside; scripts/build-engine.sh portable, then
 # build-app.sh) into build/ExeRunner-<version>.dmg to hand to friends: the app and a link to
-# /Applications to drag it onto. D3DMetal is not in it; each user imports Apple's download.
+# /Applications to drag it onto, with a note on opening it in Russian and English. D3DMetal is in it
+# when build-app.sh put it in the app; otherwise the note says where to get it.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,9 +17,12 @@ ditto "$APP" "$STAGE/ExeRunner.app"
 ln -s /Applications "$STAGE/Applications"
 if [ -d "$APP/Contents/Resources/d3dmetal" ]; then
   D3DM="D3DMetal от Apple уже внутри; новую версию можно подключить из Game Porting Toolkit"
+  D3DM_EN="Apple's D3DMetal is already inside; a newer one can be connected from the Game Porting Toolkit"
 else
   D3DM="D3DMetal: скачай Game Porting Toolkit на developer.apple.com (вход по Apple ID, бесплатно)
    и перетащи .dmg в окно ExeRunner"
+  D3DM_EN="D3DMetal: download the Game Porting Toolkit at developer.apple.com (Apple ID sign-in, free)
+   and drag the .dmg onto the ExeRunner window"
 fi
 cat > "$STAGE/Как открыть.txt" <<TXT
 1. Перетащи ExeRunner в папку «Программы» (Applications).
@@ -27,6 +31,14 @@ cat > "$STAGE/Как открыть.txt" <<TXT
    внизу «Всё равно открыть».
 3. Дальше ExeRunner сам проведёт по шагам: Rosetta, лаунчеры.
    $D3DM.
+TXT
+cat > "$STAGE/How to open.txt" <<TXT
+1. Drag ExeRunner into the Applications folder.
+2. The first time, right-click it → Open: macOS does not know this developer.
+   If it still refuses: System Settings → Privacy & Security → Open Anyway at the bottom.
+3. From there ExeRunner walks you through the steps: Rosetta, launchers.
+   $D3DM_EN.
+The interface follows the Mac's language (Russian or English); Settings can change it.
 TXT
 rm -f "$DMG"
 # diskutil image on macOS 27 and later, where hdiutil is deprecated; LZFSE opens on macOS 10.11+
