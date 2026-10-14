@@ -10,8 +10,21 @@ APP="$ROOT/build/app.noindex/ExeRunner.app"
 [ -f "$APP/Contents/Resources/engine/engine.json" ] || { echo "no engine inside $APP: run build-engine.sh portable, then build-app.sh"; exit 1; }
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 DMG="$ROOT/build/ExeRunner-$VERSION.dmg"
-STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
+python3 -I "$ROOT/tools/search-privacy.py" exclude-project
+# Stage inside the excluded checkout, including newly generated bundles.
+STAGE="$(mktemp -d "$ROOT/build/app.noindex/.dmg-stage.XXXXXX")"
+cleanup_stage() {
+  local status=$?
+  if [ -d "$STAGE/ExeRunner.app" ]; then
+    if ! python3 -I "$ROOT/tools/search-privacy.py" unregister-build "$STAGE/ExeRunner.app"; then
+      echo "could not remove the DMG staging app from macOS search" >&2
+      status=1
+    fi
+  fi
+  rm -rf "$STAGE"
+  return "$status"
+}
+trap cleanup_stage EXIT
 
 ditto "$APP" "$STAGE/ExeRunner.app"
 ln -s /Applications "$STAGE/Applications"

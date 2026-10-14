@@ -14,6 +14,39 @@ struct SettingsView: View {
                 }
             }
 
+            Section(t("Во время игры")) {
+                Toggle("Game Boost", isOn: $state.settings.gameBoost)
+                    .toggleStyle(.switch)
+                    .disabled(!state.gameBoostStatus.available)
+                    .accessibilityIdentifier("gameBoostToggle")
+                    .help(t("Приоритет CPU и GPU для игр. Прежний игровой режим macOS восстановится после выхода из последней игры."))
+                Text(state.gameBoostHint).font(.callout).foregroundStyle(.secondary)
+
+                Toggle(t("Удерживать мышь внутри игры"), isOn: $state.settings.cursorConfinement)
+                    .toggleStyle(.switch)
+                    .accessibilityIdentifier("cursorConfinementToggle")
+                    .disabled(state.engine?.hasCursorGuard != true)
+                    .help(t("Защищает захваченную игрой мышь от выхода в горячие углы. При переключении приложений мышь освобождается. Изменение применяется при следующем запуске."))
+                Toggle(t("Нативное разрешение текущего экрана"), isOn: $state.settings.automaticNativeResolution)
+                    .toggleStyle(.switch)
+                    .accessibilityIdentifier("automaticNativeResolutionToggle")
+                    .help(t("Согласовывает полноэкранное разрешение поддерживаемых игр с монитором при запуске. Качество графики сохраняется; настройки масштабирования Mac не меняются."))
+
+                Toggle(t("Показывать счётчик FPS"), isOn: Binding(
+                    get: { state.settings.performanceHUD ?? state.allItems.contains(where: \.performanceHUD) },
+                    set: { state.settings.performanceHUD = $0 }
+                ))
+                Text(t("Для программ с графикой Metal. Изменение применяется при следующем запуске."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+
+            Section(t("Приложения Windows")) {
+                Toggle(t("Автоматически готовить библиотеки Windows"), isOn: $state.settings.automaticRuntimeComponents)
+                    .help(t("Определяет стандартные зависимости EXE и устанавливает нужные компоненты перед запуском обычных программ. Все программы бутылки должны быть закрыты."))
+                Text(t("Дополнительные компоненты доступны в меню программы → Библиотеки Windows."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+
             Section("Mac") {
                 StatusRow(title: state.system.chip, detail: t("macOS \(state.system.macOS) · \(state.system.memoryGB) ГБ памяти · свободно \(state.system.freeDiskGB) ГБ"),
                           level: state.system.supported ? .ok : .missing)

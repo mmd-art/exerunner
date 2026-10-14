@@ -122,7 +122,16 @@ struct GameProfileDetails: View {
                     }
                 }
             }
-            Text(t("Источник: база игр Whisky (frankea/Whisky, GPL-3). Оценки там во многом не проверены."))
+            if let verification = profile.verification {
+                Text(t("Проверено: \(verification.date). Этап: \(verification.level)."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("\(verification.machine) · macOS \(verification.macOS) · Wine \(verification.wine) · \(verification.translator)")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text(t("Проверка на этой конфигурации не записана. Оценка базы не гарантирует совместимость."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Text(t("Источник: \(profile.source ?? "Whisky")."))
                 .font(.caption).foregroundStyle(.tertiary)
         }
         .textSelection(.enabled)

@@ -154,6 +154,7 @@ struct AddProgramSheet: View {
     @State private var phase: Phase = .form
     @State private var candidates: [URL] = []
     @State private var chosen: URL?
+    @State private var fileError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -170,6 +171,15 @@ struct AddProgramSheet: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
+            DisclosureGroup(t("Как добавить ZIP, игру или приложение")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(t("1. Распакуй архив целиком. Сохрани EXE, DLL и папки с данными вместе."))
+                    Text(t("2. Выбери основной EXE. Для готовой программы выбери «Запускать как есть», для setup.exe или MSI — «Это установщик»."))
+                    Text(t("3. Укажи название. После установки выбери EXE установленной программы и добавь его в библиотеку."))
+                    Text(t("Обычное добавление не изолирует программу от Mac и сети. Изолированный прототип пока требует отдельно подготовленной бутылки; ZIP автоматически не импортируется."))
+                }
+                .font(.callout).foregroundStyle(.secondary).padding(.top, 8)
+            }
             HStack {
                 Button(t("Выбрать файл…")) {
                     if let url = FilePicker.choose(startAt: Paths.home.appendingPathComponent("Downloads")) { pick(url) }
@@ -177,6 +187,7 @@ struct AddProgramSheet: View {
                 .buttonStyle(.pill)
                 Text(file?.lastPathComponent ?? t("файл .exe или .msi")).foregroundStyle(file == nil ? .secondary : .primary).lineLimit(1)
             }
+            if let fileError { Text(fileError).font(.callout).foregroundStyle(.red) }
             TextField(t("Название в библиотеке"), text: $name)
             Picker("", selection: $mode) {
                 ForEach(Mode.allCases) { Text($0.title).tag($0) }
@@ -243,6 +254,12 @@ struct AddProgramSheet: View {
     }
 
     private func pick(_ url: URL) {
+        guard ["exe", "msi"].contains(url.pathExtension.lowercased()) else {
+            file = nil
+            fileError = t("Выбери EXE или MSI. ZIP сначала распакуй целиком и выбери программу внутри.")
+            return
+        }
+        fileError = nil
         file = url
         if name.isEmpty { name = url.deletingPathExtension().lastPathComponent }
         if url.pathExtension.lowercased() == "msi" { mode = .installer }

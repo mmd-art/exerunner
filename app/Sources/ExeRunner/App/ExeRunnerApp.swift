@@ -2,11 +2,13 @@ import SwiftUI
 
 struct ExeRunnerApp: App {
     @StateObject private var state = AppState()
+    @NSApplicationDelegateAdaptor(ExeRunnerDelegate.self) private var delegate
 
     var body: some Scene {
         WindowGroup(AppInfo.name) {
             RootView()
                 .environmentObject(state)
+                .onAppear { delegate.state = state }
                 .frame(minWidth: 940, minHeight: 640)
         }
         .windowToolbarStyle(.unified)
@@ -24,6 +26,12 @@ struct RootView: View {
         .task {
             await state.refresh()
             state.watchProcesses()
+            // Native lifecycle diagnostic: close our actual main window, exercising the
+            // last-window callback and the same termination path as a user click.
+            if CommandLine.arguments.contains("--verify-close") {
+                try? await Task.sleep(for: .seconds(1))
+                NSApplication.shared.windows.first(where: { $0.styleMask.contains(.titled) })?.performClose(nil)
+            }
         }
         .alert(t("Что-то пошло не так"), isPresented: Binding(
             get: { state.errorMessage != nil },
@@ -42,7 +50,7 @@ struct MainView: View {
     @State private var section: Section?
 
     init(section: Section = .library) {
-        _section = State(initialValue: section)
+        _section = State(initialValue: CommandLine.arguments.contains("--settings") ? .settings : section)
     }
 
     var body: some View {

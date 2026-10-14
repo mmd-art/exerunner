@@ -40,5 +40,37 @@ expect "file is newer than a stale skip list" "d3dmetal=on foo=-" "$D" EXERUNNER
 printf 'Game.exe\tFOO=bar baz\n' > "$WORK/env"
 expect "file sets variables, any case" "d3dmetal=on foo=bar baz" "$D" EXERUNNER_COMPAT_FILE="$WORK/env"
 expect "missing file falls back to the list" "d3dmetal=off foo=-" "$D" EXERUNNER_COMPAT_FILE="$WORK/none" EXERUNNER_D3DMETAL_SKIP=game.exe
+expect "DXMT without file" "d3dmetal=on foo=-" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_USE_DXMT=1
+expect "stale inherited DXMT does not affect child" "d3dmetal=on foo=-" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_USE_DXMT=1 EXERUNNER_COMPAT_FILE="$WORK/empty"
+printf 'game.exe\t@d3dmetal=off\ngame.exe\t@dxmt=on\n' > "$WORK/dxmt"
+expect "selected executable loads builtin DXMT" "d3dmetal=on foo=-" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_COMPAT_FILE="$WORK/dxmt"
+expect "missing DXMT never falls back to D3DMetal" "d3dmetal=off foo=-" "$D" EXERUNNER_COMPAT_FILE="$WORK/dxmt"
+cat > "$WORK/path.c" <<'C'
+#include <stdio.h>
+static const char *chosen = "none";
+void prepend_dll_path(const char *dir) { chosen = dir; }
+int main(void) { puts(chosen); return 0; }
+C
+clang -O0 -o "$WORK/game.exe" "$WORK/path.c" "$ROOT/engine/compat/cxcompatdb.c"
+expect "actual DXMT path" "/dxmt" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_COMPAT_FILE="$WORK/dxmt"
+expect "D3DMetal path remains untouched" "/x" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_COMPAT_FILE="$WORK/empty"
+expect "inherited choice cannot switch unrelated program" "/x" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_USE_DXMT=1 EXERUNNER_COMPAT_FILE="$WORK/empty"
+cat > "$WORK/modeset.c" <<'C'
+#include <stdio.h>
+#include <stdlib.h>
+static const char *chosen = "none";
+void prepend_dll_path(const char *dir) { chosen = dir; }
+int main(void) {
+    const char *mode = getenv("EXERUNNER_EMULATE_MODESET");
+    printf("%s modeset=%s\n", chosen, mode ? mode : "-");
+    return 0;
+}
+C
+clang -O0 -o "$WORK/game.exe" "$WORK/modeset.c" "$ROOT/engine/compat/cxcompatdb.c"
+expect "DXMT opts into emulated Retina mode" "/dxmt modeset=1" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_COMPAT_FILE="$WORK/dxmt"
+expect "unrelated child clears inherited DXMT modeset" "/x modeset=-" "$D" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_EMULATE_MODESET=1 EXERUNNER_COMPAT_FILE="$WORK/empty"
+expect "Wine child clears inherited DXMT modeset" "none modeset=-" "$D" EXERUNNER_EMULATE_MODESET=1 EXERUNNER_COMPAT_FILE="$WORK/off"
+expect "direct DXMT opts into emulated Retina mode" "/dxmt modeset=1" EXERUNNER_DXMT_DIR=/dxmt EXERUNNER_USE_DXMT=1
+expect "regular Metal leaves modeset unchanged" "/x modeset=-" "$D"
 echo "cxcompatdb: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

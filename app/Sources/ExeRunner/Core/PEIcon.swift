@@ -5,8 +5,28 @@ import Foundation
 /// in the library and on their Mac shortcut.
 enum PEIcon {
     static func extract(from url: URL) -> NSImage? {
-        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe), let pe = PEFile(data) else { return nil }
-        return pe.mainIcon()
+        if let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+           let pe = PEFile(data), let icon = pe.mainIcon() { return icon }
+        // Some launchers have no resources; Windows shortcuts use a sibling ICO
+        // or the actual program's resources instead. Never execute the program.
+        let folder = url.deletingLastPathComponent()
+        let stem = url.deletingPathExtension().lastPathComponent
+        var stems = [stem]
+        if stem.lowercased().hasPrefix("launch"), stem.count > 6 {
+            stems.append(String(stem.dropFirst(6)))
+        }
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        for candidate in stems {
+            if let ico = files.first(where: { $0.lastPathComponent.lowercased() == (candidate + ".ico").lowercased() }),
+               let image = NSImage(contentsOf: ico) { return image }
+        }
+        for candidate in stems.dropFirst() {
+            if let exe = files.first(where: { $0.lastPathComponent.lowercased() == (candidate + ".exe").lowercased() }),
+               let data = try? Data(contentsOf: exe, options: .mappedIfSafe),
+               let pe = PEFile(data), let icon = pe.mainIcon() { return icon }
+        }
+        let icoFiles = files.filter { $0.pathExtension.lowercased() == "ico" }
+        return icoFiles.count == 1 ? NSImage(contentsOf: icoFiles[0]) : nil
     }
 }
 

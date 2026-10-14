@@ -27,6 +27,32 @@ struct Engine: Equatable {
     /// Carries its own libraries instead of Homebrew's (scripts/build-engine.sh portable)
     var isPortable: Bool { FileManager.default.fileExists(atPath: root.appendingPathComponent("engine.json").path) }
     var dxvk: URL { lib.appendingPathComponent("dxvk", isDirectory: true) }
+    var dxmt: URL { lib.appendingPathComponent("dxmt", isDirectory: true) }
+    var dxmtVersion: String? {
+        guard hasDXMT else { return nil }
+        return try? String(contentsOf: dxmt.appendingPathComponent("DXMT_VERSION"), encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    var hasDXMT: Bool {
+        let required = ["x86_64-windows/d3d11.dll", "x86_64-windows/dxgi.dll",
+                        "x86_64-windows/d3d10core.dll", "x86_64-windows/winemetal.dll",
+                        "i386-windows/d3d11.dll", "i386-windows/dxgi.dll",
+                        "i386-windows/d3d10core.dll", "i386-windows/winemetal.dll",
+                        "x86_64-unix/winemetal.so", "DXMT_VERSION"]
+        guard required.allSatisfy({ FileManager.default.isReadableFile(atPath: dxmt.appendingPathComponent($0).path) }),
+              let module = try? Data(contentsOf: compatModule, options: .mappedIfSafe),
+              let display = try? Data(contentsOf: lib.appendingPathComponent("wine/x86_64-unix/win32u.so"), options: .mappedIfSafe) else { return false }
+        let modeset = Data("EXERUNNER_EMULATE_MODESET".utf8)
+        return module.range(of: Data("EXERUNNER_DXMT_DIR".utf8)) != nil &&
+            module.range(of: modeset) != nil && display.range(of: modeset) != nil
+    }
+    var hasCursorGuard: Bool {
+        let marker = Data("EXERUNNER_CURSOR_GUARD".utf8)
+        return ["winemac.so", "win32u.so"].allSatisfy { name in
+            guard let module = try? Data(contentsOf: lib.appendingPathComponent("wine/x86_64-unix/\(name)"), options: .mappedIfSafe) else { return false }
+            return module.range(of: marker) != nil
+        }
+    }
     var compatModule: URL { lib.appendingPathComponent("wine/x86_64-unix/cxcompatdb.so") }
     var discordBridge: URL { lib.appendingPathComponent("exerunner/discord-bridge.exe") }
     var audioTest: URL { lib.appendingPathComponent("exerunner/audio-test.exe") }
@@ -86,10 +112,25 @@ enum WineEnvironment {
 
     /// - skip: executables that keep wine's own DLLs instead of D3DMetal (read by cxcompatdb.so)
     static func make(engine: Engine, prefix: URL, skip: [String] = [], extra: [String: String] = [:]) -> [String: String] {
+        let base = makeBase(engine: engine, prefix: prefix, skip: skip, extra: extra)
+        if prefix.lastPathComponent.hasPrefix("isolated-") || FileManager.default.fileExists(atPath: prefix.appendingPathComponent(".exerunner-isolated-v1").path) {
+            do { return try IsolatedWine.environment(bottle: Bottle(name: prefix.lastPathComponent, root: prefix.deletingLastPathComponent()), engine: engine, base: base) }
+            catch {
+                // All existing component/diagnostic paths fail closed too.
+                var refused = base
+                refused["EXERUNNER_SANDBOX_PROFILE"] = "/nonexistent/exerunner-isolation-refused.sb"
+                return refused
+            }
+        }
+        return base
+    }
+
+    static func makeBase(engine: Engine, prefix: URL, skip: [String] = [], extra: [String: String] = [:]) -> [String: String] {
         var env = base()
         env["WINEPREFIX"] = prefix.path
         env["WINEDEBUG"] = "-all"
         env["WINEMSYNC"] = "1"
+        if engine.hasDXMT { env["EXERUNNER_DXMT_DIR"] = engine.dxmt.path }
         if engine.isPortable {
             // everything wine opens by name and GStreamer's plugins are inside the engine
             env["DYLD_FALLBACK_LIBRARY_PATH"] = "\(engine.lib.path):/usr/lib"
@@ -150,8 +191,17 @@ enum WineProcess {
         guard fd >= 0 else { throw AppError(t("Не открывается журнал \(log.path)")) }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         let process = Process()
-        process.executableURL = executable
-        process.arguments = arguments
+        if let profile = environment["EXERUNNER_SANDBOX_PROFILE"] {
+            guard FileManager.default.isReadableFile(atPath: profile) else { throw AppError("Missing isolation profile; launch refused") }
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/sandbox-exec")
+            // sandbox-exec is platform-signed and strips DYLD variables. Restore the
+            // engine's library search path inside the sandbox through env arguments.
+            let dyld = environment["DYLD_FALLBACK_LIBRARY_PATH"] ?? "/usr/lib"
+            process.arguments = ["-f", profile, "/usr/bin/env", "DYLD_FALLBACK_LIBRARY_PATH=\(dyld)", executable.path] + arguments
+        } else {
+            process.executableURL = executable
+            process.arguments = arguments
+        }
         process.environment = environment
         if let directory, FileManager.default.fileExists(atPath: directory.path) { process.currentDirectoryURL = directory }
         process.standardOutput = handle
@@ -161,7 +211,7 @@ enum WineProcess {
             try? handle.close()
             onExit(finished.terminationStatus)
         }
-        try process.run()
+        try PrefixLaunchGate.start(process)
         return process
     }
 
@@ -182,8 +232,13 @@ enum WineProcess {
     static func server(_ flag: String, engine: Engine, environment: [String: String]) async {
         await Task.detached {
             let process = Process()
-            process.executableURL = engine.wineserver
-            process.arguments = [flag]
+            if let profile = environment["EXERUNNER_SANDBOX_PROFILE"] {
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/sandbox-exec")
+                process.arguments = ["-f", profile, "/usr/bin/env", "DYLD_FALLBACK_LIBRARY_PATH=\(environment["DYLD_FALLBACK_LIBRARY_PATH"] ?? "/usr/lib")", engine.wineserver.path, flag]
+            } else {
+                process.executableURL = engine.wineserver
+                process.arguments = [flag]
+            }
             process.environment = environment
             process.standardOutput = FileHandle.nullDevice
             process.standardError = FileHandle.nullDevice

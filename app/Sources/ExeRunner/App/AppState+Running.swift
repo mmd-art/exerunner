@@ -2,7 +2,7 @@ import Foundation
 
 extension AppState {
     func launch(_ item: LibraryItem) {
-        guard !running.contains(item.id) else { return }
+        guard !isShuttingDown, !running.contains(item.id) else { return }
         Task {
             do { _ = try await run(item) } catch { errorMessage = error.localizedDescription }
         }
@@ -11,7 +11,40 @@ extension AppState {
     /// Starts `item` and returns once wine is done with it: a program when it exits, a Steam game
     /// once its Steam client has it (the game itself is then followed in the process table).
     func run(_ item: LibraryItem) async throws -> Int32 {
+        guard !isShuttingDown else { throw CancellationError() }
+        guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
+        try Task.checkCancellation()
         guard let engine else { throw AppError(t("Движок не найден. Укажи его папку в настройках.")) }
+        if effectiveGraphics(item) == .dxmt {
+            guard engine.hasDXMT else { throw AppError(t("DXMT отсутствует или движок не поддерживает его загрузку. Выберите другой графический режим.")) }
+            guard GraphicsSelection.supportsDXMT(profile: profile(for: item)) else {
+                throw AppError(LibraryItem.Graphics.dxmt.help)
+            }
+            guard !item.isolated, !item.bottle.hasPrefix("isolated-") else {
+                throw AppError(t("DXMT пока недоступен в изолированном режиме. Обычный запуск автоматически не выполняется."))
+            }
+        }
+        if item.isolated || item.bottle.hasPrefix("isolated-") {
+            guard !item.isSteamGame, item.kind != .launcher,
+                  !allItems.contains(where: { $0.id != item.id && $0.bottle == item.bottle }) else {
+                throw AppError(t("Изолированный режим требует отдельную бутылку без лаунчера и других игр."))
+            }
+            launching.insert(item.id)
+            defer { launching.remove(item.id) }
+            let bottle = Bottle(name: item.bottle, root: bottlesRoot)
+            let log = Paths.logFile(item.id)
+            logSegments[item.id] = LogSegment(url: log)
+            launchTimes[item.id] = Date()
+            stoppedByUser.remove(item.id)
+            var extra = environment(for: item)
+            extra.merge(try nativeIdentity(for: item, in: bottle)) { $1 }
+            handoffGameForeground(item)
+            let status = try await withGameBoost(item) {
+                try await IsolatedWine.run(item, bottle: bottle, engine: engine, log: log, extra: extra)
+            }
+            finished(item.id, status: status)
+            return status
+        }
         if item.isSteamGame, let client = steamClient(for: item) {
             return try await runThroughSteam(item, client: client, engine: engine)
         }
@@ -19,11 +52,22 @@ extension AppState {
         defer { launching.remove(item.id) }
         stoppedByUser.remove(item.id)
         let (env, log) = try await prepare(item, engine: engine)
-        let arguments = [item.executable] + item.arguments
-        let folder = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)?.deletingLastPathComponent()
-        var status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log, directory: folder)
+        try Task.checkCancellation()
+        guard !isShuttingDown else { throw CancellationError() }
+        let file = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)
+        let plan = try await ExecutionBreakpointCompatibility.plan(executable: item.executable, arguments: item.arguments,
+                                                                  file: file, isolated: item.isolated, environment: env,
+                                                                  compatibilityDirectory: Paths.compat)
+        try Task.checkCancellation()
+        guard !isShuttingDown else { throw CancellationError() }
+        let arguments = plan.arguments
+        let folder = file?.deletingLastPathComponent()
+        handoffGameForeground(item)
+        var status = try await withGameBoost(item) {
+            try await WineProcess.run(engine: engine, arguments: arguments, environment: plan.environment, log: log, directory: folder)
+        }
         // Steam exits with 42 after applying an update and expects to be started again
-        if status == 42, recipe(item.recipeID)?.discoversSteamGames == true {
+        if status == 42, !isShuttingDown, !Task.isCancelled, recipe(item.recipeID)?.discoversSteamGames == true {
             status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log, directory: folder)
         }
         finished(item.id, status: status)
@@ -44,8 +88,26 @@ extension AppState {
         let token = beginActivity(t("Готовлю «\(item.name)»…"))
         defer { endActivity(token) }
 
+        // Capture the initiating window's screen before any Wine helper changes focus.
+        if settings.automaticNativeResolution, item.kind == .game, !item.isolated, highResolutionEnabled(forBottle: item.bottle),
+           !WineProcesses.list().contains(where: { $0.path.replacingOccurrences(of: "\\", with: "/").split(separator: "/").last?.lowercased() == item.executableName.lowercased() }),
+           let display = NativeDisplayTarget.current() {
+            do {
+                if let update = try NativeDisplayPolicy.prepare(adapter: profile(for: item)?.nativeDisplayProfile,
+                        documents: Paths.home.appendingPathComponent("Documents", isDirectory: true),
+                        target: display, backups: Paths.support.appendingPathComponent("DisplayBackups", isDirectory: true)) {
+                    let line = "EXERUNNER_DISPLAY native \(display.width)x\(display.height) output=\(display.outputIndex) backup=\(update.backup.path)\n"
+                    try Paths.ensure(log.deletingLastPathComponent())
+                    if !FileManager.default.fileExists(atPath: log.path) { FileManager.default.createFile(atPath: log.path, contents: Data()) }
+                    let handle = try FileHandle(forWritingTo: log)
+                    defer { try? handle.close() }
+                    try handle.seekToEnd(); try handle.write(contentsOf: Data(line.utf8))
+                }
+            } catch { throw AppError(t("Не удалось согласовать разрешение игры с текущим экраном. Исходные настройки сохранены в резервной копии, если изменение уже началось.")) }
+        }
         let compat = try await prepareBottle(bottle, log: log, engine: engine, progress: reporter(token))
         var extra = environment(for: item)
+        extra.merge(try nativeIdentity(for: item, in: bottle)) { $1 }
         extra["EXERUNNER_COMPAT_FILE"] = compat.path
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
         if settings(forBottle: item.bottle).discordBridge { BottleManager.startDiscordBridge(bottle, engine: engine, environment: env) }
@@ -55,25 +117,23 @@ extension AppState {
     /// What every program of a bottle shares: the bottle itself, Windows components, DXVK and
     /// DLL overrides, fonts, audio and the per-program file cxcompatdb.so reads, returned
     func prepareBottle(_ bottle: Bottle, log: URL, engine: Engine, progress: @escaping (String) -> Void) async throws -> URL {
+        guard !bottle.name.hasPrefix("isolated-") else { throw AppError(t("Автоматическая установка компонентов в изолированном прототипе пока недоступна.")) }
         try await BottleManager.ensure(bottle, engine: engine, log: log)
+        try await BottleManager.applyHighResolution(settings(forBottle: bottle.name), to: bottle,
+                                                    hasGames: bottleItems.contains { $0.bottle == bottle.name && $0.kind == .game },
+                                                    engine: engine, log: log)
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
-        let verbs = winetricksVerbs(in: bottle.name)
-        if !Winetricks.missing(verbs, in: bottle).isEmpty {
-            // winetricks waits for the bottle to go idle, which a running Steam never lets happen
-            if !WineProcesses.list().filter({ $0.prefix == bottle.prefixPath }).isEmpty {
-                progress(t("Закрываю программы бутылки «\(bottle.name)», чтобы поставить компоненты Windows…"))
-                await quitBottle(bottle.name)
-            }
-            try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: progress)
-        }
+        let verbs = Array(Set(winetricksVerbs(in: bottle.name) + inferredRuntimeVerbs(in: bottle.name))).sorted()
+        try await ensureRuntimeComponents(verbs, in: bottle, engine: engine, log: log, progress: progress)
         if !dxvkExecutables(in: bottle.name).isEmpty { try BottleManager.installDXVK(bottle, engine: engine) }
+        if !dxmtExecutables(in: bottle.name).isEmpty { try BottleManager.installDXMTBridge(bottle, engine: engine) }
         try await BottleManager.applyOverrides(bottle, engine: engine, overrides: dllOverrides(in: bottle.name, engine: engine),
                                                direct3D: direct3D(in: bottle.name), log: log)
         BottleManager.installMetalFXFiles(bottle, engine: engine)
         try await BottleManager.applyFonts(bottle, engine: engine, log: log)
         try await BottleManager.applyAudio(settings(forBottle: bottle.name), to: bottle, engine: engine, log: log)
         return try BottleManager.writeCompatEnvironment(bottle, perProgram: perProgramEnvironment(in: bottle.name),
-                                                        d3dmetalOff: skipList(in: bottle.name))
+                                                        d3dmetalOff: skipList(in: bottle.name), dxmt: dxmtExecutables(in: bottle.name))
     }
 
     /// A Steam game goes through its bottle's Steam client. A running client is handed the game;
@@ -86,9 +146,11 @@ extension AppState {
         stoppedByUser.remove(item.id)
         // the bottle and the game's settings; the client keeps its own environment
         let (_, log) = try await prepare(item, engine: engine)
+        handoffGameForeground(item)
         await refreshProcesses()
         expectStart(item.id)
 
+        return try await withGameBoost(item) {
         if processes(of: client, in: processTable).isEmpty {
             var started = client
             started.arguments = client.arguments + item.arguments
@@ -109,6 +171,7 @@ extension AppState {
         extra["EXERUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
         return try await WineProcess.run(engine: engine, arguments: [client.executable] + item.arguments, environment: env, log: log)
+        }
     }
 
     /// Waits for the launcher runs this process started for games (a headless launch keeps the
@@ -126,13 +189,16 @@ extension AppState {
     /// first. A game or program stops alone: its windows are asked to close, what is left after
     /// a few seconds is ended, and the rest of the bottle (Steam, say) keeps running.
     func stop(_ item: LibraryItem) async {
+        cancelForegroundHandoff(item)
         guard let engine else { return }
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         stoppedByUser.insert(item.id)
         startingDeadlines[item.id] = nil
         starting.remove(item.id)
         let log = segment(for: item.id)?.url ?? Paths.logFile(item.id)
-        if item.kind == .launcher {
+        if item.isolated || item.bottle.hasPrefix("isolated-") {
+            await BottleManager.stop(bottle, engine: engine)
+        } else if item.kind == .launcher {
             if let recipe = recipe(item.recipeID), !recipe.shutdownArguments.isEmpty,
                !processes(of: item, in: WineProcesses.list()).isEmpty {
                 let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: environment(for: item))
@@ -183,6 +249,26 @@ extension AppState {
         return false
     }
 
+    /// Quitting the runner also ends its Windows sessions. Block new launches first so
+    /// a pending preparation or Steam update cannot recreate a session during teardown.
+    func shutdown() async {
+        cancelAllForegroundHandoffs()
+        guard !isShuttingDown else { return }
+        isShuttingDown = true
+        await gameBoost.finishOwnerStarts()
+        watcher?.cancel()
+        watcher = nil
+        for task in clientRuns.values { task.cancel() }
+        let bottles = Set(bottleItems.map(\.bottle)).map { Bottle(name: $0, root: bottlesRoot) }
+        for item in allItems { stoppedByUser.insert(item.id) }
+        PrefixLaunchGate.close(Set(bottles.map(\.prefixPath)))
+        guard let engine else { return }
+        for bottle in bottles {
+            await BottleManager.stop(bottle, engine: engine)
+        }
+        await refreshProcesses()
+    }
+
     // MARK: watching
 
     /// Every two seconds while the window is open: which items have processes in their bottles
@@ -216,6 +302,7 @@ extension AppState {
         // games a launcher ran have no run of their own to report their end
         for id in active.subtracting(found) where !launching.contains(id) { finished(id, status: nil) }
         if found != active { active = found }
+        await syncGameBoost()
     }
 
     func expectStart(_ id: String) {
@@ -232,6 +319,7 @@ extension AppState {
         let path = item.isSteamGame ? nil : item.executable
         return list.filter { entry in
             guard entry.prefix == prefix else { return false }
+            if item.isolated || item.bottle.hasPrefix("isolated-") { return true }
             if let folder, WindowsPath.isInside(entry.path, folder: folder) { return true }
             if let path, WindowsPath.same(entry.path, path) { return true }
             return names.contains(entry.name.lowercased())
@@ -269,7 +357,7 @@ extension AppState {
         }
         guard let text = segment(for: id)?.window() else { return }
         guard (status ?? 0) != 0 || CrashClassifier.looksLikeCrash(text) else { return }
-        let diagnosis = CrashClassifier.shared.classify(text)
+        let diagnosis = CrashClassifier.shared.classify(text, exitStatus: status)
         if let primary = diagnosis.primary, primary.pattern.severity >= .error { diagnoses[id] = diagnosis }
     }
 

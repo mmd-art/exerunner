@@ -32,7 +32,7 @@
       "recommended": {
         "label": "D3DMetal",
         "whenToUse": null,
-        "graphics": "automatic",
+        "graphics": "d3dmetal",
         "environment": {},
         "dllOverrides": {},
         "winetricks": []
@@ -42,7 +42,11 @@
         "Tested 10/10/2026: Wine 11.16 + D3DMetal 4.0 beta 2, M2 Pro (19-core GPU), 16 GB, macOS 27.2. Steam installs DirectX itself on the first launch, then shaders build for a few minutes.",
         "Result: Low preset, 1920×1080 borderless, FSR 66%, frame generation off: 40 FPS on average, 31 for the low 5%, 51 at most. Limited by the GPU (99% busy); the game thread is busy ~10 ms out of 24. The minimum of 2 FPS comes from one-off stalls in the first 3 seconds and three of 0.3–0.8 s (shader building).",
         "Not a clean measurement: two displays (4K 120 Hz and the built-in one), VS Code, Mail, WhatsApp and Steam for Mac open, 22 GB of swap in use."
-      ]
+      ],
+      "profileVersion": 1,
+      "kind": "game",
+      "source": "ExeRunner local tests",
+      "graphicsAPI": "d3d12"
     },
     {
       "id": "black-myth-wukong",
@@ -72,7 +76,7 @@
       "recommended": {
         "label": "D3DMetal",
         "whenToUse": null,
-        "graphics": "automatic",
+        "graphics": "d3dmetal",
         "environment": {},
         "dllOverrides": {},
         "winetricks": []
@@ -80,7 +84,164 @@
       "alternatives": [],
       "notesEn": [
         "Not tested. The benchmark on the same game engine works with frame generation off."
-      ]
+      ],
+      "profileVersion": 1,
+      "kind": "game",
+      "source": "ExeRunner local tests",
+      "graphicsAPI": "d3d12"
+    },
+    {
+      "id": "farcry-primal",
+      "title": "Far Cry Primal",
+      "aliases": [],
+      "store": "other",
+      "exeNames": [
+        "FCPrimal.exe"
+      ],
+      "kind": "game",
+      "rating": "playable",
+      "antiCheat": null,
+      "notes": [
+        "Меню, игра и встроенный бенчмарк проверены. При 3840×2160 пользовательский профиль дал 31/32/35 FPS (min/avg/max); на встроенном 3456×2234 — 33/35/38.",
+        "Исправление запуска применяется только к проверенной версии EXE. HiDPI открывает физические разрешения. Общая политика экрана согласовывает полноэкранное разрешение с текущим монитором и сохраняет качество графики.",
+        "DXMT 0.80 с исправленным Retina протестирован из обычного меню: 29/33/35 FPS при 3456×2234; заметного выигрыша относительно D3DMetal пока нет. Для Auto остаётся D3DMetal. DLSS и DXR к этой игре не применяются.",
+        "Проверено 14/10/2026 на стереодинамиках DELL: после первого мамонта голоса вернулись при сведении стандартного 5.1 float PCM в стерео с сохранением центрального канала. Обычное стерео и настройки графики сохраняются."
+      ],
+      "notesEn": [
+        "Menu, gameplay and built-in benchmark verified. At 3840×2160 the owner's profile returned 31/32/35 FPS (min/avg/max); built-in 3456×2234 returned 33/35/38.",
+        "The startup adapter applies only to the tested executable revision. HiDPI exposes physical resolutions. The shared screen policy matches fullscreen resolution to the current monitor while preserving graphics quality.",
+        "DXMT 0.80 with the Retina correction was tested from a normal menu: 29/33/35 FPS at 3456×2234. No substantial improvement over D3DMetal was demonstrated; Auto stays on D3DMetal. DLSS/DXR do not apply.",
+        "Verified 14/10/2026 on DELL stereo speakers: dialogue after the first mammoth returned with standard 5.1 float PCM downmixed to stereo, preserving the center channel. Ordinary stereo and graphics settings are preserved."
+      ],
+      "issues": [
+        {
+          "severity": "medium",
+          "text": "В стереовыходе диалоги после интро могут пропадать при шестиканальном потоке.",
+          "workaround": "Рекомендованный профиль автоматически сводит стандартный 5.1 float PCM в стерео с сохранением речи.",
+          "textEn": "Dialogue after the intro can disappear on a stereo output when the game uses a six-channel stream.",
+          "workaroundEn": "The recommended profile automatically downmixes standard 5.1 float PCM to stereo, preserving dialogue."
+        }
+      ],
+      "profileVersion": 3,
+      "source": "ExeRunner local tests",
+      "graphicsAPI": "d3d11",
+      "features": {
+        "dlss": false,
+        "dxr": false
+      },
+      "verification": {
+        "date": "2026-10-14",
+        "machine": "M2 Pro, 19-core GPU, 16 GB",
+        "macOS": "27.2",
+        "wine": "11.16",
+        "translator": "D3DMetal 4.0b2",
+        "level": "gameplay + benchmark"
+      },
+      "recommended": {
+        "label": "D3DMetal",
+        "whenToUse": null,
+        "graphics": "d3dmetal",
+        "environment": {
+          "EXERUNNER_AUDIO_DOWNMIX": "1"
+        },
+        "dllOverrides": {},
+        "winetricks": []
+      },
+      "alternatives": [
+        {
+          "label": "DXMT 0.80",
+          "whenToUse": "Optional DX10/11 backend; the local Primal benchmark did not beat D3DMetal. Use the normal menu to start benchmarks.",
+          "graphics": "dxmt",
+          "environment": {},
+          "dllOverrides": {},
+          "winetricks": []
+        }
+      ],
+      "nativeDisplayProfile": "farcry-primal"
+    },
+    {
+      "id": "world-of-tanks-eu",
+      "title": "World of Tanks EU",
+      "aliases": [],
+      "store": "other",
+      "exeNames": [
+        "WorldOfTanks.exe"
+      ],
+      "kind": "game",
+      "rating": "playable",
+      "antiCheat": null,
+      "notes": [
+        "Пользователь проверил игру: 3840×2160, High, около 50 FPS. Это наблюдение владельца, не контрольный замер.",
+        "Обновления и проверка файлов выполняются в Wargaming Game Center. HiDPI проверен; рабочие настройки игры профиль не меняет."
+      ],
+      "notesEn": [
+        "Owner confirmed gameplay: 3840×2160, High, about 50 FPS. This is an owner observation, not a controlled benchmark.",
+        "Updates and file repair belong in Wargaming Game Center. HiDPI verified; this profile does not change working game settings."
+      ],
+      "issues": [],
+      "profileVersion": 1,
+      "source": "ExeRunner local tests",
+      "graphicsAPI": "d3d11",
+      "features": {
+        "dxr": false
+      },
+      "verification": {
+        "date": "2026-10-13",
+        "machine": "M2 Pro, 19-core GPU, 16 GB",
+        "macOS": "27.2",
+        "wine": "11.16",
+        "translator": "D3DMetal 4.0b2",
+        "level": "owner gameplay"
+      },
+      "recommended": {
+        "label": "D3DMetal",
+        "whenToUse": null,
+        "graphics": "d3dmetal",
+        "environment": {},
+        "dllOverrides": {},
+        "winetricks": []
+      },
+      "alternatives": []
+    },
+    {
+      "id": "wargaming-game-center",
+      "title": "Wargaming Game Center",
+      "aliases": [],
+      "store": "other",
+      "exeNames": [
+        "wgc.exe"
+      ],
+      "kind": "launcher",
+      "rating": "works",
+      "antiCheat": null,
+      "notes": [
+        "Обновление Windows-клиента World of Tanks и последующий запуск проверены. Вход в аккаунт остаётся действием пользователя."
+      ],
+      "notesEn": [
+        "Updating the Windows World of Tanks client and launching it afterward were verified. Account sign-in remains a user action."
+      ],
+      "issues": [],
+      "profileVersion": 1,
+      "source": "ExeRunner local tests",
+      "graphicsAPI": null,
+      "features": null,
+      "verification": {
+        "date": "2026-10-13",
+        "machine": "M2 Pro, 19-core GPU, 16 GB",
+        "macOS": "27.2",
+        "wine": "11.16",
+        "translator": "D3DMetal 4.0b2",
+        "level": "update + launch"
+      },
+      "recommended": {
+        "label": "D3DMetal",
+        "whenToUse": null,
+        "graphics": "d3dmetal",
+        "environment": {},
+        "dllOverrides": {},
+        "winetricks": []
+      },
+      "alternatives": []
     }
   ]
 }

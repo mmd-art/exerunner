@@ -5,8 +5,25 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderComponents(to dir: URL) async {
+        let state = AppState(managesGameBoost: false)
+        await state.refresh()
+        guard let item = state.programs.first ?? state.launchers.first else { return }
+        try? Paths.ensure(dir)
+        await capture("windows-components", AnyView(RuntimeComponentsView(item: item)), state: state, to: dir,
+                      size: NSSize(width: 1100, height: 800))
+    }
+
+    static func renderSettings(to dir: URL, language: InterfaceLanguage? = nil) async {
+        let state = AppState(managesGameBoost: false)
+        await state.refresh()
+        if let language { L10n.use(language) }
+        try? Paths.ensure(dir)
+        await capture("settings-gameboost", AnyView(MainView(section: .settings)), state: state, to: dir)
+    }
+
     static func render(to dir: URL, language: InterfaceLanguage? = nil) async {
-        let state = AppState()
+        let state = AppState(managesGameBoost: false)
         if let language { L10n.use(language) }
         await state.refresh()
         try? Paths.ensure(dir)
@@ -27,6 +44,12 @@ enum Snapshots {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)))
             }
         for (name, view) in screens { await capture(name, view, state: state, to: dir) }
+
+        // Imported games may be below the initial library viewport.
+        for item in state.games where !item.isSteamGame {
+            await capture("17-imported-game-" + item.id, AnyView(ItemTile(item: item).frame(width: 280).padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)), state: state, to: dir)
+        }
 
         // the helper and the settings sheet, on the Steam launcher and its first game
         guard let steam = state.launchers.first(where: { state.recipe($0.recipeID)?.discoversSteamGames == true }) else { return }
@@ -49,8 +72,8 @@ enum Snapshots {
         }
     }
 
-    private static func capture(_ name: String, _ view: AnyView, state: AppState, to dir: URL) async {
-        let size = NSSize(width: 1100, height: 720)
+    private static func capture(_ name: String, _ view: AnyView, state: AppState, to dir: URL,
+                                size: NSSize = NSSize(width: 1100, height: 720)) async {
         let host = NSHostingView(rootView: view
             .environmentObject(state)
             .frame(width: size.width, height: size.height)

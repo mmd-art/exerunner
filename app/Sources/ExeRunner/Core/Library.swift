@@ -4,13 +4,28 @@ struct LibraryItem: Codable, Identifiable, Hashable {
     enum Kind: String, Codable { case launcher, program, game }
 
     enum Graphics: String, Codable, CaseIterable, Identifiable {
-        case automatic, dxvk, wine
+        case automatic, d3dmetal, dxmt, dxvk, wine, vulkan
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .automatic: t("Авто (D3DMetal)")
+            case .automatic: t("Авто")
+            case .d3dmetal: "D3DMetal (Metal)"
+            case .dxmt: "DXMT (Metal)"
             case .dxvk: "DXVK (Vulkan)"
-            case .wine: t("Встроенная в Wine")
+            case .wine: t("Wine (OpenGL)")
+            case .vulkan: "Wine (Vulkan)"
+            }
+        }
+
+        /// Localized guidance for the picker and its native hover help.
+        var help: String {
+            switch self {
+            case .automatic: t("Использует рекомендацию для игры; без неё — D3DMetal для DirectX 11/12, если он подключён. Начните с этого режима.")
+            case .d3dmetal: t("Переводит DirectX 11/12 в Metal через Game Porting Toolkit. Для DirectX 9 выберите DXVK или Wine. Требует подключённый D3DMetal.")
+            case .dxmt: t("DXMT переводит DirectX 10/11 напрямую в Metal. Альтернатива D3DMetal; скорость и совместимость зависят от программы. DirectX 9/12 не поддерживаются.")
+            case .dxvk: t("DXVK переводит DirectX 9–11 в Vulkan, который на Mac работает через Metal. Попробуйте при сбоях или низком FPS в режиме Авто; результат зависит от игры.")
+            case .wine: t("Встроенный WineD3D переводит DirectX в OpenGL. Запасной вариант для старых игр и проблем совместимости; часто медленнее. DirectX 12 не поддерживается.")
+            case .vulkan: t("Экспериментальный Vulkan-рендерер встроенного WineD3D. Это другой переводчик, чем DXVK; используйте для проверки совместимости, если основные режимы дают сбои.")
             }
         }
     }
@@ -57,6 +72,11 @@ struct LibraryItem: Codable, Identifiable, Hashable {
     var extraEnvironment: [String: String] = [:]
     /// LC_ALL and LANG for the program, such as ru_RU.UTF-8; nil leaves the recipe's or the Mac's
     var locale: String?
+    /// OS-enforced offline prototype; never falls back to ordinary Wine.
+    var isolated = false
+    /// Separate disks for the two modes. Never merge unrestricted changes back.
+    var isolatedBottle: String?
+    var ordinaryBottle: String?
     var logging = Logging.normal
     /// The user's own DLL overrides for the item's programs (dll -> mode; empty disables)
     var dllOverrides: [String: String] = [:]
@@ -93,6 +113,9 @@ struct LibraryItem: Codable, Identifiable, Hashable {
         performanceHUD = try c.decodeIfPresent(Bool.self, forKey: .performanceHUD) ?? false
         extraEnvironment = try c.decodeIfPresent([String: String].self, forKey: .extraEnvironment) ?? [:]
         locale = try c.decodeIfPresent(String.self, forKey: .locale)
+        isolated = try c.decodeIfPresent(Bool.self, forKey: .isolated) ?? false
+        isolatedBottle = try c.decodeIfPresent(String.self, forKey: .isolatedBottle)
+        ordinaryBottle = try c.decodeIfPresent(String.self, forKey: .ordinaryBottle)
         logging = try c.decodeIfPresent(Logging.self, forKey: .logging) ?? .normal
         dllOverrides = try c.decodeIfPresent([String: String].self, forKey: .dllOverrides) ?? [:]
     }

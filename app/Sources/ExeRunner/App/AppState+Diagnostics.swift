@@ -39,28 +39,25 @@ extension AppState {
     private func otherGraphics(for item: LibraryItem) -> LibraryItem.Graphics? {
         guard canTargetExecutables(item) else { return nil }
         switch effectiveGraphics(item) {
-        case .automatic: return .dxvk
+        case .automatic, .d3dmetal:
+            return engine?.hasDXMT == true && GraphicsSelection.supportsDXMT(profile: profile(for: item)) ? .dxmt : .dxvk
+        case .dxmt: return engine?.d3dmetalVersion == nil ? .wine : .d3dmetal
         case .dxvk: return engine?.d3dmetalVersion == nil ? .wine : .automatic
-        case .wine: return engine?.d3dmetalVersion == nil ? .dxvk : .automatic
+        case .wine: return .vulkan
+        case .vulkan: return engine?.d3dmetalVersion == nil ? .wine : .automatic
         }
     }
 
     func apply(_ remedy: Remedy, to id: String) async {
         guard var item = item(id) else { return }
+        guard !item.isolated, !item.bottle.hasPrefix("isolated-") else {
+            errorMessage = t("Автоматическая установка компонентов в изолированном прототипе пока недоступна.")
+            return
+        }
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         switch remedy {
         case .install(let verbs):
-            guard let engine else { errorMessage = t("Движок не найден"); return }
-            let token = beginActivity(t("Ставлю компоненты Windows: \(verbs.joined(separator: ", "))…"))
-            defer { endActivity(token) }
-            let log = Paths.logFile("\(item.id)-components")
-            do {
-                try await BottleManager.ensure(bottle, engine: engine, log: log)
-                if !WineProcesses.list().filter({ $0.prefix == bottle.prefixPath }).isEmpty { await quitBottle(item.bottle) }
-                try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log, progress: reporter(token))
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+            _ = await installRuntimeComponents(verbs, for: item)
         case .graphics(let graphics):
             item.graphics = graphics
             upsert(item)
@@ -197,10 +194,14 @@ extension AppState {
         guard let text = segment(for: item.id)?.window() else {
             return Check(title: title, status: .info, detail: t("Журнала пока нет: запусти программу и проверь снова."))
         }
-        var diagnosis = CrashClassifier.shared.classify(text)
+        var diagnosis = diagnoses[item.id] ?? CrashClassifier.shared.classify(text)
         if let categories { diagnosis = CrashDiagnosis(matches: diagnosis.matches.filter { categories.contains($0.pattern.category) }) }
         guard let primary = diagnosis.primary else {
             return Check(title: title, status: .ok, detail: t("Известных ошибок нет."))
+        }
+        if primary.pattern.id == "process-exit" {
+            return Check(title: title, status: .problem, detail: primary.line,
+                         remedies: remedies(for: diagnosis, item: item))
         }
         let more = diagnosis.matches.count > 1 ? t(" Всего находок: \(diagnosis.matches.count).") : ""
         return Check(title: title, status: primary.pattern.severity >= .error ? .problem : .warning,
@@ -481,7 +482,7 @@ extension AppState {
             item: item, effectiveGraphics: effectiveGraphics(item), recipe: recipe(item.recipeID), profile: profile(for: item),
             bottle: bottle, bottleSettings: settings(forBottle: item.bottle), system: system, rosetta: rosettaInstalled,
             engine: engineInfo, environment: environment,
-            diagnosis: segment?.window().map(CrashClassifier.shared.classify), checks: checks, log: segment,
+            diagnosis: diagnoses[item.id] ?? segment?.window().map(CrashClassifier.shared.classify), checks: checks, log: segment,
             prefixProblems: PrefixCheck.problems(in: bottle).map(PrefixCheck.describe),
             winetricks: Winetricks.installed(in: bottle).sorted(),
             processes: processTable.filter { $0.prefix == bottle.prefixPath }.map(\.name).sorted())

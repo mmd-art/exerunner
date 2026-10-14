@@ -138,6 +138,10 @@ final class CrashClassifier: @unchecked Sendable {
 
     /// Every line against every pattern; nothing is merged, the strongest match leads
     func classify(_ text: String) -> CrashDiagnosis {
+        classify(text, exitStatus: nil)
+    }
+
+    func classify(_ text: String, exitStatus: Int32?) -> CrashDiagnosis {
         var matches: [CrashDiagnosis.Match] = []
         for (index, line) in text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
             let line = String(line)
@@ -161,6 +165,16 @@ final class CrashClassifier: @unchecked Sendable {
             }
             return a.offset < b.offset
         }.map(\.element)
+        // Some applications deliberately exit with an error and leave no explanatory log line.
+        // Preserve a known diagnosis; otherwise surface the observed exit without guessing a cause.
+        if let exitStatus, exitStatus != 0, (ordered.first?.pattern.severity ?? .info) < .error {
+            let pattern = CrashPattern(id: "process-exit", category: .otherUnknown, severity: .error,
+                                       confidence: 1, prefilter: nil, regex: "", remedies: ["logging-crash"])
+            let match = CrashDiagnosis.Match(pattern: pattern, lineNumber: 0,
+                line: t("Приложение завершилось с кодом \(exitStatus), но журнал не объясняет причину."),
+                captures: [t("код завершения \(exitStatus)")])
+            return CrashDiagnosis(matches: [match] + ordered)
+        }
         return CrashDiagnosis(matches: ordered)
     }
 

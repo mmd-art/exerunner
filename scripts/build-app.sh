@@ -1,6 +1,6 @@
 #!/bin/bash
-# Build ExeRunner.app into build/app.noindex/ (never into /Applications). The .noindex folder keeps
-# Spotlight and Launchpad from listing this copy next to the installed one.
+# Build ExeRunner.app into build/app.noindex/ (never into /Applications).
+# Exclude this checkout from Spotlight and unregister the generated app on exit.
 #
 # usage: build-app.sh [debug|release] [--without-d3dmetal]
 # Signs with the certificate named in $CODESIGN_IDENTITY or in scripts/signing.local (one line, not
@@ -10,6 +10,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="ExeRunner"
+ENGINE_SOURCE="${EXERUNNER_BUILD_ENGINE_ROOT:-$ROOT/engine/portable}"
+KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-0}"
 CONFIG="release"
 WITH_D3DMETAL="${EXERUNNER_D3DMETAL:-1}"
 for arg in "$@"; do
@@ -20,8 +22,22 @@ for arg in "$@"; do
   esac
 done
 APP="$ROOT/build/app.noindex/$NAME.app"
+# Check before creating a bundle: a restricted agent sandbox may not reach Spotlight.
+python3 -I "$ROOT/tools/search-privacy.py" exclude-project
+cleanup_registration() {
+  local status=$?
+  if [ -d "$APP" ]; then
+    if ! python3 -I "$ROOT/tools/search-privacy.py" unregister-build "$APP"; then
+      echo "could not remove the build app from macOS search; build is not ready" >&2
+      status=1
+    fi
+  fi
+  return "$status"
+}
+trap cleanup_registration EXIT
 IDENTITY="${CODESIGN_IDENTITY:-$(cat "$ROOT/scripts/signing.local" 2>/dev/null || true)}"
 
+bash "$ROOT/scripts/build-windows-compat.sh"
 swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64
 BIN="$(swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64 --show-bin-path)/$NAME"
 
@@ -31,8 +47,8 @@ cp "$BIN" "$APP/Contents/MacOS/$NAME"
 ditto "$ROOT/recipes" "$APP/Contents/Resources/recipes"
 ditto "$ROOT/compat" "$APP/Contents/Resources/compat"
 cp "$ROOT/LICENSE" "$ROOT/CREDITS.md" "$APP/Contents/Resources/"
-if [ -f "$ROOT/engine/portable/engine.json" ]; then
-  ditto "$ROOT/engine/portable" "$APP/Contents/Resources/engine"
+if [ -f "$ENGINE_SOURCE/engine.json" ]; then
+  ditto "$ENGINE_SOURCE" "$APP/Contents/Resources/engine"
 fi
 # D3DMetal goes in for free builds: Apple's Game Porting Toolkit licence lets it be passed on
 # non-commercially, with Apple's notices (sections 2A(iii) and 2C). --without-d3dmetal, or
@@ -70,7 +86,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>0.2</string>
+  <key>CFBundleShortVersionString</key><string>0.3</string>
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
@@ -87,7 +103,11 @@ if [ -n "$IDENTITY" ]; then
 fi
 SIGN="${HASH:--}"
 # the engine's own programs and libraries first, then the app that seals them
-if [ -d "$APP/Contents/Resources/engine" ]; then
+if [ -d "$APP/Contents/Resources/engine" ] && [ "$KEEP_ENGINE_SIGNATURES" = 1 ]; then
+  # Reuse a previously verified engine without rewriting its signed Mach-O files.
+  codesign --verify --strict "$APP/Contents/Resources/engine/bin/wine"
+fi
+if [ -d "$APP/Contents/Resources/engine" ] && [ "$KEEP_ENGINE_SIGNATURES" != 1 ]; then
   python3 -I - "$APP/Contents/Resources/engine" <<'PY' | xargs -0 codesign --force --sign "$SIGN"
 import os, sys
 magics = (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xce\xfa\xed\xfe")
@@ -103,6 +123,5 @@ PY
 fi
 codesign --force --sign "$SIGN" "$APP"
 codesign --verify --strict "$APP"
-# only the installed copy should open documents and show in "Open With"
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$APP" >/dev/null 2>&1 || true
+# The EXIT trap verifies removal from LaunchServices, also after a failed build.
 echo "built $APP"

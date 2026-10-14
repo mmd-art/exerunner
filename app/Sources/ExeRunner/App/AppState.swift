@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
         didSet {
             if settings.language != oldValue.language { L10n.use(settings.language) }
             if settings != oldValue { settings.save() }
+            if settings.gameBoost != oldValue.gameBoost { Task { await self.syncGameBoost() } }
         }
     }
     @Published private(set) var engine: Engine?
@@ -20,6 +21,7 @@ final class AppState: ObservableObject {
     @Published private(set) var system = SystemInfo.current()
     @Published private(set) var gameProfiles: [GameProfile] = []
     private(set) var compatSource = ""
+    @Published var componentInstalls: Set<String> = []
     @Published var activity: String?
     @Published var errorMessage: String?
     private var activityToken = 0
@@ -56,11 +58,17 @@ final class AppState: ObservableObject {
     var audioTests: [String: AudioTestResult] = [:]
     /// Launchers being installed: their bottle is set up for them before their installer runs
     var installing: [LibraryItem] = []
+    @Published var gameBoostStatus = GameBoostSnapshot()
+    let gameBoost = GameBoostCoordinator(directory: Paths.support.appendingPathComponent("GameBoost", isDirectory: true),
+                                         helper: Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0]))
     var watcher: Task<Void, Never>?
+    var isShuttingDown = false
+    let managesGameBoost: Bool
 
     var running: Set<String> { launching.union(active).union(starting) }
 
-    init() {
+    init(managesGameBoost: Bool = true) {
+        self.managesGameBoost = managesGameBoost
         settings = AppSettings.load()
         L10n.use(settings.language)
         recipes = Recipe.loadAll()
@@ -99,6 +107,7 @@ final class AppState: ObservableObject {
             engineVersion = nil
         }
         refreshGames()
+        await refreshGameBoostAvailability()
     }
 
     func refreshGames() {
@@ -149,6 +158,13 @@ final class AppState: ObservableObject {
 
     func settings(forBottle name: String) -> BottleSettings { bottleSettings[name] ?? BottleSettings() }
 
+    func highResolutionEnabled(forBottle name: String) -> Bool {
+        let bottle = Bottle(name: name, root: bottlesRoot)
+        let current = BottleManager.registryValues(in: bottle, hive: "user.reg", key: "Software\\\\Wine\\\\Mac Driver")?["retinamode"]
+        return settings(forBottle: name).desiredHighResolution(
+            hasGames: bottleItems.contains { $0.bottle == name && $0.kind == .game }, existing: current) ?? false
+    }
+
     func updateBottle(_ name: String, _ change: (inout BottleSettings) -> Void) {
         var value = settings(forBottle: name)
         change(&value)
@@ -176,16 +192,17 @@ final class AppState: ObservableObject {
 
     /// The compatibility database's entry: by Steam app id for Steam games, else by .exe name
     func profile(for item: LibraryItem) -> GameProfile? {
-        if let appID = item.steamAppID { return gameProfiles.first { $0.steamAppID == appID } }
-        let exe = item.executableName.lowercased()
-        return gameProfiles.first { $0.exeNames.contains { $0.lowercased() == exe } }
+        GraphicsSelection.profile(for: item, in: gameProfiles)
     }
 
     /// The executables an item covers: its own .exe, or for a Steam game the ones the database
     /// knows and those found in its folder (Steam starts the game itself, so settings have to
     /// find it by name)
     func executables(of item: LibraryItem) -> [String] {
-        guard item.isSteamGame else { return [item.executableName] }
+        guard item.isSteamGame else {
+            let owner = dockExecutable(for: item, in: Bottle(name: item.bottle, root: bottlesRoot))
+            return owner.caseInsensitiveCompare(item.executableName) == .orderedSame ? [item.executableName] : [item.executableName, owner]
+        }
         var names = profile(for: item)?.exeNames ?? []
         for name in steamExecutables[item.id] ?? [] where !names.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
             names.append(name)
@@ -196,9 +213,7 @@ final class AppState: ObservableObject {
     func canTargetExecutables(_ item: LibraryItem) -> Bool { !executables(of: item).isEmpty }
 
     func effectiveGraphics(_ item: LibraryItem) -> LibraryItem.Graphics {
-        if item.graphics != .automatic { return item.graphics }
-        if item.useRecommended, let profile = profile(for: item) { return profile.recommended.graphics }
-        return .automatic
+        GraphicsSelection.resolve(item, profile: profile(for: item), hasD3DMetal: engine?.d3dmetalVersion != nil)
     }
 
     /// Executables in a bottle that draw through DXVK: the recipes' lists, the Chromium helpers
@@ -209,6 +224,10 @@ final class AppState: ObservableObject {
             names.formUnion(executables(of: item))
         }
         return names
+    }
+
+    func dxmtExecutables(in bottle: String) -> Set<String> {
+        Set(bottleItems.filter { $0.bottle == bottle && effectiveGraphics($0) == .dxmt }.flatMap { executables(of: $0) })
     }
 
     /// Programs that draw through wine's own Direct3D, with its settings for them (renderer=gl)
@@ -222,8 +241,8 @@ final class AppState: ObservableObject {
 
     /// Executables that keep wine's own DLLs instead of D3DMetal
     func skipList(in bottle: String) -> Set<String> {
-        var names = dxvkExecutables(in: bottle).union(direct3D(in: bottle).keys)
-        for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .wine {
+        var names = dxvkExecutables(in: bottle).union(dxmtExecutables(in: bottle)).union(direct3D(in: bottle).keys)
+        for item in bottleItems where item.bottle == bottle && [.wine, .vulkan].contains(effectiveGraphics(item)) {
             names.formUnion(executables(of: item))
         }
         return names
@@ -236,6 +255,9 @@ final class AppState: ObservableObject {
         let dxvk = BottleManager.dxvkLibraries(engine)
         for exe in dxvkExecutables(in: bottle) {
             for dll in dxvk { result[exe, default: [:]][dll] = "native" }
+        }
+        for exe in dxmtExecutables(in: bottle) {
+            for dll in ["d3d11", "dxgi", "d3d10core", "winemetal"] { result[exe, default: [:]][dll] = "builtin" }
         }
         for recipe in recipes(in: bottle) {
             for (exe, dlls) in recipe.dllOverrides { result[exe, default: [:]].merge(dlls) { $1 } }
@@ -263,13 +285,45 @@ final class AppState: ObservableObject {
     }
 
     /// Variables of one item: the database's recommendation, its switches, then the user's own
+    private var foregroundLaunchTasks: [String: Task<Void, Never>] = [:]
+    private var foregroundLaunchGenerations: [String: UUID] = [:]
+
+    func handoffGameForeground(_ item: LibraryItem) {
+        guard item.kind == .game else { return }
+        foregroundLaunchTasks[item.id]?.cancel()
+        let prefix = Bottle(name: item.bottle, root: bottlesRoot).prefixPath
+        let names = Set(executables(of: item))
+        let generation = UUID()
+        foregroundLaunchGenerations[item.id] = generation
+        foregroundLaunchTasks[item.id] = Task { [weak self] in
+            await NativeGameForeground.present(prefix: prefix, executableNames: names)
+            if self?.foregroundLaunchGenerations[item.id] == generation {
+                self?.foregroundLaunchTasks[item.id] = nil
+                self?.foregroundLaunchGenerations[item.id] = nil
+            }
+        }
+    }
+
+    func cancelForegroundHandoff(_ item: LibraryItem) {
+        foregroundLaunchTasks.removeValue(forKey: item.id)?.cancel()
+        foregroundLaunchGenerations[item.id] = nil
+    }
+
+    func cancelAllForegroundHandoffs() {
+        foregroundLaunchTasks.values.forEach { $0.cancel() }
+        foregroundLaunchTasks.removeAll()
+        foregroundLaunchGenerations.removeAll()
+    }
+
     func itemEnvironment(_ item: LibraryItem) -> [String: String] {
-        var env: [String: String] = [:]
+        var env: [String: String] = ["EXERUNNER_CURSOR_GUARD": settings.cursorConfinement ? "1" : "0"]
         if item.useRecommended, let profile = profile(for: item) { env.merge(profile.recommended.environment) { $1 } }
         if !item.metalFX { env["D3DM_ENABLE_METALFX"] = "0" }
         if item.raytracing { env["D3DM_SUPPORT_DXR"] = "1" }
-        if item.performanceHUD { env["MTL_HUD_ENABLED"] = "1" }
+        if effectiveGraphics(item) == .vulkan { env["WINE_D3D_CONFIG"] = "renderer=vulkan" }
+        if effectiveGraphics(item) == .wine { env["WINE_D3D_CONFIG"] = "renderer=gl" }
         env.merge(item.extraEnvironment) { $1 }
+        env["MTL_HUD_ENABLED"] = (settings.performanceHUD ?? item.performanceHUD) ? "1" : "0"
         return env
     }
 
@@ -290,7 +344,8 @@ final class AppState: ObservableObject {
     func perProgramEnvironment(in bottle: String) -> [String: [String: String]] {
         var result: [String: [String: String]] = [:]
         for item in bottleItems where item.bottle == bottle {
-            let env = itemEnvironment(item)
+            var env = itemEnvironment(item)
+            if let identity = try? nativeIdentity(for: item, in: Bottle(name: bottle, root: bottlesRoot)) { env.merge(identity) { $1 } }
             guard !env.isEmpty else { continue }
             for exe in executables(of: item) { result[exe, default: [:]].merge(env) { $1 } }
         }
@@ -503,6 +558,7 @@ final class AppState: ObservableObject {
         if let engine {
             lines.append("engine: \(engine.root.path) \(engineVersion ?? "?")\(engine.isPortable ? " (portable)" : "")")
             lines.append("  d3dmetal from: \(engine.gptk.path)")
+            lines.append("  dxmt \(engine.dxmtVersion ?? "unavailable"), scoped Retina mode guard \(engine.hasDXMT)")
             lines.append("  compat \(engine.hasCompatModule), dxvk \(engine.hasDXVK), moltenvk \(engine.hasMoltenVK), mono+gecko \(engine.hasMonoAndGecko), d3dmetal \(engine.d3dmetalVersion ?? "none"), discord bridge \(engine.hasDiscordBridge)")
         } else {
             lines.append("engine: not found")

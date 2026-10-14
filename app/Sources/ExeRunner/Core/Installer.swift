@@ -10,6 +10,7 @@ enum Installer {
         let log = log ?? Paths.logFile("install-\(recipe.id)")
         progress(t("Готовлю бутылку «\(recipe.bottle)»…"))
         try await BottleManager.ensure(bottle, engine: engine, log: log)
+        guard !bottle.name.hasPrefix("isolated-") else { throw AppError("Installer unsupported in isolation prototype") }
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
         if let found = installedPath(exe, in: bottle) {
             progress(t("\(recipe.name) уже установлен"))
@@ -84,13 +85,18 @@ enum Installer {
         let log = Paths.logFile("install-\(file.deletingPathExtension().lastPathComponent)")
         progress(t("Готовлю бутылку «\(bottle.name)»…"))
         try await BottleManager.ensure(bottle, engine: engine, log: log)
+        guard !bottle.name.hasPrefix("isolated-") else { throw AppError("Installer unsupported in isolation prototype") }
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
         let before = executables(in: bottle)
         progress(t("Идёт установка: пройди шаги в окне установщика"))
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
-        let arguments = file.pathExtension.lowercased() == "msi" ? ["msiexec", "/i", file.path] : [file.path]
+        let arguments = WindowsInstaller.arguments(for: file)
         // not waiting for the bottle to go idle: many installers start the program at the end
-        _ = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log)
+        let status = try await WineProcess.run(engine: engine, arguments: arguments, environment: env, log: log,
+                                               directory: file.deletingLastPathComponent())
+        guard WindowsInstaller.succeeded(status, isMSI: file.pathExtension.lowercased() == "msi") else {
+            throw AppError(t("Установщик завершился с кодом \(status). Подробности: \(log.path)"))
+        }
         return executables(in: bottle).subtracting(before).map { URL(fileURLWithPath: $0) }
             .sorted { score($0) > score($1) || (score($0) == score($1) && $0.path < $1.path) }
     }

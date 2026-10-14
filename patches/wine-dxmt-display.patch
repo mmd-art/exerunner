@@ -1,0 +1,14 @@
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -6010,6 +6010,11 @@
+         decorated_mode = IS_OPTION_TRUE( buffer[0] );
+     if (!get_config_key( hkey, appkey, "EmulateModeset", buffer, sizeof(buffer) ))
+         emulate_modeset = IS_OPTION_TRUE( buffer[0] );
++
++    /* DXMT fullscreen uses emulated modes so Retina scaling stays owned by macOS.
++     * The compat module sets this only in the selected executable; no registry writes. */
++    if (getenv( "EXERUNNER_EMULATE_MODESET" ) &&
++        !strcmp( getenv( "EXERUNNER_EMULATE_MODESET" ), "1" )) emulate_modeset = TRUE;
+ 
+ #undef IS_OPTION_TRUE
+ 

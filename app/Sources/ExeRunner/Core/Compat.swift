@@ -26,6 +26,26 @@ struct GameProfile: Codable, Identifiable, Hashable {
 
     enum Verdict { case good, caution, bad, unknown }
 
+    struct Features: Codable, Hashable {
+        var dlss: Bool?
+        var dxr: Bool?
+    }
+    struct Verification: Codable, Hashable {
+        var date: String
+        var machine: String
+        var macOS: String
+        var wine: String
+        var translator: String
+        var level: String
+    }
+    /// Validated display-file adapter used by the shared automatic screen policy.
+    var nativeDisplayProfile: String? = nil
+    var profileVersion: Int?
+    var source: String?
+    var kind: LibraryItem.Kind?
+    var graphicsAPI: String?
+    var features: Features?
+    var verification: Verification?
     var id: String
     var title: String
     var aliases: [String]
@@ -95,7 +115,9 @@ enum CompatDatabase {
                 sources.append(file.source)
                 for game in file.games {
                     games.removeAll { $0.id == game.id || ($0.steamAppID != nil && $0.steamAppID == game.steamAppID) }
-                    games.append(game)
+                    var sourced = game
+                    if sourced.source == nil { sourced.source = file.source }
+                    games.append(sourced)
                 }
             } catch {
                 NSLog("\(name): \(error)")

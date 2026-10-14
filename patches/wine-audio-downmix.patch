@@ -1,0 +1,112 @@
+--- a/dlls/winecoreaudio.drv/coreaudio.c
++++ b/dlls/winecoreaudio.drv/coreaudio.c
+@@ -75,6 +75,8 @@
+ #define kAudioObjectPropertyElementMain kAudioObjectPropertyElementMaster
+ #endif
+ 
++#include "stereo_downmix.h"
++
+ WINE_DEFAULT_DEBUG_CHANNEL(coreaudio);
+ WINE_DECLARE_DEBUG_CHANNEL(winediag);
+ 
+@@ -93,6 +95,7 @@
+     HANDLE timer_thread;
+ 
+     BOOL playing, please_quit;
++    BOOL exerunner_stereo_downmix;
+     REFERENCE_TIME period;
+     UINT32 period_frames;
+     UINT32 bufsize_frames, resamp_bufsize_frames;
+@@ -384,7 +387,15 @@
+ 
+         chunk_bytes = (stream->bufsize_frames - stream->lcl_offs_frames) * stream->fmt->nBlockAlign;
+ 
+-        if(to_copy_bytes > chunk_bytes){
++        if(stream->exerunner_stereo_downmix){
++            UINT32 frame, read_frame = stream->lcl_offs_frames;
++            float *out = data->mBuffers[0].mData;
++            for(frame = 0; frame < to_copy_frames; ++frame){
++                const float *in = (const float *)(stream->local_buffer + read_frame * stream->fmt->nBlockAlign);
++                exerunner_mix_51_frame(in, out + frame * 2);
++                if(++read_frame == stream->bufsize_frames) read_frame = 0;
++            }
++        }else if(to_copy_bytes > chunk_bytes){
+             memcpy(data->mBuffers[0].mData, stream->local_buffer + lcl_offs_bytes, chunk_bytes);
+             memcpy(((BYTE *)data->mBuffers[0].mData) + chunk_bytes, stream->local_buffer, to_copy_bytes - chunk_bytes);
+         }else
+@@ -396,8 +407,13 @@
+     }else
+         to_copy_bytes = to_copy_frames = 0;
+ 
+-    if(nframes > to_copy_frames)
+-        silence_buffer(stream, ((BYTE *)data->mBuffers[0].mData) + to_copy_bytes, nframes - to_copy_frames);
++    if(nframes > to_copy_frames){
++        if(stream->exerunner_stereo_downmix)
++            memset((float *)data->mBuffers[0].mData + to_copy_frames * 2, 0,
++                   (nframes - to_copy_frames) * 2 * sizeof(float));
++        else
++            silence_buffer(stream, ((BYTE *)data->mBuffers[0].mData) + to_copy_bytes, nframes - to_copy_frames);
++    }
+ 
+     os_unfair_lock_unlock(&stream->lock);
+ 
+@@ -793,6 +809,7 @@
+     struct create_stream_params *params = args;
+     unsigned int min_period_frames, max_period_frames;
+     struct coreaudio_stream *stream;
++    WAVEFORMATEX playback_format;
+     AURenderCallbackStruct input;
+     OSStatus sc;
+     SIZE_T size;
+@@ -841,7 +858,36 @@
+         goto end;
+     }
+ 
+-    params->result = ca_setup_audiounit(stream->flow, stream->unit, stream->fmt, &stream->dev_desc, &stream->converter);
++    /* Per-launch opt-in, only standard 5.1 float PCM to a physical stereo output.
++     * Preserve the six-channel Windows ring buffer and mix before the output unit.
++     * Stereo, capture and other processes retain their original path. */
++    if(stream->flow == eRender && stream->fmt->nChannels == 6 && stream->fmt->wBitsPerSample == 32){
++        WAVEFORMATEXTENSIBLE *ext = (WAVEFORMATEXTENSIBLE *)stream->fmt;
++        const char *enabled = getenv("EXERUNNER_AUDIO_DOWNMIX");
++        BOOL floating = stream->fmt->wFormatTag == WAVE_FORMAT_IEEE_FLOAT ||
++            (stream->fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
++             IsEqualGUID(&ext->SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT));
++        BOOL standard = stream->fmt->wFormatTag != WAVE_FORMAT_EXTENSIBLE ||
++            ext->dwChannelMask == 0x3f || ext->dwChannelMask == 0x60f;
++        AudioStreamBasicDescription hardware;
++        UInt32 hardware_size = sizeof(hardware);
++        if(enabled && !strcmp(enabled, "1") && floating && standard &&
++           AudioUnitGetProperty(stream->unit, kAudioUnitProperty_StreamFormat,
++                                kAudioUnitScope_Output, 0, &hardware, &hardware_size) == noErr &&
++           hardware.mChannelsPerFrame == 2){
++            stream->exerunner_stereo_downmix = TRUE;
++            playback_format = *stream->fmt;
++            playback_format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
++            playback_format.nChannels = 2;
++            playback_format.nBlockAlign = 2 * sizeof(float);
++            playback_format.nAvgBytesPerSec = playback_format.nSamplesPerSec * playback_format.nBlockAlign;
++            playback_format.cbSize = 0;
++            TRACE("EXERUNNER 5.1-to-stereo downmix enabled; center preserved in L/R\n");
++        }
++    }
++    params->result = ca_setup_audiounit(stream->flow, stream->unit,
++                                      stream->exerunner_stereo_downmix ? &playback_format : stream->fmt,
++                                      &stream->dev_desc, &stream->converter);
+     if(FAILED(params->result)) goto end;
+ 
+     input.inputProcRefCon = stream;
+--- /dev/null
++++ b/dlls/winecoreaudio.drv/stereo_downmix.h
+@@ -0,0 +1,11 @@
++/* Diagnostic opt-in 5.1 -> stereo mix. Standard Windows order:
++ * FL, FR, FC, LFE, left surround, right surround. LFE is omitted.
++ * Normalize the sum of each output's gains to 1 to retain headroom.
++ */
++static inline void exerunner_mix_51_frame(const float *in, float *out)
++{
++    const float front = 0.414213562373095f;
++    const float surround = 0.292893218813452f;
++    out[0] = in[0] * front + (in[2] + in[4]) * surround;
++    out[1] = in[1] * front + (in[2] + in[5]) * surround;
++}

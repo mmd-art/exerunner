@@ -98,6 +98,12 @@ enum BottleManager {
     }
 
     static func stop(_ bottle: Bottle, engine: Engine) async {
+        if bottle.name.hasPrefix("isolated-") {
+            // Separate sandbox invocations cannot signal each other. The host
+            // stops only processes whose own WINEPREFIX identifies this bottle.
+            WineProcesses.kill(WineProcesses.list(includeServers: true).filter { $0.prefix == bottle.prefixPath })
+            return
+        }
         await WineProcess.server("-k", engine: engine, environment: WineEnvironment.make(engine: engine, prefix: bottle.url))
     }
 
@@ -119,6 +125,18 @@ enum BottleManager {
                 try? FileManager.default.removeItem(at: to)
                 try FileManager.default.copyItem(at: from, to: to)
             }
+        }
+    }
+
+    /// DXMT's builtin bridge must also exist in the Windows namespace.
+    /// Renderer DLLs stay outside the bottle and are selected per process.
+    static func installDXMTBridge(_ bottle: Bottle, engine: Engine) throws {
+        guard engine.hasDXMT else { throw AppError(t("В движке нет DXMT")) }
+        for (arch, dir) in [("x86_64-windows", "system32"), ("i386-windows", "syswow64")] {
+            let source = engine.dxmt.appendingPathComponent("\(arch)/winemetal.dll")
+            let target = bottle.driveC.appendingPathComponent("windows/\(dir)/winemetal.dll")
+            if FileManager.default.contentsEqual(atPath: source.path, andPath: target.path) { continue }
+            try Data(contentsOf: source).write(to: target, options: .atomic)
         }
     }
 
@@ -165,10 +183,11 @@ enum BottleManager {
     /// programs kept off D3DMetal. Written even when empty: a launcher started earlier still points
     /// its programs at this file, and an empty file is what says "nothing" to them.
     static func writeCompatEnvironment(_ bottle: Bottle, perProgram: [String: [String: String]],
-                                       d3dmetalOff: Set<String>) throws -> URL {
+                                       d3dmetalOff: Set<String>, dxmt: Set<String> = []) throws -> URL {
         let file = compatFile(bottle)
         let lines = (perProgram.flatMap { exe, env in env.map { "\(exe)\t\($0.key)=\($0.value)" } }
-            + d3dmetalOff.map { "\($0)\t@d3dmetal=off" }).sorted()
+            + d3dmetalOff.map { "\($0)\t@d3dmetal=off" }
+            + dxmt.map { "\($0)\t@dxmt=on" }).sorted()
         try lines.map { $0 + "\n" }.joined().write(to: file, atomically: true, encoding: .utf8)
         return file
     }

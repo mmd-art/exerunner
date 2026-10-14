@@ -1,0 +1,188 @@
+--- a/dlls/winemac.drv/cocoa_app.m
++++ b/dlls/winemac.drv/cocoa_app.m
+@@ -23,6 +23,7 @@
+ #import "cocoa_event.h"
+ #import "cocoa_window.h"
+ #import "cocoa_icon_utils.h"
++#include "cursor_guard.h"
+ 
+ #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+ 
+@@ -116,6 +117,10 @@
+ @property (retain, nonatomic) NSCursor* cursor;
+ @property (retain, nonatomic) NSImage* applicationIcon;
+ @property (readonly, nonatomic) BOOL inputSourceIsInputMethod;
++@property (assign, nonatomic) BOOL exerunnerOwnsFullscreenPresentation;
++@property (assign, nonatomic) BOOL exerunnerPresentedFullscreenOnce;
++@property (assign, nonatomic) NSApplicationPresentationOptions exerunnerSavedPresentationOptions;
++    - (void) tryToActivateIgnoringOtherApps:(BOOL)ignore;
+ @property (retain, nonatomic) WineWindow* mouseCaptureWindow;
+ 
+     - (void) setupObservations;
+@@ -679,6 +684,23 @@
+         rect->origin.y = NSMaxY([[NSScreen screens][0] frame]) - NSMaxY(*rect);
+     }
+ 
++    /* Capture belongs to the visible key Wine window, never a hidden helper
++     * surface. Use the ancestor so child dialogs keep the parent's clip area. */
++    - (WineWindow*) cursorOwnerWindow
++    {
++        NSWindow *key = [NSApp keyWindow];
++        if ([key isKindOfClass:[WineWindow class]] && [key isVisible] && ![key isMiniaturized])
++            return [(WineWindow *)key ancestorWineWindow];
++        for (NSNumber *number in [NSWindow windowNumbersWithOptions:0])
++        {
++            NSWindow *window = [NSApp windowWithWindowNumber:number.integerValue];
++            if ([window isKindOfClass:[WineWindow class]] && [window isVisible] &&
++                ![window isMiniaturized] && [window screen])
++                return [(WineWindow *)window ancestorWineWindow];
++        }
++        return nil;
++    }
++
+     - (WineWindow*) frontWineWindow
+     {
+         NSNumber* windowNumber;
+@@ -822,6 +844,50 @@
+ 
+     - (void) updateFullscreenWindows
+     {
++        /* Fullscreen presentation belongs to this process, not the user's Dock
++         * preferences. Present a launched game's first real fullscreen window
++         * once; Cmd-Tab/deactivation releases both presentation and mouse. */
++        const char *presentation = getenv("EXERUNNER_FULLSCREEN_PRESENTATION");
++        if (!presentation || strcmp(presentation, "0"))
++        {
++            WineWindow *fullscreenWindow = nil;
++            for (NSWindow *candidate in [NSApp windows])
++                if ([candidate isKindOfClass:[WineWindow class]] &&
++                    ((WineWindow *)candidate).fullscreen && [candidate isVisible] &&
++                    ![candidate isMiniaturized] && [candidate isOnActiveSpace] &&
++                    !((WineWindow *)candidate).noForeground)
++                {
++                    fullscreenWindow = (WineWindow *)candidate;
++                    break;
++                }
++            const char *game = getenv("WINE_APP_GAME");
++            if (fullscreenWindow && game && !strcmp(game, "1") &&
++                !self.exerunnerPresentedFullscreenOnce && ![NSApp isHidden])
++            {
++                self.exerunnerPresentedFullscreenOnce = YES;
++                [self tryToActivateIgnoringOtherApps:YES];
++                [fullscreenWindow makeKeyAndOrderFront:nil];
++            }
++            if (fullscreenWindow && [NSApp isActive])
++            {
++                if (!self.exerunnerOwnsFullscreenPresentation)
++                {
++                    self.exerunnerSavedPresentationOptions = [NSApp presentationOptions];
++                    self.exerunnerOwnsFullscreenPresentation = YES;
++                }
++                NSApplicationPresentationOptions options = self.exerunnerSavedPresentationOptions;
++                options &= ~(NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar);
++                options |= NSApplicationPresentationAutoHideDock | NSApplicationPresentationAutoHideMenuBar;
++                if ([NSApp presentationOptions] != options) [NSApp setPresentationOptions:options];
++            }
++            else if (self.exerunnerOwnsFullscreenPresentation)
++            {
++                NSApplicationPresentationOptions options = self.exerunnerSavedPresentationOptions;
++                self.exerunnerOwnsFullscreenPresentation = NO;
++                [NSApp setPresentationOptions:options];
++            }
++        }
++
+         if (capture_displays_for_fullscreen && [NSApp isActive])
+         {
+             BOOL anyFullscreen = FALSE;
+@@ -2547,6 +2613,7 @@
+         }
+ 
+         [self releaseMouseCapture];
++        [self updateFullscreenWindows];
+     }
+ 
+     - (void) applicationDidUnhide:(NSNotification*)aNotification
+@@ -2894,6 +2961,26 @@
+         if (!CGRectIsInfinite(rect))
+             rect = cgrect_mac_from_win(rect);
+ 
++        /* A finite ClipCursor request is still a capture request when it covers
++         * the desktop. Keep it within the owning window, away from hot corners.
++         * NULL/reset remains infinite and releases normally; AppKit confines only
++         * while the owning application is frontmost. No Dock preference writes. */
++        if (!CGRectIsInfinite(rect) &&
++            (!getenv("EXERUNNER_CURSOR_GUARD") || strcmp(getenv("EXERUNNER_CURSOR_GUARD"), "0")))
++        {
++            WineWindow *window = [controller cursorOwnerWindow];
++            if (window && [window isVisible])
++            {
++                NSRect bounds = [window contentRectForFrameRect:[window frame]];
++                [controller flipRect:&bounds];
++                rect = exerunner_guard_cursor_rect(rect, NSRectToCGRect(bounds));
++                static unsigned trace_count;
++                if (getenv("EXERUNNER_CURSOR_TRACE") && !strcmp(getenv("EXERUNNER_CURSOR_TRACE"), "1") && trace_count++ < 64)
++                    fprintf(stderr, "EXERUNNER_CURSOR_GUARD window=%ld clip=%g,%g,%g,%g active=%d\n",
++                            (long)window.windowNumber, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height, [NSApp isActive]);
++            }
++        }
++
+         if (!CGRectIsInfinite(rect))
+         {
+             NSRect nsrect = NSRectFromCGRect(rect);
+--- a/dlls/winemac.drv/cocoa_app.h
++++ b/dlls/winemac.drv/cocoa_app.h
+@@ -141,6 +141,7 @@
+     - (void) flipRect:(NSRect*)rect;
+     - (NSPoint) flippedMouseLocation:(NSPoint)point;
+ 
++    - (WineWindow*) cursorOwnerWindow;
+     - (WineWindow*) frontWineWindow;
+     - (void) adjustWindowLevels;
+     - (void) updateFullscreenWindows;
+--- a/dlls/winemac.drv/cocoa_cursorclipping.m
++++ b/dlls/winemac.drv/cocoa_cursorclipping.m
+@@ -457,7 +457,7 @@
+         if (clippingCursor && ![self stopClippingCursor])
+             return FALSE;
+ 
+-        WineWindow *ownerWindow = [[WineApplicationController sharedController] frontWineWindow];
++        WineWindow *ownerWindow = [[WineApplicationController sharedController] cursorOwnerWindow];
+         if (!ownerWindow)
+         {
+             /* There's nothing we can do here in this case, since confinement
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -6006,6 +6006,13 @@
+         grab_pointer = IS_OPTION_TRUE( buffer[0] );
+     if (!get_config_key( hkey, appkey, "GrabFullscreen", buffer, sizeof(buffer) ))
+         grab_fullscreen = IS_OPTION_TRUE( buffer[0] );
++
++    /* ExeRunner games keep fullscreen capture on the chosen monitor even when
++     * more than one display is attached. Explicit GrabPointer opt-out and normal
++     * deactivate/reset release still apply. Ordinary applications are unchanged. */
++    if (getenv( "WINE_APP_GAME" ) && !strcmp( getenv( "WINE_APP_GAME" ), "1" ) &&
++        (!getenv( "EXERUNNER_CURSOR_GUARD" ) || strcmp( getenv( "EXERUNNER_CURSOR_GUARD" ), "0" )))
++        grab_fullscreen = TRUE;
+     if (!get_config_key( hkey, appkey, "Decorated", buffer, sizeof(buffer) ))
+         decorated_mode = IS_OPTION_TRUE( buffer[0] );
+     if (!get_config_key( hkey, appkey, "EmulateModeset", buffer, sizeof(buffer) ))
+--- /dev/null
++++ b/dlls/winemac.drv/cursor_guard.h
+@@ -0,0 +1,17 @@
++/* ExeRunner capture guard: screen coordinates are macOS points, never pixels. */
++#ifndef EXERUNNER_CURSOR_GUARD_H
++#define EXERUNNER_CURSOR_GUARD_H
++#include <CoreGraphics/CoreGraphics.h>
++static inline CGRect exerunner_guard_cursor_rect(CGRect request, CGRect window)
++{
++    CGRect clipped;
++    const CGFloat margin = 2.0;
++    if (CGRectIsInfinite(request) || CGRectIsNull(request) || CGRectIsEmpty(request) ||
++        CGRectIsInfinite(window) || CGRectIsNull(window) || CGRectIsEmpty(window)) return request;
++    clipped = CGRectIntersection(request, window);
++    /* Preserve recenter/one-point locks and non-intersecting requests exactly. */
++    if (CGRectIsEmpty(clipped) || clipped.size.width <= margin * 2 ||
++        clipped.size.height <= margin * 2) return request;
++    return CGRectInset(clipped, margin, margin);
++}
++#endif

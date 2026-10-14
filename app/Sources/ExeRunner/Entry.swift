@@ -7,10 +7,19 @@ import Foundation
 /// helper's report zip; `--components <bottle> <verb,verb>` installs Windows components;
 /// `--import-d3dmetal <dmg or
 /// folder>` imports D3DMetal from Apple's download;
+/// `--shutdown` ends library bottles; `--verify-close <report.json>` checks native window exit;
 /// `--self-test` prints a status report; `--snapshot <dir> [--language en|ru]` renders screens to PNG.
 @main
 enum Entry {
     static func main() {
+        let raw = CommandLine.arguments
+        if let index = raw.firstIndex(of: "--game-boost-monitor"), index + 1 < raw.count {
+            let store = GameBoostStore(directory: URL(fileURLWithPath: raw[index + 1], isDirectory: true))
+            let status = GameBoostMonitor.run(store: store, enabled: { AppSettings.load().gameBoost }, observe: {
+                WineProcesses.list().map { GameBoostObservedProcess(prefix: $0.prefix, path: $0.path) }
+            })
+            exit(status)
+        }
         Migration.run()
         let args = CommandLine.arguments
         if let index = args.firstIndex(of: "--launch"), index + 1 < args.count {
@@ -25,8 +34,16 @@ enum Entry {
             Headless.stop(itemID: args[index + 1])
         } else if let index = args.firstIndex(of: "--import-d3dmetal"), index + 1 < args.count {
             Headless.importD3DMetal(from: URL(fileURLWithPath: args[index + 1]))
+        } else if args.contains("--shutdown") {
+            Headless.shutdown()
         } else if args.contains("--self-test") {
             Headless.selfTest()
+        } else if let index = args.firstIndex(of: "--snapshot-components"), index + 1 < args.count {
+            Headless.snapshotComponents(to: URL(fileURLWithPath: args[index + 1], isDirectory: true))
+        } else if let index = args.firstIndex(of: "--snapshot-settings"), index + 1 < args.count {
+            let language = args.firstIndex(of: "--language").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+                .map { $0.hasPrefix("ru") ? InterfaceLanguage.russian : InterfaceLanguage.english }
+            Headless.snapshotSettings(to: URL(fileURLWithPath: args[index + 1], isDirectory: true), language: language)
         } else if let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count {
             // --language en|ru renders in that language whatever the settings say
             let language = args.firstIndex(of: "--language").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
@@ -39,6 +56,19 @@ enum Entry {
 }
 
 enum Headless {
+    /// Runs the same shutdown routine used by the visible application’s termination delegate.
+    static func shutdown() -> Never {
+        Task { @MainActor in
+            let state = AppState()
+            await state.shutdown()
+            await state.refreshProcesses()
+            print("running after shutdown: \(state.running.sorted())")
+            print("wine processes after shutdown: \(state.processTable.count)")
+            exit(0)
+        }
+        dispatchMain()
+    }
+
     static func launch(itemID: String) -> Never {
         Task { @MainActor in
             let state = AppState()
@@ -103,12 +133,14 @@ enum Headless {
             let state = AppState()
             await state.refresh()
             guard let engine = state.engine else { FileHandle.standardError.write(Data("no engine\n".utf8)); exit(1) }
+            guard !name.hasPrefix("isolated-") else {
+                FileHandle.standardError.write(Data("Component installation unsupported in isolation prototype\n".utf8)); exit(1)
+            }
             let bottle = Bottle(name: name, root: state.bottlesRoot)
             let log = Paths.logFile("\(name)-components")
             do {
                 try await BottleManager.ensure(bottle, engine: engine, log: log)
-                try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
-                try await Winetricks.ensure(verbs, in: bottle, engine: engine, log: log) { print($0) }
+                try await state.ensureRuntimeComponents(verbs, in: bottle, engine: engine, log: log) { print($0) }
                 print("installed \(verbs.joined(separator: ", ")) in \(name): \(Winetricks.installed(in: bottle).sorted())")
                 exit(0)
             } catch {
@@ -160,9 +192,31 @@ enum Headless {
         exit(0)
     }
 
+    static func snapshotComponents(to dir: URL) -> Never {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.prohibited)
+        Task { @MainActor in
+            await Snapshots.renderComponents(to: dir)
+            exit(0)
+        }
+        app.run()
+        exit(0)
+    }
+
+    static func snapshotSettings(to dir: URL, language: InterfaceLanguage?) -> Never {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.prohibited)
+        Task { @MainActor in
+            await Snapshots.renderSettings(to: dir, language: language)
+            exit(0)
+        }
+        app.run()
+        exit(0)
+    }
+
     static func selfTest() -> Never {
         Task { @MainActor in
-            let state = AppState()
+            let state = AppState(managesGameBoost: false)
             await state.refresh()
             await state.refreshProcesses()
             print(state.report())

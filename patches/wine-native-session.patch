@@ -1,0 +1,271 @@
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index ceeb424..c9810cc 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -502,7 +502,12 @@ static char *create_tempdir(const char *wineloader_path)
+     struct stat st;
+     size_t n;
+ 
+-    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, tempdir, MAX_PATH))
++    const char *isolated_tmp = getenv("EXERUNNER_SANDBOX_PROFILE") ? getenv("TMPDIR") : NULL;
++    if (isolated_tmp)
++    {
++        if (strlcpy(tempdir, isolated_tmp, MAX_PATH) >= MAX_PATH) goto fail;
++    }
++    else if (!confstr(_CS_DARWIN_USER_TEMP_DIR, tempdir, MAX_PATH))
+         goto fail;
+ 
+     if (stat(wineloader_path, &st))
+@@ -553,7 +558,8 @@ static char *create_preloader_link(const char *wineloader_path, const char *exe_
+     /* Try a hard link first, to avoid the little "alias" arrow that the Dock puts on the icon.
+      * But if that fails, fall back to a symlink.
+      */
+-    if (!link(wineloader_path, linkpath) || !symlink(wineloader_path, linkpath))
++    /* A writable isolated disk must not gain a hard link to the engine. */
++    if ((!getenv("EXERUNNER_SANDBOX_PROFILE") && !link(wineloader_path, linkpath)) || !symlink(wineloader_path, linkpath))
+         return linkpath;
+ 
+ fail:
+diff --git a/dlls/winemac.drv/cocoa_app.m b/dlls/winemac.drv/cocoa_app.m
+index c57ca47..28a1efc 100644
+--- a/dlls/winemac.drv/cocoa_app.m
++++ b/dlls/winemac.drv/cocoa_app.m
+@@ -295,7 +295,9 @@ - (void) changeEditMenuKeyEquivalentsForWindow:(NSWindow*)window
+ 
+     - (void) transformProcessToForeground:(BOOL)activateIfTransformed
+     {
+-        if ([NSApp activationPolicy] != NSApplicationActivationPolicyRegular)
++        NSApplicationActivationPolicy wantedPolicy = exerunner_hide_dock_icon ?
++            NSApplicationActivationPolicyAccessory : NSApplicationActivationPolicyRegular;
++        if ([NSApp activationPolicy] != wantedPolicy)
+         {
+             NSMenu* mainMenu;
+             NSMenu* submenu;
+@@ -326,7 +328,7 @@ - (void) transformProcessToForeground:(BOOL)activateIfTransformed
+                 }
+             }
+ 
+-            [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
++            [NSApp setActivationPolicy:wantedPolicy];
+ 
+             if (activateIfTransformed)
+                 [self tryToActivateIgnoringOtherApps:YES];
+@@ -342,6 +344,9 @@ - (void) transformProcessToForeground:(BOOL)activateIfTransformed
+             // Application menu
+             submenu = [[[NSMenu alloc] initWithTitle:WineLocalizedString(STRING_MENU_WINE)] autorelease];
+             bundleName = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString*)kCFBundleNameKey];
++            const char *displayName = getenv("WINE_APP_DISPLAY_NAME");
++            if (!exerunner_hide_dock_icon && displayName && displayName[0])
++                bundleName = [NSString stringWithUTF8String:displayName];
+ 
+             if ([bundleName length])
+                 title = [NSString stringWithFormat:WineLocalizedString(STRING_MENU_ITEM_HIDE_APPNAME), bundleName];
+@@ -2029,14 +2034,17 @@ - (void) setupObservations
+                 [self handleWindowDrag:(WineWindow *)window begin:NO];
+         }];
+ 
+-        [nc addObserver:self
+-               selector:@selector(keyboardSelectionDidChange)
+-                   name:NSTextInputContextKeyboardSelectionDidChangeNotification
+-                 object:nil];
++        if (!getenv("EXERUNNER_SANDBOX_PROFILE"))
++        {
++            [nc addObserver:self
++                   selector:@selector(keyboardSelectionDidChange)
++                       name:NSTextInputContextKeyboardSelectionDidChangeNotification
++                     object:nil];
+ 
+-        /* The above notification isn't sent unless the NSTextInputContext
+-           class has initialized itself.  Poke it. */
+-        [NSTextInputContext self];
++            /* The above notification isn't sent unless the NSTextInputContext
++               class has initialized itself.  Poke it. */
++            [NSTextInputContext self];
++        }
+ 
+         [wsnc addObserver:self
+                  selector:@selector(activeSpaceDidChange)
+@@ -2180,6 +2188,15 @@ - (void) tryToActivateIgnoringOtherApps:(BOOL)ignore
+ 
+         if ([NSApp isActive]) return;  /* Nothing to do. */
+ 
++        /* Isolated sessions cannot use the cross-process activation broker.
++         * Do not repeatedly post a forbidden distributed notification; ask
++         * AppKit directly, without widening the sandbox's IPC permissions. */
++        if (getenv("EXERUNNER_SANDBOX_PROFILE"))
++        {
++            [NSApp activateIgnoringOtherApps:ignore];
++            return;
++        }
++
+         if (!ignore ||
+             ![NSApplication instancesRespondToSelector:@selector(yieldActivationToApplication:)])
+         {
+@@ -2930,6 +2947,8 @@ void macdrv_set_application_icon(CFArrayRef images, CFURLRef urlRef)
+             controller.applicationIcon = image;
+         else
+             [controller setApplicationIconFromCGImageArray:imageArray];
++        /* Icon resources often arrive after the process became foreground. */
++        [NSApp setApplicationIconImage:controller.applicationIcon];
+     });
+ }
+ 
+diff --git a/dlls/winemac.drv/cocoa_main.m b/dlls/winemac.drv/cocoa_main.m
+index 869b3c7..3be8d77 100644
+--- a/dlls/winemac.drv/cocoa_main.m
++++ b/dlls/winemac.drv/cocoa_main.m
+@@ -70,6 +70,12 @@ static void run_cocoa_app(void* info)
+     {
+         if (!NSApp)
+         {
++            const char *display_name = getenv("WINE_APP_DISPLAY_NAME");
++            if (!exerunner_hide_dock_icon && display_name && display_name[0])
++            {
++                NSString *name = [NSString stringWithUTF8String:display_name];
++                if (name) [[NSProcessInfo processInfo] setProcessName:name];
++            }
+             [WineApplication sharedApplication];
+             created_app = TRUE;
+         }
+diff --git a/dlls/winemac.drv/cocoa_window.m b/dlls/winemac.drv/cocoa_window.m
+index 34c3f57..ae1e657 100644
+--- a/dlls/winemac.drv/cocoa_window.m
++++ b/dlls/winemac.drv/cocoa_window.m
+@@ -899,6 +899,10 @@ - (void) setLayer:(CALayer*)newLayer
+      */
+     - (NSTextInputContext*) inputContext
+     {
++        /* The offline session does not use host IME remote views. AppKit otherwise
++         * retries the denied broker forever and defers all keyboard delivery.
++         * Wine's ordinary keyboard events remain available. */
++        if (getenv("EXERUNNER_SANDBOX_PROFILE")) return nil;
+         if (!markedText)
+             markedText = [[NSMutableAttributedString alloc] init];
+         return [super inputContext];
+@@ -1220,7 +1224,16 @@ - (void) adjustFullScreenBehavior:(NSWindowCollectionBehavior)behavior
+     {
+         NSUInteger style = [self styleMask];
+ 
+-        if (behavior & NSWindowCollectionBehaviorParticipatesInCycle &&
++        /* A Windows game manages its own fullscreen. Do not join another
++         * Mac application's fullscreen Space, whose desktop icons are hidden. */
++        const char *game = getenv("WINE_APP_GAME");
++        if (game && game[0] == '1')
++        {
++            behavior &= ~(NSWindowCollectionBehaviorFullScreenPrimary | NSWindowCollectionBehaviorFullScreenAuxiliary);
++            behavior |= NSWindowCollectionBehaviorFullScreenNone;
++            if (style & NSWindowStyleMaskFullScreen) [super toggleFullScreen:nil];
++        }
++        else if (behavior & NSWindowCollectionBehaviorParticipatesInCycle &&
+             style & NSWindowStyleMaskResizable && !(style & NSWindowStyleMaskUtilityWindow) && !maximized &&
+             !(self.parentWindow || self.latentParentWindow))
+         {
+diff --git a/dlls/winemac.drv/macdrv_cocoa.h b/dlls/winemac.drv/macdrv_cocoa.h
+index c6552ba..a9e3475 100644
+--- a/dlls/winemac.drv/macdrv_cocoa.h
++++ b/dlls/winemac.drv/macdrv_cocoa.h
+@@ -132,6 +132,7 @@
+ extern bool macdrv_err_on;
+ extern int topmost_float_inactive;
+ extern bool capture_displays_for_fullscreen;
++extern bool exerunner_hide_dock_icon;
+ /* CrossOver Hack 10912: Mac Edit menu */
+ extern int mac_edit_menu;
+ extern bool left_option_is_alt;
+diff --git a/dlls/winemac.drv/macdrv_main.c b/dlls/winemac.drv/macdrv_main.c
+index 05aaa57..9282cc3 100644
+--- a/dlls/winemac.drv/macdrv_main.c
++++ b/dlls/winemac.drv/macdrv_main.c
+@@ -43,6 +43,7 @@ C_ASSERT(NUM_EVENT_TYPES <= sizeof(macdrv_event_mask) * 8);
+ 
+ int topmost_float_inactive = TOPMOST_FLOAT_INACTIVE_NONFULLSCREEN;
+ bool capture_displays_for_fullscreen = false;
++bool exerunner_hide_dock_icon = false;
+ BOOL allow_vsync = TRUE;
+ BOOL allow_set_gamma = TRUE;
+ /* CrossOver Hack 10912: Mac Edit menu */
+@@ -296,6 +297,18 @@ static void setup_options(void)
+     appname = RtlGetCurrentPeb()->ProcessParameters->ImagePathName.Buffer;
+     if ((p = wcsrchr(appname, '/'))) appname = p + 1;
+     if ((p = wcsrchr(appname, '\\'))) appname = p + 1;
++    /* A session has one Dock owner; launcher/web/utility children remain usable
++     * accessory applications rather than creating duplicate icons. */
++    const char *dock_owner = getenv("WINE_APP_DOCK_EXE");
++    if (dock_owner && dock_owner[0] && strlen(dock_owner) < MAX_PATH)
++    {
++        CFStringRef owner = CFStringCreateWithCString(NULL, dock_owner, kCFStringEncodingUTF8);
++        CFStringRef current = CFStringCreateWithCharacters(NULL, appname, lstrlenW(appname));
++        if (owner && current)
++            exerunner_hide_dock_icon = CFStringCompare(current, owner, kCFCompareCaseInsensitive) != kCFCompareEqualTo;
++        if (owner) CFRelease(owner);
++        if (current) CFRelease(current);
++    }
+     len = lstrlenW(appname);
+ 
+     if (len && len < MAX_PATH)
+diff --git a/loader/main.c b/loader/main.c
+index d3fcd20..96f7796 100644
+--- a/loader/main.c
++++ b/loader/main.c
+@@ -196,13 +196,14 @@ static void apple_override_bundle_name( int argc, char *argv[] )
+     const size_t prefix_len = strlen(prefix);
+     static const char suffix[] = "</string>";
+     const size_t suffix_len = strlen(suffix);
+-    static const char padding[] = "<!-- bundle name padding -->";
++    static const char padding[] = "<!-- bundle name padding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 -->";
+     const size_t padding_len = strlen(padding);
+     char* bundle_name;
+     const char* p;
+     size_t bundle_name_len, max_bundle_name_len;
+     vm_address_t start, end;
+     const char* new_bundle_name = getenv("WINEPRELOADERAPPNAME");
++    if (!new_bundle_name) new_bundle_name = getenv("WINE_APP_DISPLAY_NAME");
+     size_t new_bundle_name_len;
+ 
+     unsetenv("WINEPRELOADERAPPNAME");
+@@ -258,8 +259,30 @@ static void apple_override_bundle_name( int argc, char *argv[] )
+     if (vm_protect(mach_task_self(), start, end - start, 0,
+                    VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE|VM_PROT_COPY) == KERN_SUCCESS)
+     {
+-        size_t copy_len = min(new_bundle_name_len, max_bundle_name_len);
+-        memcpy(bundle_name, new_bundle_name, copy_len);
++        /* Preserve XML validity and complete UTF-8 characters, even for long
++         * localized library names. Never cut through an entity or codepoint. */
++        size_t copy_len = 0, input = 0;
++        while (input < new_bundle_name_len)
++        {
++            const char *part = new_bundle_name + input;
++            size_t take = 1, length = 1;
++            unsigned char ch = (unsigned char)*part;
++            if (ch == '&') part = "&amp;", length = 5;
++            else if (ch == '<') part = "&lt;", length = 4;
++            else if (ch == '>') part = "&gt;", length = 4;
++            else if (ch == '"') part = "&quot;", length = 6;
++            else if (ch == '\'') part = "&apos;", length = 6;
++            else if (ch >= 0xc0)
++            {
++                take = ch < 0xe0 ? 2 : ch < 0xf0 ? 3 : 4;
++                if (input + take > new_bundle_name_len) break;
++                length = take;
++            }
++            if (copy_len + length > max_bundle_name_len) break;
++            memcpy(bundle_name + copy_len, part, length);
++            copy_len += length;
++            input += take;
++        }
+         memcpy(bundle_name + copy_len, suffix, suffix_len);
+         if (copy_len < max_bundle_name_len)
+             memset(bundle_name + copy_len + suffix_len, ' ', max_bundle_name_len - copy_len);
+diff --git a/loader/wine_info.plist.in b/loader/wine_info.plist.in
+index beb1c33..6bc19ed 100644
+--- a/loader/wine_info.plist.in
++++ b/loader/wine_info.plist.in
+@@ -13,7 +13,7 @@
+     <key>CFBundleInfoDictionaryVersion</key>
+     <string>6.0</string>
+     <key>CFBundleName</key>
+-    <string>CrossOver-Hosted Application</string><!-- CrossOver Hack 10913 -->
++    <string>CrossOver-Hosted Application</string><!-- bundle name padding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 -->
+     <key>CFBundlePackageType</key>
+     <string>APPL</string>
+     <key>CFBundleShortVersionString</key>

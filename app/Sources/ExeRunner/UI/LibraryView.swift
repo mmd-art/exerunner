@@ -63,12 +63,17 @@ struct ItemTile: View {
     @EnvironmentObject private var state: AppState
     let item: LibraryItem
     @State private var editing = false
+    @State private var managingComponents = false
     @State private var troubleshooting: Symptom?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             cover
             Text(item.name).font(.headline).lineLimit(2, reservesSpace: true)
+            if item.isolated {
+                Label(t("Изолировано · без сети"), systemImage: "shield.lefthalf.filled")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let profile = state.profile(for: item) {
                 HStack(spacing: 6) {
                     VerdictBadge(profile: profile)
@@ -114,6 +119,7 @@ struct ItemTile: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(nsColor: .separatorColor).opacity(0.6)))
         .contextMenu { menuItems }
         .sheet(isPresented: $editing) { ItemSettingsView(item: item) }
+        .sheet(isPresented: $managingComponents) { RuntimeComponentsView(item: item) }
         .sheet(item: $troubleshooting) { TroubleshootView(itemID: item.id, symptom: $0) }
     }
 
@@ -123,7 +129,7 @@ struct ItemTile: View {
             if let path = item.artwork, let image = NSImage(contentsOfFile: path) {
                 Image(nsImage: image).resizable().scaledToFill()
             } else if let icon = state.icon(for: item) {
-                Image(nsImage: icon).resizable().interpolation(.high).scaledToFit().frame(width: 76, height: 76)
+                Image(nsImage: icon).resizable().interpolation(.high).scaledToFit().frame(width: item.kind == .game ? 144 : 76, height: item.kind == .game ? 144 : 76)
             } else {
                 Image(systemName: symbol).font(.system(size: 40, weight: .light)).foregroundStyle(.secondary)
             }
@@ -140,6 +146,7 @@ struct ItemTile: View {
     @ViewBuilder
     private var menuItems: some View {
         Button(t("Настройки запуска…")) { editing = true }
+        Button(t("Библиотеки Windows…")) { managingComponents = true }
         Button(t("Помощник по проблемам…")) { troubleshooting = state.diagnoses[item.id] == nil ? (item.kind == .launcher ? .launcher : .launch) : .launch }
         Button(state.hasShortcut(item) ? t("Убрать из Программ на Mac") : t("Добавить в Программы на Mac")) { state.toggleShortcut(item) }
         Button(t("Показать в Finder")) { state.reveal(item) }
@@ -161,6 +168,8 @@ struct ItemSettingsView: View {
     @State private var environmentText = ""
     @State private var overridesText = ""
     @State private var bottle = BottleSettings()
+    @State private var saving = false
+    @State private var saveError: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -188,12 +197,51 @@ struct ItemSettingsView: View {
                 Section(t("Графика")) {
                     if state.canTargetExecutables(item) {
                         Picker("DirectX", selection: $item.graphics) {
-                            ForEach(LibraryItem.Graphics.allCases) { Text($0.title).tag($0) }
+                            ForEach(LibraryItem.Graphics.allCases) { option in
+                                Text(option.title).tag(option).help(option.help)
+                                    .disabled(option == .dxmt && (state.engine?.hasDXMT != true || item.isolated ||
+                                        !GraphicsSelection.supportsDXMT(profile: state.profile(for: item))))
+                            }
                         }
+                        .help(item.graphics.help)
+                        Text(GraphicsSelection.explanation(item, profile: state.profile(for: item),
+                                                           hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                            .font(.callout).foregroundStyle(.secondary)
+                        if state.effectiveGraphics(item) == .dxmt {
+                            Text(state.engine?.dxmtVersion.map { "DXMT " + $0 } ?? t("В движке нет DXMT"))
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                        Text(item.graphics.help)
+                            .font(.callout).foregroundStyle(.secondary)
                     }
                     Toggle(t("DLSS через MetalFX"), isOn: $item.metalFX)
+                        .disabled(!GraphicsSelection.allowsMetalFX(graphics: state.effectiveGraphics(item),
+                                  profile: state.profile(for: item), hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                        .help(t("Переводит существующий в игре DLSS в MetalFX через D3DMetal. DLSS нужно также включить в самой игре. Может повысить FPS за счёт рендера в меньшем разрешении; для игр без DLSS не нужен."))
                     Toggle(t("Трассировка лучей (DXR)"), isOn: $item.raytracing)
-                    Toggle(t("Счётчик FPS (Metal HUD)"), isOn: $item.performanceHUD)
+                        .disabled(!GraphicsSelection.allowsDXR(graphics: state.effectiveGraphics(item),
+                                  profile: state.profile(for: item), hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                        .help(t("Разрешает DXR через D3DMetal для игр на DirectX 12, которые поддерживают трассировку лучей. Эффект нужно включить в самой игре; нагрузка и требования к GPU возрастают."))
+                    if state.profile(for: item)?.features?.dlss == false {
+                        Text(t("В этой программе нет DLSS; переключатель MetalFX не увеличит FPS."))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    if state.profile(for: item)?.features?.dxr == false || state.profile(for: item)?.graphicsAPI == "d3d11" {
+                        Text(t("Эта программа не использует DXR."))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    Text(t("Счётчик FPS включается в общих настройках ExeRunner."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                Section(t("Изоляция")) {
+                    Toggle(t("Изолированный запуск (экспериментальный)"), isOn: $item.isolated)
+                        .disabled(item.isSteamGame || item.kind == .launcher || state.running.contains(item.id) || saving)
+                    Text(t("Включено: без интернета и доступа к личным папкам Mac. Выключено: обычный Wine с доступом к Mac и сети. Режимы используют отдельные копии; их сохранения и изменения не объединяются. Это экспериментальная песочница, не виртуальная машина."))
+                        .font(.callout).foregroundStyle(.secondary)
+                    if state.running.contains(item.id) {
+                        Text(t("Сначала останови программу, чтобы сменить режим."))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                 }
                 Section(t("Запуск")) {
                     TextField(item.isSteamGame ? t("Параметры запуска игры") : t("Аргументы"), text: $argumentsText,
@@ -213,6 +261,14 @@ struct ItemSettingsView: View {
                     }
                 }
                 Section {
+                    Toggle(t("Высокое разрешение (HiDPI)"), isOn: Binding(
+                        get: { bottle.highResolution ?? state.highResolutionEnabled(forBottle: item.bottle) },
+                        set: { bottle.highResolution = $0 }
+                    ))
+                    .disabled(item.isolated || item.bottle.hasPrefix("isolated-"))
+                    .help(t("Открывает физические разрешения монитора, включая 2K и 4K. Для игр включается по умолчанию; ранее выбранный режим сохраняется. Выключи при проблемах с размером интерфейса или курсором. Масштабирование Mac не меняется."))
+                    Text(t("HiDPI применяется после остановки всех программ этой бутылки и нового запуска."))
+                        .font(.callout).foregroundStyle(.secondary)
                     Picker(t("Звук"), selection: $bottle.audioDriver) {
                         ForEach(BottleSettings.AudioDriver.allCases) { Text($0.title).tag($0) }
                     }
@@ -241,16 +297,22 @@ struct ItemSettingsView: View {
             .formStyle(.grouped)
             HStack {
                 Spacer()
-                Button(t("Отмена")) { dismiss() }
-                Button(t("Сохранить")) { save(); dismiss() }
+                Button(t("Отмена")) { dismiss() }.disabled(saving)
+                if saving { ProgressView().controlSize(.small) }
+                Button(t("Сохранить")) { Task { await save() } }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
+                    .disabled(saving)
             }
             .buttonStyle(.pill)
             .padding(16)
         }
         .frame(width: 540, height: 700)
         .onAppear(perform: load)
+        .interactiveDismissDisabled(saving)
+        .alert(t("Не удалось сохранить настройки"), isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) { Button("OK") { saveError = nil } } message: { Text(saveError ?? "") }
     }
 
     private func load() {
@@ -265,7 +327,10 @@ struct ItemSettingsView: View {
         overridesText = item.dllOverrides.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "\n")
     }
 
-    private func save() {
+    private func save() async {
+        guard !saving else { return }
+        saving = true
+        defer { saving = false }
         let words = argumentsText.split(separator: " ").map(String.init)
         if let appID = item.steamAppID {
             // steam://run/<id>//<launch options>/ hands options to the game through Steam
@@ -287,10 +352,10 @@ struct ItemSettingsView: View {
             overrides[dll] = parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : ""
         }
         item.dllOverrides = overrides
-        state.upsert(item)
-        let bottle = bottle
-        state.updateBottle(item.bottle) { $0 = bottle }
-        state.refreshGames()
+        do {
+            try await state.saveLaunchSettings(item, bottleSettings: bottle)
+            dismiss()
+        } catch { saveError = error.localizedDescription }
     }
 }
 

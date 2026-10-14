@@ -37,6 +37,16 @@ struct BottleSettings: Codable, Equatable {
         }
     }
 
+    /// nil adopts an existing Wine display choice, otherwise enables HiDPI for game bottles.
+    /// A user choice always wins. Wine requires one display coordinate system per bottle.
+    var highResolution: Bool?
+
+    func desiredHighResolution(hasGames: Bool, existing: String?) -> Bool? {
+        if let highResolution { return highResolution }
+        if let existing { return ["y", "t", "1"].contains(String(existing.prefix(1)).lowercased()) }
+        return hasGames ? true : nil
+    }
+
     var audioDriver = AudioDriver.automatic
     var audioLatency = AudioLatency.standard
     /// Relay games' Discord activity to the Discord app on the Mac
@@ -46,6 +56,7 @@ struct BottleSettings: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        highResolution = try c.decodeIfPresent(Bool.self, forKey: .highResolution)
         audioDriver = try c.decodeIfPresent(AudioDriver.self, forKey: .audioDriver) ?? .automatic
         audioLatency = try c.decodeIfPresent(AudioLatency.self, forKey: .audioLatency) ?? .standard
         discordBridge = try c.decodeIfPresent(Bool.self, forKey: .discordBridge) ?? false
@@ -103,6 +114,35 @@ extension BottleManager {
 
             """, into: bottle, engine: engine, log: log)
         try version.write(to: stamp, atomically: true, encoding: .utf8)
+    }
+
+    /// HiDPI is a bottle-wide Wine setting; it never changes macOS display scaling.
+    /// Existing hand-configured values are retained until the owner uses the UI switch.
+    /// Restart only bootstrap services after a change; refuse if a real program is alive.
+    static func applyHighResolution(_ settings: BottleSettings, to bottle: Bottle, hasGames: Bool,
+                                    engine: Engine, log: URL) async throws {
+        let key = "Software\\\\Wine\\\\Mac Driver"
+        guard let values = registryValues(in: bottle, hive: "user.reg", key: key) else {
+            throw AppError(t("Не удалось прочитать настройки экрана бутылки."))
+        }
+        let current = values["retinamode"]
+        guard let enabled = settings.desiredHighResolution(hasGames: hasGames, existing: current) else { return }
+        if let current, ["y", "t", "1"].contains(String(current.prefix(1)).lowercased()) == enabled { return }
+        let bootstrap: Set<String> = ["wineserver", "wineboot.exe", "services.exe", "svchost.exe", "rpcss.exe",
+                                      "plugplay.exe", "winedevice.exe", "explorer.exe", "conhost.exe", "regedit.exe"]
+        let active = WineProcesses.list().filter { $0.prefix == bottle.prefixPath && !bootstrap.contains($0.name.lowercased()) }
+        guard active.isEmpty else { throw AppError(t("Сначала останови программы этой бутылки, чтобы применить HiDPI.")) }
+        try await importRegistry("""
+
+            [HKEY_CURRENT_USER\\Software\\Wine\\Mac Driver]
+            "RetinaMode"="\(enabled ? "y" : "n")"
+
+            """, into: bottle, engine: engine, log: log)
+        // Existing driver instances have already cached the monitor coordinate system.
+        await stop(bottle, engine: engine)
+        await WineProcess.server("-w", engine: engine, environment: WineEnvironment.make(engine: engine, prefix: bottle.url))
+        let saved = registryValues(in: bottle, hive: "user.reg", key: key)?["retinamode"]
+        guard saved == (enabled ? "y" : "n") else { throw AppError(t("Не удалось применить HiDPI к бутылке.")) }
     }
 
     /// The audio driver and buffer, written only when they changed since the last launch. From

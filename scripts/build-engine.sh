@@ -30,9 +30,9 @@ MOLTENVK_SHA256="f95765a6229cb7b915990a2890ce12ebe36a730b021545d3d52ae69ce4c4024
 DXVK_VERSION="1.10.3"
 DXVK_URL="https://github.com/Gcenx/DXVK-macOS/releases/download/v1.10.3-20230507-repack/dxvk-macOS-async-v1.10.3-20230507-repack.tar.gz"
 DXVK_SHA256="acd1520ad105d8ef124a09c8e11a259a5dc8bdc565ad18e0e52693f9807b2477"
-# Windows components for programs (Visual C++ runtimes, .NET, fonts); release 20260125
-WINETRICKS_COMMIT="b76e1ee79ac57d7aceb384f74518fc423265810c"
-WINETRICKS_SHA256="431f82fc74000e6c864409f1d8fb495d696c03928808e3e8acffc45179312a7b"
+# Windows components; pinned upstream revision includes .NET 10 and Visual C++ 2026.
+WINETRICKS_COMMIT="f3890f670867b5ffbc3938726db45c0f7d16c8ba"
+WINETRICKS_SHA256="672a1ff4442e8691a3ffc0e6860137e201a1d1227e9b3044245f1731e9e9837e"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/engine/src"
@@ -86,7 +86,39 @@ tools() {
   test -r nls/locale.nls
 }
 
+native_session_patch() {
+  local patch="$ROOT/patches/wine-native-session.patch"
+  if git -C "$SRC" apply --reverse --check "$patch" >/dev/null 2>&1; then return; fi
+  git -C "$SRC" apply --check "$patch"
+  git -C "$SRC" apply "$patch"
+}
+
+dxmt_display_patch() {
+  local patch="$ROOT/patches/wine-dxmt-display.patch"
+  if git -C "$SRC" apply --reverse --check "$patch" >/dev/null 2>&1; then return; fi
+  git -C "$SRC" apply --check "$patch"
+  git -C "$SRC" apply "$patch"
+}
+
+audio_downmix_patch() {
+  local patch="$ROOT/patches/wine-audio-downmix.patch"
+  if git -C "$SRC" apply --reverse --check "$patch" >/dev/null 2>&1; then return; fi
+  git -C "$SRC" apply --check "$patch"
+  git -C "$SRC" apply "$patch"
+}
+
+pointer_display_patch() {
+  local patch="$ROOT/patches/wine-pointer-display.patch"
+  if git -C "$SRC" apply --reverse --check "$patch" >/dev/null 2>&1; then return; fi
+  git -C "$SRC" apply --check "$patch"
+  git -C "$SRC" apply "$patch"
+}
+
 configure_x86() {
+  native_session_patch
+  dxmt_display_patch
+  audio_downmix_patch
+  pointer_display_patch
   step "configure x86_64"
   mkdir -p "$BUILD" && cd "$BUILD"
   export CC="ccache /usr/bin/clang -arch x86_64" CXX="ccache /usr/bin/clang++ -arch x86_64"
@@ -296,11 +328,12 @@ case "${1:-all}" in
   addons) addons ;;
   moltenvk) moltenvk ;;
   dxvk) dxvk ;;
+  dxmt) bash "$ROOT/scripts/install-dxmt.sh" "$DIST" ;;
   compat) compat ;;
   discord) discord ;;
   media) media ;;
   portable) portable ;;
   winetricks) winetricks ;;
-  all) [ -f "$SRC/VERSION" ] || fetch; tools; configure_x86; build_x86; addons; moltenvk; dxvk; winetricks; compat; discord; media; portable ;;
-  *) echo "usage: $0 [fetch|tools|configure|make|addons|moltenvk|dxvk|winetricks|compat|discord|media|portable|all]"; exit 2 ;;
+  all) [ -f "$SRC/VERSION" ] || fetch; tools; configure_x86; build_x86; addons; moltenvk; dxvk; bash "$ROOT/scripts/install-dxmt.sh" "$DIST"; winetricks; compat; discord; media; portable ;;
+  *) echo "usage: $0 [fetch|tools|configure|make|addons|moltenvk|dxvk|dxmt|winetricks|compat|discord|media|portable|all]"; exit 2 ;;
 esac

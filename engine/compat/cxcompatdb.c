@@ -79,7 +79,7 @@ static void *ntdll_symbol(const char *symbol)
 }
 
 /* Applies this program's lines from EXERUNNER_COMPAT_FILE. Returns -1 without a readable file,
- * else 1 when a line turns D3DMetal off for the program and 0 when none does. */
+ * 2 for DXMT, 1 for Wine/DXVK and 0 for D3DMetal. */
 static int apply_compat_file(const char *exe)
 {
     const char *path = getenv("EXERUNNER_COMPAT_FILE");
@@ -88,6 +88,8 @@ static int apply_compat_file(const char *exe)
     FILE *file;
 
     if (!exe || !path || !*path || !(file = fopen(path, "r"))) return -1;
+    /* A launcher can inherit this from a DXMT game. Recompute it for each executable. */
+    unsetenv("EXERUNNER_EMULATE_MODESET");
     while (fgets(line, sizeof(line), file))
     {
         char *tab = strchr(line, '\t'), *eq, *end;
@@ -99,6 +101,7 @@ static int apply_compat_file(const char *exe)
         if (!(eq = strchr(tab + 1, '=')) || eq == tab + 1) continue;
         *eq = 0;
         if (!strcmp(tab + 1, "@d3dmetal")) d3dmetal_off = !strcmp(eq + 1, "off");
+        else if (!strcmp(tab + 1, "@dxmt") && !strcmp(eq + 1, "on")) d3dmetal_off = 2;
         else setenv(tab + 1, eq + 1, 1);
     }
     fclose(file);
@@ -113,6 +116,21 @@ static void exerunner_compat_init(void)
     char *copy;
     int d3dmetal_off = apply_compat_file(exe_name());
 
+    /* Only the matching process gets DXMT. A readable compat file is authoritative:
+     * launcher children must not inherit the parent's selected renderer. */
+    if (d3dmetal_off == 2 || (d3dmetal_off == -1 && getenv("EXERUNNER_USE_DXMT") &&
+                            !strcmp(getenv("EXERUNNER_USE_DXMT"), "1")))
+    {
+        dir = getenv("EXERUNNER_DXMT_DIR");
+        if (dir && *dir && (prepend_dll_path = ntdll_symbol("prepend_dll_path")))
+            if ((copy = strdup(dir)))
+            {
+                /* DXMT's fullscreen mode switch must not replace macOS Retina scaling. */
+                setenv("EXERUNNER_EMULATE_MODESET", "1", 1);
+                prepend_dll_path(copy);
+            }
+        return;
+    }
     dir = getenv("EXERUNNER_D3DMETAL_DIR");
     if (!dir || !*dir || d3dmetal_off == 1) return;
     /* the file is rewritten before every launch; a list inherited from a launcher may be older */

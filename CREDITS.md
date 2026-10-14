@@ -76,3 +76,32 @@ allows passing it on for non-commercial purposes only, with Apple's notices (sec
   and must stay free while it carries D3DMetal;
 - `scripts/build-app.sh --without-d3dmetal` (or `EXERUNNER_D3DMETAL=0`) builds without it;
 - users can always import a newer Game Porting Toolkit in the app; the newer D3DMetal wins.
+
+
+## DXMT
+
+DXMT 0.80 by Feifan He (3Shain), MIT licence, is bundled as a separate optional
+Direct3D 10/11-to-Metal backend. The official release and its published SHA-256 are
+pinned in scripts/install-dxmt.sh. Its licence and source/version URL ship
+in engine/lib/dxmt. DXMT does not replace Wine's default DLLs or D3DMetal globally.
+Source: https://github.com/3Shain/dxmt/tree/v0.80.
+
+
+## ExeRunner compatibility and general-runtime work
+
+Local, reproducible Wine modifications are stored in `patches/` and applied by
+`scripts/build-engine.sh`: native process identity/session integration, DXMT display-mode
+emulation, conditional stereo audio downmix, cursor capture and fullscreen presentation.
+They extend the upstream Wine implementation; Wine remains LGPL-2.1-or-later.
+
+The execution-breakpoint launcher and adapter in `tools/windows/` are ExeRunner's own
+compatibility resources, rebuilt from source during packaging. They implement a scoped
+Windows API compatibility path; the application does not distribute game files.
+
+The general Windows-component catalog, read-only PE import inspection, native manager,
+installer handling and tests are ExeRunner code. Package installation uses upstream
+Winetricks, pinned to revision `f3890f670867b5ffbc3938726db45c0f7d16c8ba` (LGPL-2.1-or-later),
+with the script digest checked by the engine build. Its package definitions supply
+Microsoft Visual C++, .NET, DirectX libraries and fonts on demand. Microsoft components
+retain their own licenses; they are downloaded for the selected bottle rather than added
+to ExeRunner's source repository or distributable app.

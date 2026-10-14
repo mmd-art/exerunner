@@ -8,14 +8,14 @@ ExeRunner brings setup, a program library, launcher recipes, graphics selection 
 compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-**Status:** private alpha, version 0.2. Primarily validated on an M2 Pro Mac.
+**Status:** private alpha, version 0.3. Primarily validated on an M2 Pro Mac.
 The interface is available in English and Russian. Compatibility depends on the application.
 
 ## Screenshots
 
 These are native UI exports of the local alpha built on **14/10/2026**. They show the
 application catalog and settings, with English selected, without a personal game library.
-Some controls belong to the newer local build described below.
+The Windows-component manager is shown below.
 
 ### Application catalog
 
@@ -42,14 +42,12 @@ The committed source provides:
 - **Audio and media setup:** per-bottle audio configuration and a test sound, fonts,
   Discord status integration, and Media Foundation/GStreamer video decoding.
 
-### Current local alpha
+### Compatibility and runtime features
 
-The locally installed build also includes the following work, validated through regression
-checks and selected real gameplay. **These additions are not yet committed to `main`.**
-The screenshots show this newer build; they are not a claim that a fresh checkout already
-contains every displayed control.
+The alpha includes the following work, validated through regression checks, self-authored
+Windows controls and selected real gameplay.
 
-| Area | Implemented in the local alpha | Validation boundary |
+| Area | Implemented | Validation boundary |
 | --- | --- | --- |
 | Graphics | Explicit D3DMetal, DXMT, DXVK, Wine OpenGL and Wine Vulkan choices; Auto selection with a visible reason | Auto follows profiles and available components; it does not benchmark applications |
 | Game Boost | macOS Game Mode policy during game sessions, restoration after the final game exits, and an independent monitor | Requires Apple's installed `gamepolicyctl`; no guaranteed FPS gain |
@@ -58,6 +56,20 @@ contains every displayed control.
 | Retina and fullscreen | Physical display modes, fullscreen presentation and cursor confinement with release on app switching | Fullscreen, camera turns and Cmd-Tab accepted in Far Cry Primal on the built-in display |
 | Native resolution | Current-screen policy with backup of supported game display settings | Far Cry Primal adapter only; arbitrary games and multi-monitor switching need separate validation |
 | Isolated launch | Experimental copied-bottle launch with restricted file-content access and blocked IP networking | Eligible standalone applications only; not a virtual machine or a malware guarantee |
+
+## General Windows components
+
+Open **… → Windows components…** on a library card to manage Visual C++, .NET Framework,
+.NET/Windows Desktop runtimes through version 10, DirectX helper libraries, fonts and system
+libraries. Components are shared within the selected bottle and downloaded/cache-reused
+on demand. A failed batch keeps its successfully installed packages.
+
+Ordinary standalone programs can prepare standard dependencies automatically from EXE imports
+and runtimeconfig metadata. Wine Mono remains the default for compatible managed programs;
+native .NET Framework is an explicit choice. Static inspection does not replace runtime
+error diagnostics. See [general runtime behavior and tests](docs/general-runtime.md).
+
+<img src="docs/images/exerunner-components.png" alt="General Windows-component manager with Visual C++ and .NET packages" width="880">
 
 ## How it works
 
@@ -76,7 +88,7 @@ flowchart LR
 ```
 
 The runtime is built from Wine 11.16 with CodeWeavers' CrossOver 26.3 changes. D3DMetal handles
-DirectX 11/12; the local alpha adds DXMT 0.80 for DirectX 10/11. DXVK/MoltenVK is used for
+DirectX 11/12; the alpha adds DXMT 0.80 for DirectX 10/11. DXVK/MoltenVK is used for
 compatible Direct3D applications and launcher browser helpers. A helper can use DXVK while
 the game it starts uses D3DMetal. The compatibility module configures overrides per executable.
 
@@ -148,16 +160,15 @@ and the associated notices.
 per-program graphics/DLL overrides and catalog text. English UI strings are maintained in
 `app/Sources/ExeRunner/Core/English.swift`; `tools/l10n-check.py` checks translation coverage.
 
-The existing 0.2 disk image predates the latest local fixes. A refreshed distribution build
-and validation on another Mac are still pending.
+The 0.3 disk image includes the current runtime and compatibility work. Validation on a clean
+or second Mac remains pending.
 
 ## Next milestones
 
-- Integrate the validated local runtime and UI changes into the repository.
-- Produce an updated distribution build and verify a clean installation on another Mac.
+- Verify a clean installation of the current distribution build on another Mac.
 - Expand dated application/game compatibility checks, including longer gameplay sessions.
 - Validate external-display and multi-monitor transitions and add safe native-display adapters.
-- Investigate professional application and device workflows as a separate roadmap.
+- Extend general printing, serial/USB and MIDI support with independent acceptance controls.
 
 ## License and attribution
 

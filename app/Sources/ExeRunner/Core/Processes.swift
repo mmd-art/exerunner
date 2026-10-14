@@ -39,7 +39,7 @@ enum WineProcesses {
         var name: String { WindowsPath.name(path) }
     }
 
-    static func list() -> [Entry] {
+    static func list(includeServers: Bool = false, copiedLoaderImages: [Data]? = nil) -> [Entry] {
         let count = proc_listallpids(nil, 0)
         guard count > 0 else { return [] }
         var pids = [pid_t](repeating: 0, count: Int(count) + 64)
@@ -52,13 +52,45 @@ enum WineProcesses {
         guard sysctl(&mib, 2, &argmax, &size, nil, 0) == 0, argmax > 0 else { return [] }
         var buffer = [UInt8](repeating: 0, count: Int(argmax))
         var path = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        var loaderImages = copiedLoaderImages
+        var verifiedCopies: [String: Bool] = [:]
 
         return pids.prefix(Int(found)).compactMap { pid in
             guard pid > 0, proc_pidpath(pid, &path, UInt32(path.count)) > 0 else { return nil }
-            let binary = URL(fileURLWithPath: String(cString: path)).lastPathComponent
-            guard binary == "wine" || binary == "wine64" || binary.hasSuffix("-preloader") else { return nil }
+            let executable = URL(fileURLWithPath: String(cString: path))
+            let binary = executable.lastPathComponent
+            let conventional = binary == "wine" || binary == "wine64" || binary.hasSuffix("-preloader") || (includeServers && binary == "wineserver")
+            if !conventional {
+                // Wine can relaunch with a renamed copy of its Unix loader (CEF, for example).
+                // Its name alone is insufficient: require Wine's temp folder and exact bytes
+                // of the selected engine. Cache each candidate only within this process scan.
+                guard executable.deletingLastPathComponent().lastPathComponent.hasPrefix("winetemp-") else { return nil }
+                if loaderImages == nil { loaderImages = selectedWineLoaderImages() }
+                let verified = verifiedCopies[executable.path] ?? matchesCopiedLoader(executable, images: loaderImages ?? [])
+                verifiedCopies[executable.path] = verified
+                guard verified else { return nil }
+            }
             return entry(pid, buffer: &buffer)
         }
+    }
+
+    private static func selectedWineLoaderImages() -> [Data] {
+        guard let engine = Engine.locate(AppSettings.load()) else { return [] }
+        let loaders = [engine.wine] + ["x86_64-unix", "aarch64-unix", "i386-unix"].map {
+            engine.lib.appendingPathComponent("wine/\($0)/wine")
+        }
+        return loaders.compactMap { url in
+            guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                  size > 0, size <= 1_048_576 else { return nil }
+            return try? Data(contentsOf: url)
+        }
+    }
+
+    private static func matchesCopiedLoader(_ url: URL, images: [Data]) -> Bool {
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+              images.contains(where: { $0.count == size }),
+              let bytes = try? Data(contentsOf: url) else { return false }
+        return images.contains(bytes)
     }
 
     /// KERN_PROCARGS2: argc, the executable's path, then NUL-terminated arguments and environment.

@@ -1,6 +1,7 @@
 // The app's parsing and matching, outside the app: Steam's VDF files, Windows paths, the crash
 // classifier and its log window, the redactor, and reading wine processes from the process table.
 // Built and run by tests/core-test.sh together with the app's own source files.
+import Darwin
 import Foundation
 
 var passed = 0, failed = 0
@@ -45,6 +46,21 @@ check("vdf condition skipped", manifest?["installdir"]?.string == "Black Myth Wu
 check("folder name safe", SteamLibrary.isFolderName("Black Myth Wukong Benchmark Tool"))
 check("folder name climbs", !SteamLibrary.isFolderName("..") && !SteamLibrary.isFolderName("a\\..\\b") && !SteamLibrary.isFolderName("a/b"))
 
+// HiDPI migration: physical modes for game bottles, preserve working legacy choices.
+let legacyDisplay = try! JSONDecoder().decode(BottleSettings.self, from: Data(#"{"audioDriver":"coreaudio","audioLatency":"low","discordBridge":true}"#.utf8))
+check("display migration keeps other settings", legacyDisplay.highResolution == nil && legacyDisplay.audioDriver == .coreaudio && legacyDisplay.audioLatency == .low && legacyDisplay.discordBridge)
+check("new game sees physical display", legacyDisplay.desiredHighResolution(hasGames: true, existing: nil) == true)
+check("ordinary program keeps display default", legacyDisplay.desiredHighResolution(hasGames: false, existing: nil) == nil)
+check("working WoT retina choice preserved", legacyDisplay.desiredHighResolution(hasGames: true, existing: "y") == true)
+check("existing cursor workaround preserved", legacyDisplay.desiredHighResolution(hasGames: true, existing: "n") == false)
+var displayChoice = legacyDisplay
+displayChoice.highResolution = false
+check("owner can disable physical display", displayChoice.desiredHighResolution(hasGames: true, existing: "y") == false)
+displayChoice.highResolution = true
+check("owner can enable physical display", displayChoice.desiredHighResolution(hasGames: false, existing: "n") == true)
+let displayRoundtrip = try! JSONDecoder().decode(BottleSettings.self, from: JSONEncoder().encode(displayChoice))
+check("display choice roundtrip", displayRoundtrip == displayChoice)
+
 // Windows paths
 check("path same", WindowsPath.same("C:/Program Files (x86)/Steam/", "c:\\program files (x86)\\steam"))
 check("path inside", WindowsPath.isInside("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Game\\bin\\game.exe",
@@ -70,6 +86,16 @@ check("crash marker", CrashClassifier.looksLikeCrash(log) && !CrashClassifier.lo
 check("verb for dll", MissingLibrary.verb(for: "MSVCP140_ATOMIC_WAIT.dll") == "vcrun2022" && MissingLibrary.verb(for: "d3dx9_43.dll") == "d3dx9"
       && MissingLibrary.verb(for: "xaudio2_7.dll") == "xact" && MissingLibrary.verb(for: "foo.dll") == nil)
 check("clean log", classifier.classify("fixme:x\nhello\n").isEmpty)
+
+// Silent nonzero exits must remain visible even when Wine has no known crash signature.
+let silentExit = classifier.classify("", exitStatus: 10)
+check("silent nonzero exit is an error", silentExit.primary?.pattern.id == "process-exit"
+      && silentExit.primary?.pattern.severity == .error && silentExit.primary?.captures.contains(where: { $0.contains("10") }) == true)
+check("silent exit does not invent a missing component", silentExit.missingLibraries.isEmpty
+      && silentExit.remedies == ["logging-crash"] && silentExit.primary?.lineNumber == 0)
+check("clean zero and absent status are not failures", classifier.classify("", exitStatus: 0).isEmpty
+      && classifier.classify("").isEmpty)
+check("known crash diagnosis is retained", classifier.classify(log, exitStatus: 10).primary?.pattern.id == "page-fault")
 
 // log window: short logs whole, long ones as their first 200 and last 500 lines, from an offset
 let work = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("core-test-\(getpid())")
@@ -160,6 +186,34 @@ if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
           "\(mine.map(\.path))")
     check("process through start.exe", mine.contains { $0.path == "/Users/someone/tool.exe" }, "\(mine.map(\.path))")
     check("process name", mine.contains { $0.name == "game.exe" })
+    // A display-mode migration must refuse before writing or stopping a live program.
+    let displayBottle = Bottle(name: URL(fileURLWithPath: prefix).lastPathComponent, root: URL(fileURLWithPath: prefix).deletingLastPathComponent())
+    let registry = displayBottle.url.appendingPathComponent("user.reg")
+    let originalRegistry = "[Software\\\\Wine\\\\Mac Driver]\n\"RetinaMode\"=\"n\"\n"
+    try! originalRegistry.write(to: registry, atomically: true, encoding: .utf8)
+    var explicitDisplay = BottleSettings(); explicitDisplay.highResolution = true
+    do {
+        try await BottleManager.applyHighResolution(explicitDisplay, to: displayBottle, hasGames: true,
+            engine: Engine(root: URL(fileURLWithPath: "/nonexistent/exerunner-display-test")), log: work.appendingPathComponent("display-refusal.log"))
+        check("display mode refuses a live program", false)
+    } catch let error as AppError {
+        check("display mode refuses a live program", error.message == t("Сначала останови программы этой бутылки, чтобы применить HiDPI."), error.message)
+    } catch { check("display mode refuses a live program", false, String(describing: error)) }
+    check("refused display migration keeps registry", (try? String(contentsOf: registry, encoding: .utf8)) == originalRegistry)
+    check("refused display migration keeps programs alive", WineProcesses.list().contains { $0.prefix == prefix && $0.name == "game.exe" })
+
+    if let loader = ProcessInfo.processInfo.environment["EXPECT_COPIED_LOADER"] {
+        for key in ["EXPECT_UNRELATED_CEF_PID", "EXPECT_OUTSIDE_CEF_PID"] {
+            let pid = ProcessInfo.processInfo.environment[key].flatMap(Int32.init)
+            check("excluded CEF fixture is alive", pid.map { Darwin.kill($0, 0) == 0 } ?? false, key)
+        }
+        let images = [try Data(contentsOf: URL(fileURLWithPath: loader))]
+        let copied = WineProcesses.list(copiedLoaderImages: images).filter { $0.prefix == prefix }
+        check("renamed copied Wine loader keeps game identity", copied.contains { $0.path == "C:\\Games\\WorldOfTanks.exe" }, "\(copied.map(\.path))")
+        check("unrelated CEF with Wine prefix is excluded", !copied.contains { $0.path == "C:\\Games\\unrelated-cef.exe" })
+        check("copy outside Wine temp folder is excluded", !copied.contains { $0.path == "C:\\Games\\outside-temp.exe" })
+        check("regular Wine processes remain tracked", copied.contains { $0.name == "game.exe" })
+    }
 }
 
 try? FileManager.default.removeItem(at: work)
