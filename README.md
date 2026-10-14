@@ -1,57 +1,168 @@
+<img src="app/Resources/AppIcon.png" alt="ExeRunner app icon" width="96">
+
 # ExeRunner
 
-Run Windows programs and games on Apple Silicon Macs. One app with a step-by-step setup, a
-library of your launchers, games and programs, and shortcuts in Applications for each of them.
+**A native macOS launcher for Windows applications and games on Apple Silicon.**
 
-Under the hood: Wine 11.16 with CodeWeavers' CrossOver 26.3 changes, Apple's D3DMetal for
-DirectX 11 and 12, DXVK on MoltenVK for launchers' Chromium windows, and a compatibility module of
-our own that picks the graphics path per program, even for games a launcher starts.
+ExeRunner brings setup, a program library, launcher recipes, graphics selection and
+compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
+Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-Status: private alpha (0.2), tested on an M2 Pro with macOS 27. Russian and English interface.
+**Status:** private alpha, version 0.2. Primarily validated on an M2 Pro Mac.
+The interface is available in English and Russian. Compatibility depends on the application.
+
+## Screenshots
+
+These are native UI exports of the local alpha built on **14/10/2026**. They show the
+application catalog and settings, with English selected, without a personal game library.
+Some controls belong to the newer local build described below.
+
+### Application catalog
+
+<img src="docs/images/exerunner-catalog.png" alt="ExeRunner catalog with launcher recipes and recorded compatibility status" width="880">
+
+### Game and display settings
+
+<img src="docs/images/exerunner-settings.png" alt="ExeRunner settings with English selected, Game Boost, cursor capture and native resolution controls" width="880">
 
 ## What it does
 
-- Installs and runs Steam, and lists your Steam games from every library folder. A game goes to
-  a running Steam or starts it; Stop closes the game alone.
-- Launcher presets, each installed silently into a bottle of its own:
+The committed source provides:
 
-  | Launcher | State (10/10/2026) |
-  |---|---|
-  | Steam | tested: your games from every library folder, D3DMetal for games, Stop per game |
-  | EA app, Epic Games Launcher, Ubisoft Connect, Rockstar Games Launcher | install and show their sign-in page; signing in and games not tested yet |
-  | Battle.net | parked: its sign-in browser crashes |
-  | GOG Galaxy | parked: its Qt 6 web view stays empty under DXVK and D3DMetal |
-- A compatibility database (from Whisky) that sets graphics, Windows components and variables
-  per game.
-- Crash diagnosis from wine's log and Unreal's crash reports, a helper with checks and fixes for
-  eight kinds of problems, and a report zip with secrets and your user name removed.
-- Per-bottle audio with a test sound, fonts, and a bridge for games' Discord status.
-- Game video through Media Foundation and GStreamer with an FFmpeg build of our own (WMV, H.264).
+- **A native program library:** launchers, Windows programs and games, with optional
+  shortcuts in macOS Applications.
+- **Steam integration:** discovers installed games across Steam library folders, launches
+  them through the Windows client and provides a separate Stop action for each game.
+- **Launcher recipes:** component setup, environment variables and graphics overrides in
+  separate Wine bottles (Windows environments).
+- **Compatibility profiles:** per-game graphics, Windows components and environment
+  recommendations, including an attributed database imported from Whisky.
+- **Diagnostics:** Wine and Unreal crash-log classification, troubleshooting checks, and
+  support reports with user names and known secret patterns redacted.
+- **Audio and media setup:** per-bottle audio configuration and a test sound, fonts,
+  Discord status integration, and Media Foundation/GStreamer video decoding.
 
-## Build
+### Current local alpha
 
-Needs Xcode's command line tools, Rosetta, and x86_64 Homebrew in `/usr/local` with the
-libraries the engine links (freetype, gnutls, gstreamer, ffmpeg, …), plus arm64 Homebrew for
-mingw-w64 and cabextract.
+The locally installed build also includes the following work, validated through regression
+checks and selected real gameplay. **These additions are not yet committed to `main`.**
+The screenshots show this newer build; they are not a claim that a fresh checkout already
+contains every displayed control.
 
-```sh
-scripts/build-engine.sh all          # the engine into engine/dist (15–30 minutes)
-scripts/build-engine.sh portable     # a copy that needs no Homebrew, for the app to carry
-scripts/build-app.sh                 # build/app.noindex/ExeRunner.app
-scripts/make-dmg.sh                  # build/ExeRunner-<version>.dmg to hand out
-tests/cxcompatdb-test.sh && tests/core-test.sh && tests/l10n-test.sh
+| Area | Implemented in the local alpha | Validation boundary |
+| --- | --- | --- |
+| Graphics | Explicit D3DMetal, DXMT, DXVK, Wine OpenGL and Wine Vulkan choices; Auto selection with a visible reason | Auto follows profiles and available components; it does not benchmark applications |
+| Game Boost | macOS Game Mode policy during game sessions, restoration after the final game exits, and an independent monitor | Requires Apple's installed `gamepolicyctl`; no guaranteed FPS gain |
+| Startup | A scoped Wine/Rosetta execution-breakpoint adapter | One tested Far Cry Primal executable revision; not a general protected-game fix |
+| Audio | Preservation of center-channel dialogue when a six-channel stream reaches stereo output | Confirmed in Far Cry Primal dialogue; unrelated streams retain their previous behavior |
+| Retina and fullscreen | Physical display modes, fullscreen presentation and cursor confinement with release on app switching | Fullscreen, camera turns and Cmd-Tab accepted in Far Cry Primal on the built-in display |
+| Native resolution | Current-screen policy with backup of supported game display settings | Far Cry Primal adapter only; arbitrary games and multi-monitor switching need separate validation |
+| Isolated launch | Experimental copied-bottle launch with restricted file-content access and blocked IP networking | Eligible standalone applications only; not a virtual machine or a malware guarantee |
+
+## How it works
+
+ExeRunner manages setup, bottles, launch settings and process lifecycle. **Rosetta 2 handles
+x86/x64 CPU instruction translation; Wine supplies Windows API compatibility.** Graphics
+translation is a separate path:
+
+```mermaid
+flowchart LR
+    D["Direct3D calls"] --> A["D3DMetal / DXMT"]
+    D --> V["DXVK"]
+    V --> K["Vulkan / MoltenVK"]
+    A --> M["Metal"]
+    K --> M
+    M --> G["Apple GPU"]
 ```
 
-Recipes (`recipes/*.recipe`) describe a launcher in a few lines: installer and its arguments,
-the program, environment, which helpers draw through DXVK (`dxvk`), per-program DLL overrides
-(`dll`) and wine's own Direct3D settings (`d3d`), the catalog text (`about`, `about-en`).
+The runtime is built from Wine 11.16 with CodeWeavers' CrossOver 26.3 changes. D3DMetal handles
+DirectX 11/12; the local alpha adds DXMT 0.80 for DirectX 10/11. DXVK/MoltenVK is used for
+compatible Direct3D applications and launcher browser helpers. A helper can use DXVK while
+the game it starts uses D3DMetal. The compatibility module configures overrides per executable.
 
-The interface texts are written in Russian where they are used and looked up in
-`app/Sources/ExeRunner/Core/English.swift`; `tools/l10n-check.py` lists any text without English.
+Wine and Rosetta are upstream technologies; ExeRunner's work is the native product, runtime
+integration, launch policy, diagnostics and scoped compatibility repairs.
 
-D3DMetal comes from Apple's [Game Porting Toolkit](https://developer.apple.com/download/all/?q=Game%20Porting%20Toolkit):
-import its `.dmg` in the app once, and builds carry it from then on (see [CREDITS.md](CREDITS.md)).
+## Recorded launcher compatibility
 
-## Licence
+These are the recorded checks from **10/10/2026**, not guarantees for every launcher update
+or game available in a store.
 
-GPL-3.0-or-later; see [LICENSE](LICENSE) and [CREDITS.md](CREDITS.md) for what comes from where.
+| Launcher | Recorded status |
+| --- | --- |
+| Steam | Tested: installation, library discovery, game launch and per-game Stop |
+| EA app, Epic Games Launcher, Ubisoft Connect | Install and display their sign-in page; sign-in and games are not yet validated |
+| Rockstar Games Launcher | Installer and initial startup checked; sign-in and games require further validation |
+| Battle.net | Disabled in the catalog: sign-in browser crashes |
+| GOG Galaxy | Disabled in the catalog: Qt 6 web view remains empty with the tested graphics paths |
+
+A compatibility database entry is a recommendation, not evidence that this project tested
+that game. Anti-cheat, drivers, store login flows and individual game versions can prevent
+an application from working.
+
+## Add a Windows application or game
+
+1. Keep the complete application folder in a permanent location. If it came in a ZIP,
+   extract all files together, including DLLs and data directories.
+2. In the library, choose **Add program** and select the main `.exe` or `.msi` installer.
+3. For a portable application, choose **Run as is**. For an installer, choose
+   **This is an installer**, complete setup, then select the installed program's executable.
+4. Give the item a name and add it to the library. Keep a portable application's folder
+   in place after adding it.
+
+Importing a program does not scan or certify it. Ordinary Wine applications can access Mac
+files and networking. Use software from sources you trust.
+
+## Build from source
+
+The application targets **macOS 15 or later on Apple Silicon**. Building the full runtime
+requires Xcode command-line tools, Rosetta, x86_64 Homebrew in `/usr/local` for Wine's linked
+libraries, and arm64 Homebrew for the native build tools, MinGW-w64 and `cabextract`.
+Pinned upstream versions and build stages are recorded in `scripts/build-engine.sh`.
+
+```sh
+# Build the runtime and its portable copy.
+scripts/build-engine.sh all
+
+# Package the native application and create a disk image.
+scripts/build-app.sh
+scripts/make-dmg.sh
+
+# Check the committed compatibility database, core behavior and localization.
+tests/cxcompatdb-test.sh
+tests/core-test.sh
+tests/l10n-test.sh
+```
+
+The app is produced at `build/app.noindex/ExeRunner.app`; the disk image is
+`build/ExeRunner-<version>.dmg`. Run `scripts/build-engine.sh portable` again when you need
+to regenerate the portable copy after changing runtime components.
+
+D3DMetal is imported from Apple's
+[Game Porting Toolkit download](https://developer.apple.com/download/all/?q=Game%20Porting%20Toolkit)
+through the application. Its code is not stored in this repository. Packaging can omit it
+with `scripts/build-app.sh --without-d3dmetal`; see [CREDITS.md](CREDITS.md) for provenance
+and the associated notices.
+
+`recipes/*.recipe` describe launcher installers, executables, environment variables,
+per-program graphics/DLL overrides and catalog text. English UI strings are maintained in
+`app/Sources/ExeRunner/Core/English.swift`; `tools/l10n-check.py` checks translation coverage.
+
+The existing 0.2 disk image predates the latest local fixes. A refreshed distribution build
+and validation on another Mac are still pending.
+
+## Next milestones
+
+- Integrate the validated local runtime and UI changes into the repository.
+- Produce an updated distribution build and verify a clean installation on another Mac.
+- Expand dated application/game compatibility checks, including longer gameplay sessions.
+- Validate external-display and multi-monitor transitions and add safe native-display adapters.
+- Investigate professional application and device workflows as a separate roadmap.
+
+## License and attribution
+
+ExeRunner's application code is **GPL-3.0-or-later**. See [LICENSE](LICENSE) and
+[CREDITS.md](CREDITS.md) for upstream work, component licenses and icon provenance.
+DXMT is an MIT-licensed upstream project: [3Shain/dxmt](https://github.com/3Shain/dxmt).
+
+ExeRunner is not affiliated with Apple, Microsoft, Valve or CodeWeavers.
