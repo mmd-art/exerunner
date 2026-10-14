@@ -8,14 +8,16 @@ ExeRunner brings setup, a program library, launcher recipes, graphics selection 
 compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-**Status:** private alpha, version 0.3. Primarily validated on an M2 Pro Mac.
-The interface is available in English and Russian. Compatibility depends on the application.
+**Status:** private alpha, version 0.4. Primarily validated on an M2 Pro Mac.
+The interface is available in English and Russian. The app executable includes arm64 and x86_64;
+Intel hardware acceptance is still pending. Compatibility depends on the application.
 
 ## Screenshots
 
 These are native UI exports of the local alpha built on **14/10/2026**. They show the
 application catalog and settings, with English selected, without a personal game library.
-The Windows-component manager is shown below.
+The Windows-component manager is shown below. The environment/device panel was added on **15/10/2026**;
+its native export anonymizes configured printer names.
 
 ### Application catalog
 
@@ -49,12 +51,17 @@ Windows controls and selected real gameplay.
 
 | Area | Implemented | Validation boundary |
 | --- | --- | --- |
-| Graphics | Explicit D3DMetal, DXMT, DXVK, Wine OpenGL and Wine Vulkan choices; Auto selection with a visible reason | Auto follows profiles and available components; it does not benchmark applications |
+| Graphics | Explicit D3DMetal, DXMT, DXVK, Wine OpenGL, Wine Vulkan and experimental vkd3d choices; Auto selection with a visible reason | Auto follows profiles and available components; it does not benchmark applications |
 | Game Boost | macOS Game Mode policy during game sessions, restoration after the final game exits, and an independent monitor | Requires Apple's installed `gamepolicyctl`; no guaranteed FPS gain |
 | Startup | A scoped Wine/Rosetta execution-breakpoint adapter | One tested Far Cry Primal executable revision; not a general protected-game fix |
 | Audio | Preservation of center-channel dialogue when a six-channel stream reaches stereo output | Confirmed in Far Cry Primal dialogue; unrelated streams retain their previous behavior |
 | Retina and fullscreen | Physical display modes, fullscreen presentation and cursor confinement with release on app switching | Fullscreen, camera turns and Cmd-Tab accepted in Far Cry Primal on the built-in display |
 | Native resolution | Current-screen policy with backup of supported game display settings | Far Cry Primal adapter only; arbitrary games and multi-monitor switching need separate validation |
+| Environment engines | Default or a separate Wine engine per bottle, used for installation, launch, diagnostics and Stop | Changing a busy environment is refused; a missing explicit engine does not silently fall back |
+| Printing | CUPS-backed Mac printers exposed to Windows printing APIs | Printer discovery and GDI print-to-file passed; no physical paper job was sent |
+| Serial devices | Persistent COM1–COM255 mappings, connection status and managed removal | Bidirectional PTY and baud/state controls passed through the actual app preparation path; physical USB serial acceptance pending |
+| Controllers | Native HID or SDL-based Xbox/XInput mapping per environment, with restoration of previous policy | Bluetooth DualSense enumerated in WinMM and XInput; button/stick input recorded through XInput |
+| MIDI and OpenCL | Native CoreMIDI and OpenCL API bridges in the engine | WinMM message reached a virtual CoreMIDI destination; OpenCL platform enumeration passed |
 | Isolated launch | Experimental copied-bottle launch with restricted file-content access and blocked IP networking | Eligible standalone applications only; not a virtual machine or a malware guarantee |
 
 ## General Windows components
@@ -71,16 +78,42 @@ error diagnostics. See [general runtime behavior and tests](docs/general-runtime
 
 <img src="docs/images/exerunner-components.png" alt="General Windows-component manager with Visual C++ and .NET packages" width="880">
 
+## Engines, printing and devices
+
+Open **… → Windows environment, engine and devices…** on a library card. These choices
+are shared by all programs in that Windows environment.
+
+- **Engine:** inherit the application default or select a folder containing `bin/wine`
+  and `bin/wineserver`. External Wine engines can run ordinary GDI/OpenGL programs without
+  a DXVK bundle. An explicitly selected renderer still needs its own runtime.
+- **Printing:** use the Mac's configured printers from the Windows application's Print
+  dialog. The panel also opens Windows printer settings.
+- **COM:** choose a detected Mac serial device and a free COM number. Disconnected saved
+  devices retain their mapping; connections configured outside ExeRunner are preserved.
+- **Controllers:** choose **Xbox / XInput** for compatible gamepads in Xbox-input games,
+  or **Native HID** for the original interface. **Automatic** restores the environment's
+  previous controller policy. Changes apply on the next launch while the environment is idle.
+- **USB, HID and MIDI:** the panel lists native devices and engine capabilities. A USB
+  Ethernet adapter uses macOS networking; it does not require installing its Windows USB
+  driver in Wine.
+
+This is a general platform layer, not a guarantee for arbitrary Windows kernel drivers,
+ASIO interfaces, protection dongles or every USB protocol. See
+[device and engine behavior, controls and limits](docs/devices-and-engines.md).
+
+<img src="docs/images/exerunner-environment.png" alt="English environment panel with engine, printers and serial device controls" width="880">
+
 ## How it works
 
 ExeRunner manages setup, bottles, launch settings and process lifecycle. **Rosetta 2 handles
-x86/x64 CPU instruction translation; Wine supplies Windows API compatibility.** Graphics
+x86/x64 CPU instruction translation on Apple Silicon; Intel hosts execute that code natively.
+Wine supplies Windows API compatibility.** Graphics
 translation is a separate path:
 
 ```mermaid
 flowchart LR
     D["Direct3D calls"] --> A["D3DMetal / DXMT"]
-    D --> V["DXVK"]
+    D --> V["DXVK / vkd3d"]
     V --> K["Vulkan / MoltenVK"]
     A --> M["Metal"]
     K --> M
@@ -160,7 +193,7 @@ and the associated notices.
 per-program graphics/DLL overrides and catalog text. English UI strings are maintained in
 `app/Sources/ExeRunner/Core/English.swift`; `tools/l10n-check.py` checks translation coverage.
 
-The 0.3 disk image includes the current runtime and compatibility work. Validation on a clean
+The 0.4 disk image includes the current runtime and compatibility work. Validation on a clean
 or second Mac remains pending.
 
 ## Next milestones
@@ -168,7 +201,8 @@ or second Mac remains pending.
 - Verify a clean installation of the current distribution build on another Mac.
 - Expand dated application/game compatibility checks, including longer gameplay sessions.
 - Validate external-display and multi-monitor transitions and add safe native-display adapters.
-- Extend general printing, serial/USB and MIDI support with independent acceptance controls.
+- Complete physical printer, USB/COM and MIDI acceptance beyond the local file/virtual-endpoint controls.
+- Validate the universal build on Intel hardware and macOS configurations beyond this M2 Pro host.
 
 ## License and attribution
 

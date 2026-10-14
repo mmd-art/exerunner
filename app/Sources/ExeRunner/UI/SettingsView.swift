@@ -50,13 +50,14 @@ struct SettingsView: View {
             Section("Mac") {
                 StatusRow(title: state.system.chip, detail: t("macOS \(state.system.macOS) · \(state.system.memoryGB) ГБ памяти · свободно \(state.system.freeDiskGB) ГБ"),
                           level: state.system.supported ? .ok : .missing)
-                HStack {
+                if !state.system.isAppleSilicon { Text(t("На Intel Mac Rosetta не требуется.")).foregroundStyle(.secondary) }
+                else { HStack {
                     StatusRow(title: state.rosettaInstalled ? t("Rosetta установлена") : t("Rosetta не установлена"), detail: "",
                               level: state.rosettaInstalled ? .ok : .missing)
                     if !state.rosettaInstalled {
                         Button(t("Установить")) { Task { await state.installRosetta() } }.buttonStyle(.pill)
                     }
-                }
+                } }
             }
 
             Section(t("Движок")) {

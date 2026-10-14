@@ -1,6 +1,6 @@
 import Foundation
 
-/// What belongs to a bottle rather than to one program in it: Windows audio, the Discord bridge.
+/// Shared environment choices: runtime, serial devices, display, audio and the Discord bridge.
 /// Stored in bottles.json next to the library, by bottle name.
 struct BottleSettings: Codable, Equatable {
     /// HKCU\Software\Wine\Drivers "Audio"
@@ -40,6 +40,27 @@ struct BottleSettings: Codable, Equatable {
     /// nil adopts an existing Wine display choice, otherwise enables HiDPI for game bottles.
     /// A user choice always wins. Wine requires one display coordinate system per bottle.
     var highResolution: Bool?
+    /// nil follows the application default. Existing environments retain that behavior.
+    var enginePath: String?
+    struct SerialPort: Codable, Equatable, Identifiable {
+        var number: Int
+        var device: String
+        var id: Int { number }
+        var name: String { "COM\(number)" }
+    }
+    var serialPorts: [SerialPort] = []
+    enum ControllerMode: String, Codable, CaseIterable, Identifiable {
+        case automatic, xinput, native
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .automatic: t("Автоматически")
+            case .xinput: t("Xbox / XInput")
+            case .native: t("Нативный HID")
+            }
+        }
+    }
+    var controllerMode = ControllerMode.automatic
 
     func desiredHighResolution(hasGames: Bool, existing: String?) -> Bool? {
         if let highResolution { return highResolution }
@@ -57,6 +78,9 @@ struct BottleSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         highResolution = try c.decodeIfPresent(Bool.self, forKey: .highResolution)
+        enginePath = try c.decodeIfPresent(String.self, forKey: .enginePath)
+        serialPorts = try c.decodeIfPresent([SerialPort].self, forKey: .serialPorts) ?? []
+        controllerMode = try c.decodeIfPresent(ControllerMode.self, forKey: .controllerMode) ?? .automatic
         audioDriver = try c.decodeIfPresent(AudioDriver.self, forKey: .audioDriver) ?? .automatic
         audioLatency = try c.decodeIfPresent(AudioLatency.self, forKey: .audioLatency) ?? .standard
         discordBridge = try c.decodeIfPresent(Bool.self, forKey: .discordBridge) ?? false
@@ -84,15 +108,19 @@ enum BottleSettingsStore {
 }
 
 extension BottleManager {
-    /// Imports a REGEDIT4 file into the bottle. The values are live for every process once
+    /// Imports a Unicode registry file into the bottle. The values are live for every process once
     /// regedit exits; wineserver writes them to user.reg and system.reg a little later.
-    static func importRegistry(_ text: String, into bottle: Bottle, engine: Engine, log: URL) async throws {
+    static func importRegistry(_ text: String, into bottle: Bottle, engine: Engine, log: URL,
+                               extra: [String: String] = [:]) async throws {
         let name = "exerunner-\(UUID().uuidString.prefix(8)).reg"
         let file = bottle.driveC.appendingPathComponent(name)
-        try ("REGEDIT4\n" + text).write(to: file, atomically: true, encoding: .utf8)
+        var data = Data([0xff, 0xfe])
+        data.append(("Windows Registry Editor Version 5.00\r\n" + text).data(using: .utf16LittleEndian)!)
+        try data.write(to: file, options: .atomic)
         defer { try? FileManager.default.removeItem(at: file) }
-        let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
-        _ = try await WineProcess.run(engine: engine, arguments: ["regedit", "/S", "C:\\\(name)"], environment: env, log: log)
+        let env = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)
+        let status = try await WineProcess.run(engine: engine, arguments: ["regedit", "/S", "C:\\\(name)"], environment: env, log: log)
+        guard status == 0 else { throw AppError(t("Не удалось обновить реестр Windows. Журнал: \(log.path)")) }
     }
 
     /// Settings every bottle gets once. Wine's crash debugger is off: its console and "Program

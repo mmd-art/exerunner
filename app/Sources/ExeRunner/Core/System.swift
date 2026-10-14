@@ -20,7 +20,7 @@ struct SystemInfo: Equatable {
     var memoryGB: Int
     var freeDiskGB: Int
 
-    var supported: Bool { isAppleSilicon && macOSMajor >= 15 }
+    var supported: Bool { macOSMajor >= 15 }
 
     static func current() -> SystemInfo {
         let version = ProcessInfo.processInfo.operatingSystemVersion
@@ -28,7 +28,7 @@ struct SystemInfo: Equatable {
         let free = values?.volumeAvailableCapacityForImportantUsage ?? 0
         return SystemInfo(
             chip: sysctlString("machdep.cpu.brand_string") ?? "?",
-            isAppleSilicon: sysctlInt("hw.optional.arm64") == 1,
+            isAppleSilicon: HostArchitecture.isAppleSilicon,
             macOS: "\(version.majorVersion).\(version.minorVersion)",
             macOSMajor: version.majorVersion,
             memoryGB: Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824),
@@ -43,10 +43,4 @@ private func sysctlString(_ name: String) -> String? {
     var buffer = [CChar](repeating: 0, count: size)
     guard sysctlbyname(name, &buffer, &size, nil, 0) == 0 else { return nil }
     return String(cString: buffer)
-}
-
-private func sysctlInt(_ name: String) -> Int {
-    var value: Int32 = 0
-    var size = MemoryLayout<Int32>.size
-    return sysctlbyname(name, &value, &size, nil, 0) == 0 ? Int(value) : 0
 }

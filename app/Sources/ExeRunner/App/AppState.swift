@@ -67,13 +67,14 @@ final class AppState: ObservableObject {
 
     var running: Set<String> { launching.union(active).union(starting) }
 
-    init(managesGameBoost: Bool = true) {
+    init(managesGameBoost: Bool = true, initialSettings: AppSettings? = nil,
+         initialItems: [LibraryItem]? = nil, initialBottleSettings: [String: BottleSettings]? = nil) {
         self.managesGameBoost = managesGameBoost
-        settings = AppSettings.load()
+        settings = initialSettings ?? AppSettings.load()
         L10n.use(settings.language)
         recipes = Recipe.loadAll()
-        items = LibraryStore.load()
-        bottleSettings = BottleSettingsStore.load()
+        items = initialItems ?? LibraryStore.load()
+        bottleSettings = initialBottleSettings ?? BottleSettingsStore.load()
         engine = Engine.locate(settings)
         (compatSource, gameProfiles) = CompatDatabase.load()
     }
@@ -213,13 +214,16 @@ final class AppState: ObservableObject {
     func canTargetExecutables(_ item: LibraryItem) -> Bool { !executables(of: item).isEmpty }
 
     func effectiveGraphics(_ item: LibraryItem) -> LibraryItem.Graphics {
-        GraphicsSelection.resolve(item, profile: profile(for: item), hasD3DMetal: engine?.d3dmetalVersion != nil)
+        GraphicsSelection.resolve(item, profile: profile(for: item), hasD3DMetal: engineForItem(item)?.d3dmetalVersion != nil)
     }
 
     /// Executables in a bottle that draw through DXVK: the recipes' lists, the Chromium helpers
     /// games ship, and programs set to it
     func dxvkExecutables(in bottle: String) -> Set<String> {
-        var names = Set(recipes(in: bottle).flatMap(\.dxvkExecutables) + Launchers.chromiumHelpers)
+        var names = Set(recipes(in: bottle).flatMap(\.dxvkExecutables))
+        // Plain external Wine engines can run GDI/OpenGL programs without a DXVK bundle.
+        // An explicit DXVK item or launcher recipe still requires its DLLs.
+        if (try? selectedEngine(forBottle: bottle))?.hasDXVK == true { names.formUnion(Launchers.chromiumHelpers) }
         for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .dxvk {
             names.formUnion(executables(of: item))
         }
@@ -242,7 +246,7 @@ final class AppState: ObservableObject {
     /// Executables that keep wine's own DLLs instead of D3DMetal
     func skipList(in bottle: String) -> Set<String> {
         var names = dxvkExecutables(in: bottle).union(dxmtExecutables(in: bottle)).union(direct3D(in: bottle).keys)
-        for item in bottleItems where item.bottle == bottle && [.wine, .vulkan].contains(effectiveGraphics(item)) {
+        for item in bottleItems where item.bottle == bottle && [.wine, .vulkan, .vkd3d].contains(effectiveGraphics(item)) {
             names.formUnion(executables(of: item))
         }
         return names
@@ -258,6 +262,11 @@ final class AppState: ObservableObject {
         }
         for exe in dxmtExecutables(in: bottle) {
             for dll in ["d3d11", "dxgi", "d3d10core", "winemetal"] { result[exe, default: [:]][dll] = "builtin" }
+        }
+        for item in bottleItems where item.bottle == bottle && effectiveGraphics(item) == .vkd3d {
+            for exe in executables(of: item) {
+                for dll in ["d3d12", "d3d12core", "dxgi", "d3d11"] { result[exe, default: [:]][dll] = "builtin" }
+            }
         }
         for recipe in recipes(in: bottle) {
             for (exe, dlls) in recipe.dllOverrides { result[exe, default: [:]].merge(dlls) { $1 } }
@@ -320,7 +329,7 @@ final class AppState: ObservableObject {
         if item.useRecommended, let profile = profile(for: item) { env.merge(profile.recommended.environment) { $1 } }
         if !item.metalFX { env["D3DM_ENABLE_METALFX"] = "0" }
         if item.raytracing { env["D3DM_SUPPORT_DXR"] = "1" }
-        if effectiveGraphics(item) == .vulkan { env["WINE_D3D_CONFIG"] = "renderer=vulkan" }
+        if [.vulkan, .vkd3d].contains(effectiveGraphics(item)) { env["WINE_D3D_CONFIG"] = "renderer=vulkan" }
         if effectiveGraphics(item) == .wine { env["WINE_D3D_CONFIG"] = "renderer=gl" }
         env.merge(item.extraEnvironment) { $1 }
         env["MTL_HUD_ENABLED"] = (settings.performanceHUD ?? item.performanceHUD) ? "1" : "0"
@@ -365,7 +374,9 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func install(_ recipe: Recipe) async -> Bool {
-        guard let engine else { errorMessage = t("Движок не найден"); return false }
+        let engine: Engine
+        do { engine = try selectedEngine(forBottle: recipe.bottle) }
+        catch { errorMessage = error.localizedDescription; return false }
         let token = beginActivity(t("Устанавливаю \(recipe.name)…"))
         defer { endActivity(token) }
         // installers often start their launcher at the end (EA does): it has to find the bottle
@@ -394,7 +405,9 @@ final class AppState: ObservableObject {
     }
 
     func runInstaller(_ file: URL, bottle: String) async -> [URL] {
-        guard let engine else { errorMessage = t("Движок не найден"); return [] }
+        let engine: Engine
+        do { engine = try selectedEngine(forBottle: bottle) }
+        catch { errorMessage = error.localizedDescription; return [] }
         let token = beginActivity(t("Запускаю установщик…"))
         defer { endActivity(token) }
         do {
@@ -462,12 +475,19 @@ final class AppState: ObservableObject {
     }
 
     func setEngine(_ url: URL) async {
-        guard Engine(root: url).isValid else {
-            errorMessage = t("В папке «\(url.lastPathComponent)» нет движка (bin/wine)")
-            return
-        }
-        settings.enginePath = url.path
-        await refresh()
+        do {
+            _ = try EngineSelection.resolve(defaultEngine: nil, path: url.path)
+            let table = WineProcesses.list(includeServers: true)
+            let busy = Set(componentInstalls).union(bottleItems.filter { running.contains($0.id) }.map(\.bottle))
+            let inherited = Set(bottleItems.map(\.bottle)).union(componentInstalls).filter { settings(forBottle: $0).enginePath == nil }
+            guard !inherited.contains(where: { name in
+                busy.contains(name) || table.contains { $0.prefix == Bottle(name: name, root: bottlesRoot).prefixPath }
+            }) else {
+                throw AppError(t("Сначала останови программы Windows-сред, использующих движок по умолчанию."))
+            }
+            settings.enginePath = url.path
+            await refresh()
+        } catch { errorMessage = error.localizedDescription }
     }
 
     func setBottlesRoot(_ url: URL) {
@@ -582,7 +602,8 @@ final class AppState: ObservableObject {
         }
         for bottle in Set(allItems.map(\.bottle)).sorted() {
             lines.append("bottle \(bottle): recipes \(recipes(in: bottle).map(\.id)), dxvk \(dxvkExecutables(in: bottle).sorted()), d3dmetal off \(skipList(in: bottle).sorted()), winetricks \(winetricksVerbs(in: bottle)), \(settings(forBottle: bottle))")
-            if let engine {
+            if let engine = try? selectedEngine(forBottle: bottle) {
+                lines.append("  selected engine: \(engine.root.path), \(engine.recordedVersion ?? "?"), CUPS \(engine.supportsPrinting), USB \(engine.supportsUSB), HID \(engine.supportsHID), MIDI \(engine.supportsMIDI), OpenCL \(engine.supportsOpenCL)")
                 let disabled = dllOverrides(in: bottle, engine: engine).filter { $0.value.values.contains("") }.keys.sorted()
                 lines.append("  dll off for: \(disabled)")
             }

@@ -38,6 +38,8 @@ enum Entry {
             Headless.shutdown()
         } else if args.contains("--self-test") {
             Headless.selfTest()
+        } else if let index = args.firstIndex(of: "--snapshot-environment"), index + 1 < args.count {
+            Headless.snapshotEnvironment(to: URL(fileURLWithPath: args[index + 1], isDirectory: true))
         } else if let index = args.firstIndex(of: "--snapshot-components"), index + 1 < args.count {
             Headless.snapshotComponents(to: URL(fileURLWithPath: args[index + 1], isDirectory: true))
         } else if let index = args.firstIndex(of: "--snapshot-settings"), index + 1 < args.count {
@@ -132,13 +134,13 @@ enum Headless {
         Task { @MainActor in
             let state = AppState()
             await state.refresh()
-            guard let engine = state.engine else { FileHandle.standardError.write(Data("no engine\n".utf8)); exit(1) }
             guard !name.hasPrefix("isolated-") else {
                 FileHandle.standardError.write(Data("Component installation unsupported in isolation prototype\n".utf8)); exit(1)
             }
             let bottle = Bottle(name: name, root: state.bottlesRoot)
             let log = Paths.logFile("\(name)-components")
             do {
+                let engine = try state.selectedEngine(forBottle: name)
                 try await BottleManager.ensure(bottle, engine: engine, log: log)
                 try await state.ensureRuntimeComponents(verbs, in: bottle, engine: engine, log: log) { print($0) }
                 print("installed \(verbs.joined(separator: ", ")) in \(name): \(Winetricks.installed(in: bottle).sorted())")
@@ -188,6 +190,14 @@ enum Headless {
             await Snapshots.render(to: dir, language: language)
             exit(0)
         }
+        app.run()
+        exit(0)
+    }
+
+    static func snapshotEnvironment(to dir: URL) -> Never {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.prohibited)
+        Task { @MainActor in await Snapshots.renderEnvironment(to: dir); exit(0) }
         app.run()
         exit(0)
     }

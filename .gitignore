@@ -3,6 +3,9 @@ engine/build/
 engine/build-tools/
 engine/dist/
 engine/portable/
+engine/portable-devices/
+engine/build-devices/
+engine/dist-devices/
 engine/deps/
 engine/ccache/
 bottles/

@@ -64,6 +64,7 @@ struct ItemTile: View {
     let item: LibraryItem
     @State private var editing = false
     @State private var managingComponents = false
+    @State private var managingEnvironment = false
     @State private var troubleshooting: Symptom?
 
     var body: some View {
@@ -120,6 +121,7 @@ struct ItemTile: View {
         .contextMenu { menuItems }
         .sheet(isPresented: $editing) { ItemSettingsView(item: item) }
         .sheet(isPresented: $managingComponents) { RuntimeComponentsView(item: item) }
+        .sheet(isPresented: $managingEnvironment) { EnvironmentView(item: item) }
         .sheet(item: $troubleshooting) { TroubleshootView(itemID: item.id, symptom: $0) }
     }
 
@@ -147,6 +149,7 @@ struct ItemTile: View {
     private var menuItems: some View {
         Button(t("Настройки запуска…")) { editing = true }
         Button(t("Библиотеки Windows…")) { managingComponents = true }
+        Button(t("Windows-среда, движок и устройства…")) { managingEnvironment = true }
         Button(t("Помощник по проблемам…")) { troubleshooting = state.diagnoses[item.id] == nil ? (item.kind == .launcher ? .launcher : .launch) : .launch }
         Button(state.hasShortcut(item) ? t("Убрать из Программ на Mac") : t("Добавить в Программы на Mac")) { state.toggleShortcut(item) }
         Button(t("Показать в Finder")) { state.reveal(item) }
@@ -199,16 +202,17 @@ struct ItemSettingsView: View {
                         Picker("DirectX", selection: $item.graphics) {
                             ForEach(LibraryItem.Graphics.allCases) { option in
                                 Text(option.title).tag(option).help(option.help)
-                                    .disabled(option == .dxmt && (state.engine?.hasDXMT != true || item.isolated ||
+                                    .disabled((option == .d3dmetal && state.engineForItem(item)?.d3dmetalVersion == nil) ||
+                                        (option == .vkd3d && (state.engineForItem(item)?.hasVKD3D != true || item.isolated || item.bottle.hasPrefix("isolated-"))) || option == .dxmt && (state.engineForItem(item)?.hasDXMT != true || item.isolated ||
                                         !GraphicsSelection.supportsDXMT(profile: state.profile(for: item))))
                             }
                         }
                         .help(item.graphics.help)
                         Text(GraphicsSelection.explanation(item, profile: state.profile(for: item),
-                                                           hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                                                           hasD3DMetal: state.engineForItem(item)?.d3dmetalVersion != nil))
                             .font(.callout).foregroundStyle(.secondary)
                         if state.effectiveGraphics(item) == .dxmt {
-                            Text(state.engine?.dxmtVersion.map { "DXMT " + $0 } ?? t("В движке нет DXMT"))
+                            Text(state.engineForItem(item)?.dxmtVersion.map { "DXMT " + $0 } ?? t("В движке нет DXMT"))
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                         Text(item.graphics.help)
@@ -216,11 +220,11 @@ struct ItemSettingsView: View {
                     }
                     Toggle(t("DLSS через MetalFX"), isOn: $item.metalFX)
                         .disabled(!GraphicsSelection.allowsMetalFX(graphics: state.effectiveGraphics(item),
-                                  profile: state.profile(for: item), hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                                  profile: state.profile(for: item), hasD3DMetal: state.engineForItem(item)?.d3dmetalVersion != nil))
                         .help(t("Переводит существующий в игре DLSS в MetalFX через D3DMetal. DLSS нужно также включить в самой игре. Может повысить FPS за счёт рендера в меньшем разрешении; для игр без DLSS не нужен."))
                     Toggle(t("Трассировка лучей (DXR)"), isOn: $item.raytracing)
                         .disabled(!GraphicsSelection.allowsDXR(graphics: state.effectiveGraphics(item),
-                                  profile: state.profile(for: item), hasD3DMetal: state.engine?.d3dmetalVersion != nil))
+                                  profile: state.profile(for: item), hasD3DMetal: state.engineForItem(item)?.d3dmetalVersion != nil))
                         .help(t("Разрешает DXR через D3DMetal для игр на DirectX 12, которые поддерживают трассировку лучей. Эффект нужно включить в самой игре; нагрузка и требования к GPU возрастают."))
                     if state.profile(for: item)?.features?.dlss == false {
                         Text(t("В этой программе нет DLSS; переключатель MetalFX не увеличит FPS."))
@@ -279,7 +283,7 @@ struct ItemSettingsView: View {
                         Text(t("Статус игры в Discord"))
                         Text(t("Игра сможет показывать в Discord на Mac, во что ты играешь."))
                     }
-                    .disabled(state.engine?.hasDiscordBridge != true)
+                    .disabled(state.engineForItem(item)?.hasDiscordBridge != true)
                 } header: {
                     Text(t("Бутылка «\(item.bottle)»"))
                 } footer: {
@@ -353,6 +357,10 @@ struct ItemSettingsView: View {
         }
         item.dllOverrides = overrides
         do {
+            let currentEnvironment = state.settings(forBottle: item.bottle)
+            bottle.enginePath = currentEnvironment.enginePath
+            bottle.serialPorts = currentEnvironment.serialPorts
+            bottle.controllerMode = currentEnvironment.controllerMode
             try await state.saveLaunchSettings(item, bottleSettings: bottle)
             dismiss()
         } catch { saveError = error.localizedDescription }

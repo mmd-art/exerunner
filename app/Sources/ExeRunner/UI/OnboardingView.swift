@@ -51,7 +51,7 @@ struct OnboardingView: View {
     private var header: some View {
         VStack(spacing: 12) {
             HStack(spacing: 6) {
-                ForEach(Step.allCases, id: \.self) { item in
+                ForEach(Step.allCases.filter { state.system.isAppleSilicon || ![.rosetta, .d3dmetal].contains($0) }, id: \.self) { item in
                     Capsule()
                         .fill(item.rawValue <= step.rawValue ? Color.accentColor : Color.secondary.opacity(0.25))
                         .frame(width: item == step ? 26 : 10, height: 6)
@@ -85,8 +85,10 @@ struct OnboardingView: View {
             Text(t("\(AppInfo.name) запускает Windows-программы без виртуальной машины и без Windows. Настройка займёт пару минут."))
                 .font(.title3).foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 12) {
-                Label(t("Проверим Mac и поставим Rosetta"), systemImage: "checkmark.seal")
-                Label(t("Подключим D3DMetal от Apple для DirectX 11 и 12"), systemImage: "cube.transparent")
+                if state.system.isAppleSilicon {
+                    Label(t("Проверим Mac и поставим Rosetta"), systemImage: "checkmark.seal")
+                    Label(t("Подключим D3DMetal от Apple для DirectX 11 и 12"), systemImage: "cube.transparent")
+                } else { Label(t("На Intel Mac доступны Wine и Vulkan; поддержка пока экспериментальная."), systemImage: "cpu") }
                 Label(t("Поставим лаунчеры: Steam и другие"), systemImage: "gamecontroller")
                 Label(t("Игры и программы запускаются из библиотеки или прямо из папки «Программы»"), systemImage: "square.grid.2x2")
             }
@@ -97,8 +99,8 @@ struct OnboardingView: View {
     private var macCheck: some View {
         let s = state.system
         return VStack(alignment: .leading, spacing: 14) {
-            StatusRow(title: t("Процессор"), detail: s.isAppleSilicon ? s.chip : t("\(s.chip): нужен Mac на Apple Silicon (M1 и новее)"),
-                      level: s.isAppleSilicon ? .ok : .missing)
+            StatusRow(title: t("Процессор"), detail: s.isAppleSilicon ? s.chip : t("\(s.chip): Intel Mac, экспериментальная поддержка"),
+                      level: s.isAppleSilicon ? .ok : .warning)
             StatusRow(title: "macOS \(s.macOS)", detail: s.macOSMajor >= 15 ? "" : t("Нужна macOS 15 Sequoia или новее"),
                       level: s.macOSMajor >= 15 ? .ok : .missing)
             StatusRow(title: t("Память: \(s.memoryGB) ГБ"),
@@ -280,7 +282,9 @@ struct OnboardingView: View {
     }
 
     private func go(_ delta: Int) {
-        if let target = Step(rawValue: step.rawValue + delta) { step = target }
+        var raw = step.rawValue + delta
+        while let target = Step(rawValue: raw), !state.system.isAppleSilicon, [.rosetta, .d3dmetal].contains(target) { raw += delta }
+        if let target = Step(rawValue: raw) { step = target }
     }
 
     private func runInstalls() async {

@@ -13,6 +13,7 @@ NAME="ExeRunner"
 ENGINE_SOURCE="${EXERUNNER_BUILD_ENGINE_ROOT:-$ROOT/engine/portable}"
 KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-0}"
 CONFIG="release"
+export MACOSX_DEPLOYMENT_TARGET=15.0
 WITH_D3DMETAL="${EXERUNNER_D3DMETAL:-1}"
 for arg in "$@"; do
   case "$arg" in
@@ -38,8 +39,15 @@ trap cleanup_registration EXIT
 IDENTITY="${CODESIGN_IDENTITY:-$(cat "$ROOT/scripts/signing.local" 2>/dev/null || true)}"
 
 bash "$ROOT/scripts/build-windows-compat.sh"
-swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64
-BIN="$(swift build --package-path "$ROOT/app" -c "$CONFIG" --arch arm64 --show-bin-path)/$NAME"
+# Universal UI; Wine remains x86_64 on both hosts. Intel requires separate acceptance.
+APP_ARCHS="${EXERUNNER_APP_ARCHS:-arm64 x86_64}"
+ARCH_ARGS=()
+for arch in $APP_ARCHS; do
+  case "$arch" in arm64|x86_64) ARCH_ARGS+=(--arch "$arch") ;; *) echo "unsupported app architecture: $arch" >&2; exit 2 ;; esac
+done
+[ "${#ARCH_ARGS[@]}" -gt 0 ] || { echo 'no app architectures selected' >&2; exit 2; }
+swift build --package-path "$ROOT/app" -c "$CONFIG" "${ARCH_ARGS[@]}"
+BIN="$(swift build --package-path "$ROOT/app" -c "$CONFIG" "${ARCH_ARGS[@]}" --show-bin-path)/$NAME"
 
 rm -rf "$APP" "$ROOT/build/$NAME.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -86,7 +94,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>0.3</string>
+  <key>CFBundleShortVersionString</key><string>0.4</string>
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.games</string>

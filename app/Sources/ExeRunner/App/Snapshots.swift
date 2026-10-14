@@ -5,6 +5,20 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderEnvironment(to dir: URL) async {
+        let state = AppState(managesGameBoost: false)
+        await state.refresh()
+        try? Paths.ensure(dir)
+        let item = LibraryItem(id: "environment-preview", name: "Windows applications", kind: .program,
+                               bottle: "programs", executable: "C:\\Programs\\app.exe")
+        L10n.use(.english)
+        var devices = DeviceInventory.current()
+        // The export preserves printer discovery without publishing configured queue names or IDs.
+        devices.printers = devices.printers.indices.map { "Mac printer \($0 + 1)" }
+        await capture("windows-environment", AnyView(EnvironmentView(item: item, inventory: devices)), state: state, to: dir,
+                      size: NSSize(width: 1100, height: 850))
+    }
+
     static func renderComponents(to dir: URL) async {
         let state = AppState(managesGameBoost: false)
         await state.refresh()

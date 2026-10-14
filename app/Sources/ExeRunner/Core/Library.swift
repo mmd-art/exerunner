@@ -4,7 +4,7 @@ struct LibraryItem: Codable, Identifiable, Hashable {
     enum Kind: String, Codable { case launcher, program, game }
 
     enum Graphics: String, Codable, CaseIterable, Identifiable {
-        case automatic, d3dmetal, dxmt, dxvk, wine, vulkan
+        case automatic, d3dmetal, dxmt, dxvk, wine, vulkan, vkd3d
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -14,6 +14,7 @@ struct LibraryItem: Codable, Identifiable, Hashable {
             case .dxvk: "DXVK (Vulkan)"
             case .wine: t("Wine (OpenGL)")
             case .vulkan: "Wine (Vulkan)"
+            case .vkd3d: "vkd3d (DX12 · Vulkan)"
             }
         }
 
@@ -25,6 +26,7 @@ struct LibraryItem: Codable, Identifiable, Hashable {
             case .dxmt: t("DXMT переводит DirectX 10/11 напрямую в Metal. Альтернатива D3DMetal; скорость и совместимость зависят от программы. DirectX 9/12 не поддерживаются.")
             case .dxvk: t("DXVK переводит DirectX 9–11 в Vulkan, который на Mac работает через Metal. Попробуйте при сбоях или низком FPS в режиме Авто; результат зависит от игры.")
             case .wine: t("Встроенный WineD3D переводит DirectX в OpenGL. Запасной вариант для старых игр и проблем совместимости; часто медленнее. DirectX 12 не поддерживается.")
+            case .vkd3d: t("Запасной переводчик DirectX 12 в Vulkan через встроенный vkd3d. Экспериментальный: доступные feature level и функции зависят от GPU и MoltenVK; многие современные DX12-игры не поддерживаются.")
             case .vulkan: t("Экспериментальный Vulkan-рендерер встроенного WineD3D. Это другой переводчик, чем DXVK; используйте для проверки совместимости, если основные режимы дают сбои.")
             }
         }

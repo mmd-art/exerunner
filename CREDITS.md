@@ -105,3 +105,17 @@ with the script digest checked by the engine build. Its package definitions supp
 Microsoft Visual C++, .NET, DirectX libraries and fonts on demand. Microsoft components
 retain their own licenses; they are downloaded for the selected bottle rather than added
 to ExeRunner's source repository or distributable app.
+
+## Printing and device integration
+
+Version 0.4 enables Wine's existing CUPS printing, libusb USB, IOHID controller, CoreMIDI and
+OpenCL bridges. The new environment UI, engine selection, serial mapping ownership and
+controller-policy preservation are ExeRunner code. Controller translation uses the upstream
+WineBus SDL2 mapping implementation; it is not a new controller driver or ASIO implementation.
+The optional DX12 Vulkan path is Wine's bundled vkd3d (LGPL-2.1-or-later); no vkd3d-proton
+backend is claimed.
+
+The staged runtime additionally carries **libusb 1.0.29** (LGPL-2.1-or-later), including
+`LICENSES/libusb/COPYING`. Source: https://github.com/libusb/libusb/tree/v1.0.29.
+CUPS, CoreMIDI, IOKit and OpenCL use the host macOS libraries. SDL2 was already part of the
+portable engine and retains its upstream licence and recorded version in `LICENSES.md`.

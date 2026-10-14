@@ -24,7 +24,7 @@ mkdir -p "$PREFIX/drive_c" "$PREFIX/.isolation/home" "$PREFIX/.isolation/tmp" "$
 printf 'offline prototype\n' > "$PREFIX/.exerunner-isolated-v1"
 SRC="$ROOT/app/Sources/ExeRunner/Core"
 cp "$ROOT/tests/isolation-test.swift" "$WORK/main.swift"
-swiftc -o "$WORK/harness" "$WORK/main.swift" "$SRC/IsolatedWine.swift" "$SRC/Basics.swift" "$SRC/Engine.swift" "$SRC/Library.swift" "$SRC/Bottles.swift" "$SRC/Settings.swift" "$SRC/Processes.swift" "$SRC/VDF.swift" "$SRC/Recipe.swift" "$SRC/Localization.swift" "$SRC/English.swift" "$SRC/PrefixLaunchGate.swift"
+swiftc -o "$WORK/harness" "$WORK/main.swift" "$SRC/IsolatedWine.swift" "$SRC/Basics.swift" "$SRC/Engine.swift" "$SRC/EngineSelection.swift" "$SRC/Library.swift" "$SRC/Bottles.swift" "$SRC/Settings.swift" "$SRC/Processes.swift" "$SRC/VDF.swift" "$SRC/Recipe.swift" "$SRC/Localization.swift" "$SRC/English.swift" "$SRC/PrefixLaunchGate.swift"
 cp "$ROOT/tests/isolation-present-window.swift" "$WORK/window/main.swift"
 swiftc -O "$WORK/window/main.swift" "$SRC/Processes.swift" -o "$WORK/window-check"
 i686-w64-mingw32-gcc -O2 -static "$ROOT/tests/isolation-present.c" -ld3d9 -o "$PREFIX/drive_c/present32.exe"

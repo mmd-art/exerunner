@@ -11,7 +11,10 @@ enum GraphicsSelection {
     }
     static func resolve(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool) -> LibraryItem.Graphics {
         if item.graphics != .automatic { return item.graphics }
-        if item.useRecommended, let choice = profile?.recommended.graphics, choice != .automatic { return choice }
+        if item.useRecommended, let choice = profile?.recommended.graphics, choice != .automatic {
+            // Recommendations cannot enable an unavailable Apple-only runtime.
+            if choice != .d3dmetal || hasD3DMetal { return choice }
+        }
         return hasD3DMetal ? .d3dmetal : .wine
     }
     static func explanation(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool) -> String {

@@ -1,8 +1,17 @@
 import Foundation
 
+enum HostArchitecture {
+    static let isAppleSilicon: Bool = {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        return sysctlbyname("hw.optional.arm64", &value, &size, nil, 0) == 0 && value == 1
+    }()
+}
+
 /// The engine: our Wine build plus D3DMetal (if imported), DXVK, MoltenVK and the compat module.
 struct Engine: Equatable {
     let root: URL
+    init(root: URL) { self.root = URL(fileURLWithPath: root.standardizedFileURL.path, isDirectory: true) }
 
     var wine: URL { root.appendingPathComponent("bin/wine") }
     var wineserver: URL { root.appendingPathComponent("bin/wineserver") }
@@ -57,9 +66,33 @@ struct Engine: Equatable {
     var discordBridge: URL { lib.appendingPathComponent("exerunner/discord-bridge.exe") }
     var audioTest: URL { lib.appendingPathComponent("exerunner/audio-test.exe") }
 
+    var supportsPrinting: Bool { module("winspool.so", contains: "cupsGetDests") }
+    var supportsUSB: Bool { module("wineusb.so", contains: "libusb_init") }
+    var supportsMIDI: Bool { module("winecoreaudio.so", contains: "MIDIClientCreate") }
+    var supportsHID: Bool { module("winebus.so", contains: "IOHIDManagerCreate") }
+    var hasXInputMapping: Bool {
+        module("winebus.so", contains: "SDL_GameControllerOpen") &&
+            FileManager.default.isReadableFile(atPath: lib.appendingPathComponent("libSDL2-2.0.0.dylib").path)
+    }
+    var supportsOpenCL: Bool { module("opencl.so", contains: "clGetPlatformIDs") }
+    var recordedVersion: String? {
+        guard let data = try? Data(contentsOf: root.appendingPathComponent("engine.json")),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return json["wine"] as? String
+    }
+    private func module(_ name: String, contains symbol: String) -> Bool {
+        guard let data = try? Data(contentsOf: lib.appendingPathComponent("wine/x86_64-unix/\(name)"), options: .mappedIfSafe) else { return false }
+        return data.range(of: Data(symbol.utf8)) != nil
+    }
+
     var isValid: Bool { FileManager.default.isExecutableFile(atPath: wine.path) }
     var hasCompatModule: Bool { FileManager.default.fileExists(atPath: compatModule.path) }
     var hasDXVK: Bool { FileManager.default.fileExists(atPath: dxvk.appendingPathComponent("x64/d3d11.dll").path) }
+    var hasVKD3D: Bool {
+        hasMoltenVK && ["x86_64-windows/d3d12core.dll", "i386-windows/d3d12core.dll", "x86_64-unix/winevulkan.so"].allSatisfy {
+            FileManager.default.isReadableFile(atPath: lib.appendingPathComponent("wine/" + $0).path)
+        }
+    }
     var hasDiscordBridge: Bool { FileManager.default.fileExists(atPath: discordBridge.path) }
     var hasMoltenVK: Bool { FileManager.default.fileExists(atPath: lib.appendingPathComponent("libMoltenVK.dylib").path) }
     var hasMonoAndGecko: Bool {
@@ -70,7 +103,8 @@ struct Engine: Equatable {
     }
 
     var d3dmetalVersion: String? {
-        guard FileManager.default.fileExists(atPath: gptk.appendingPathComponent("external/libd3dshared.dylib").path) else { return nil }
+        guard HostArchitecture.isAppleSilicon, module("cxcompatdb.so", contains: "EXERUNNER_D3DMETAL_DIR"),
+              FileManager.default.fileExists(atPath: gptk.appendingPathComponent("external/libd3dshared.dylib").path) else { return nil }
         let text = try? String(contentsOf: gptk.appendingPathComponent("D3DMETAL_VERSION"), encoding: .utf8)
         return text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "?"
     }

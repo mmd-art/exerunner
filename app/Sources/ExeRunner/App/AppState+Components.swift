@@ -4,7 +4,7 @@ extension AppState {
     func suggestedRuntimeComponents(for item: LibraryItem) -> [String] {
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         guard let file = bottle.hostURL(forWindowsPath: item.executable) else { return [] }
-        return RuntimeComponent.suggested(for: file, available: engine.map { Winetricks.available(in: $0) } ?? [], installed: Winetricks.installed(in: bottle))
+        return RuntimeComponent.suggested(for: file, available: engineForItem(item).map { Winetricks.available(in: $0) } ?? [], installed: Winetricks.installed(in: bottle))
     }
 
     func inferredRuntimeVerbs(in bottle: String) -> [String] {
@@ -28,7 +28,9 @@ extension AppState {
 
     @discardableResult
     func installRuntimeComponents(_ verbs: [String], for item: LibraryItem) async -> Bool {
-        guard let engine else { errorMessage = t("Движок не найден"); return false }
+        let engine: Engine
+        do { engine = try selectedEngine(forBottle: item.bottle) }
+        catch { errorMessage = error.localizedDescription; return false }
         guard !item.isolated, !item.bottle.hasPrefix("isolated-") else {
             errorMessage = t("Автоматическая установка компонентов в изолированном прототипе пока недоступна.")
             return false

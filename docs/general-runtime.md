@@ -57,9 +57,15 @@ checks installed Visual C++2026 and .NET Desktop10 in the test prefix; a managed
 on Microsoft.NETCore.App10.0.0. These are standard-runtime tests, not evidence that every
 Windows application or every Microsoft servicing revision has been accepted.
 
-Printing, arbitrary Windows kernel drivers, broad device/COM workflows, clean-Mac deployment
-and additional machine/OS configurations require separate work and acceptance. The current
-Wine configuration disables CUPS/USB/OpenCL; those capabilities are not asserted here.
+Version 0.4 enables CUPS, libusb and OpenCL in the runtime, exposes COM and controller modes,
+and selects engines per environment. On 15/10/2026 the general Win32/Win64/MSI/WinForms suite
+passed again against that engine. Unicode clipboard transfer passed in both directions, with
+the owner's previous clipboard restored. See [device and engine acceptance](devices-and-engines.md)
+for printing, serial, MIDI, controller and networking controls and their physical-test boundaries.
+
+Arbitrary Windows kernel drivers, physical COM/MIDI workflows, clean-Mac deployment and
+additional machine/OS configurations still need separate acceptance. The universal app binary
+has both CPU slices; a Rosetta-hosted x86_64 check is not Intel hardware acceptance.
 
 Format contracts: [Microsoft PE format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format),
 [MSI exit codes](https://learn.microsoft.com/en-us/windows/win32/msi/error-codes).

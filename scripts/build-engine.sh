@@ -37,8 +37,8 @@ WINETRICKS_SHA256="672a1ff4442e8691a3ffc0e6860137e201a1d1227e9b3044245f1731e9e98
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/engine/src"
 TOOLS="$ROOT/engine/build-tools"
-BUILD="$ROOT/engine/build"
-DIST="$ROOT/engine/dist"
+BUILD="${EXERUNNER_ENGINE_BUILD_ROOT:-$ROOT/engine/build}"
+DIST="${EXERUNNER_ENGINE_DIST_ROOT:-$ROOT/engine/dist}"
 X86=/usr/local          # x86_64 Homebrew: freetype, gnutls, sdl2, ffmpeg, gstreamer
 ARM=/opt/homebrew       # arm64 Homebrew: bison, flex, make, mingw-w64, ccache, pkgconf, native freetype
 
@@ -61,8 +61,7 @@ export CCACHE_DIR="$ROOT/engine/ccache"
 step() { printf '\n==> %s (%s)\n' "$1" "$(date +%H:%M:%S)"; }
 
 common_without=(--without-x --without-wayland --without-oss --without-alsa --without-pulse
-                --without-sane --without-usb --without-v4l2 --without-pcap --without-capi
-                --without-opencl --without-cups --disable-tests)
+                --without-sane --without-v4l2 --without-pcap --without-capi --disable-tests)
 
 fetch() {
   step "fetch source $ENGINE_COMMIT"
@@ -133,7 +132,12 @@ configure_x86() {
   export ac_cv_lib_soname_gnutls=libgnutls.30.dylib
   export ac_cv_lib_soname_MoltenVK=libMoltenVK.dylib
   "$SRC/configure" --host=x86_64-apple-darwin24 --with-wine-tools="$TOOLS" \
-    --enable-archs=i386,x86_64 --prefix="$DIST" "${common_without[@]}"
+    --enable-archs=i386,x86_64 --prefix="$DIST" --with-cups --with-usb --with-opencl "${common_without[@]}"
+  # Required generic platform support must not silently disappear from distributable builds.
+  grep -q '^#define HAVE_CUPS_CUPS_H 1' include/config.h
+  grep -q '^#define SONAME_LIBCUPS ' include/config.h
+  grep -qE '^USB_LIBS *= *.+' Makefile
+  grep -qE '^IOKIT_LIBS *= *.+' Makefile
   # configure only warns when these are missing; say it loudly instead
   grep -q '^#define HAVE_FFMPEG 1' include/config.h && echo "ffmpeg: found" || echo "WARNING: ffmpeg not found"
   grep -qE '^GSTREAMER_LIBS *= *.+' Makefile && echo "gstreamer: found" || echo "WARNING: gstreamer not found"

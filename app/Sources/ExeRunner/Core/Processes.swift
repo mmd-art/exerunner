@@ -75,9 +75,10 @@ enum WineProcesses {
     }
 
     private static func selectedWineLoaderImages() -> [Data] {
-        guard let engine = Engine.locate(AppSettings.load()) else { return [] }
-        let loaders = [engine.wine] + ["x86_64-unix", "aarch64-unix", "i386-unix"].map {
-            engine.lib.appendingPathComponent("wine/\($0)/wine")
+        let engines = EngineSelection.configuredEngines(defaultEngine: Engine.locate(AppSettings.load()),
+            store: Paths.support.appendingPathComponent("bottles.json"))
+        let loaders = engines.flatMap { engine in
+            [engine.wine] + ["x86_64-unix", "aarch64-unix", "i386-unix"].map { engine.lib.appendingPathComponent("wine/\($0)/wine") }
         }
         return loaders.compactMap { url in
             guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,

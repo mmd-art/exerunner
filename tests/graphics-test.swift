@@ -16,6 +16,8 @@ for graphics in LibraryItem.Graphics.allCases where graphics != .automatic {
 }
 primal.graphics = .automatic; primal.useRecommended = false
 check("disabled profile retains fallback", GraphicsSelection.resolve(primal, profile: profile, hasD3DMetal: true) == .d3dmetal)
+var recommended = primal; recommended.useRecommended = true
+check("unavailable Metal recommendation uses fallback", GraphicsSelection.resolve(recommended, profile: profile, hasD3DMetal: false) == .wine)
 check("no Metal has honest Wine fallback", GraphicsSelection.resolve(primal, profile: nil, hasD3DMetal: false) == .wine)
 check("Primal does not advertise DLSS", !GraphicsSelection.allowsMetalFX(graphics: .d3dmetal, profile: profile, hasD3DMetal: true))
 check("DX11 does not advertise DXR", !GraphicsSelection.allowsDXR(graphics: .d3dmetal, profile: profile, hasD3DMetal: true))

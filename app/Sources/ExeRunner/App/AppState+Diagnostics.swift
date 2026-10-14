@@ -25,7 +25,7 @@ extension AppState {
             case "raytracing-off":
                 if itemEnvironment(item)["D3DM_SUPPORT_DXR"] == "1" { add(.raytracingOff) }
             case "metalfx-off":
-                if item.metalFX, engine?.d3dmetalVersion != nil, canTargetExecutables(item) { add(.metalFXOff) }
+                if item.metalFX, engineForItem(item)?.d3dmetalVersion != nil, canTargetExecutables(item) { add(.metalFXOff) }
             case "logging-crash":
                 if item.logging == .normal { add(.logging(.crash)) }
             default:
@@ -40,11 +40,11 @@ extension AppState {
         guard canTargetExecutables(item) else { return nil }
         switch effectiveGraphics(item) {
         case .automatic, .d3dmetal:
-            return engine?.hasDXMT == true && GraphicsSelection.supportsDXMT(profile: profile(for: item)) ? .dxmt : .dxvk
-        case .dxmt: return engine?.d3dmetalVersion == nil ? .wine : .d3dmetal
-        case .dxvk: return engine?.d3dmetalVersion == nil ? .wine : .automatic
+            return engineForItem(item)?.hasDXMT == true && GraphicsSelection.supportsDXMT(profile: profile(for: item)) ? .dxmt : .dxvk
+        case .dxmt: return engineForItem(item)?.d3dmetalVersion == nil ? .wine : .d3dmetal
+        case .dxvk: return engineForItem(item)?.d3dmetalVersion == nil ? .wine : .automatic
         case .wine: return .vulkan
-        case .vulkan: return engine?.d3dmetalVersion == nil ? .wine : .automatic
+        case .vulkan, .vkd3d: return engineForItem(item)?.d3dmetalVersion == nil ? .wine : .automatic
         }
     }
 
@@ -83,7 +83,7 @@ extension AppState {
         case .audioLatency(let latency):
             updateBottle(item.bottle) { $0.audioLatency = latency }
         case .resetAudio:
-            guard let engine else { return }
+            guard let engine = engineForItem(item) else { return }
             do {
                 try await BottleManager.resetAudio(bottle, engine: engine, log: Paths.logFile("\(item.bottle)-audio"))
             } catch {
@@ -91,7 +91,7 @@ extension AppState {
             }
             await refreshProcesses()
         case .testAudio:
-            guard let engine, FileManager.default.fileExists(atPath: engine.audioTest.path) else { return }
+            guard let engine = engineForItem(item), FileManager.default.fileExists(atPath: engine.audioTest.path) else { return }
             let token = beginActivity(t("Проигрываю тестовый звук…"))
             defer { endActivity(token) }
             let output = FileManager.default.temporaryDirectory.appendingPathComponent("exerunner-audio-\(UUID().uuidString).log")
@@ -108,7 +108,7 @@ extension AppState {
         case .restartBottle:
             await stopBottle(item)
         case .clearDNSOverride:
-            guard let engine else { return }
+            guard let engine = engineForItem(item) else { return }
             do {
                 try await BottleManager.importRegistry("""
 
@@ -137,12 +137,12 @@ extension AppState {
         await refreshProcesses()
         switch symptom {
         case .launch:
-            return [engineCheck(), d3dmetalCheck(), prefixCheck(bottle), outputCheck(item)] + gameCrashChecks(item)
+            return [engineCheck(item), d3dmetalCheck(item), prefixCheck(bottle), outputCheck(item)] + gameCrashChecks(item)
                 + componentChecks(item, bottle) + antiCheatChecks(item) + [graphicsCheck(item)]
         case .launcher:
             return launcherChecks(item, bottle) + [outputCheck(item, only: [.networkingLaunchers, .graphics, .coreCrashFatal])]
         case .graphics:
-            return [graphicsCheck(item)] + raytracingChecks(item) + [d3dmetalCheck(), outputCheck(item, only: [.graphics]), gpuCheck()]
+            return [graphicsCheck(item)] + raytracingChecks(item) + [d3dmetalCheck(item), outputCheck(item, only: [.graphics]), gpuCheck()]
         case .audio:
             return audioChecks(item, bottle)
         case .controller:
@@ -156,23 +156,23 @@ extension AppState {
         }
     }
 
-    private func engineCheck() -> Check {
+    private func engineCheck(_ item: LibraryItem) -> Check {
         let title = t("Движок")
-        guard let engine else { return Check(title: title, status: .problem, detail: t("Движок не найден. Укажи его папку в настройках.")) }
-        guard rosettaInstalled else {
+        guard let engine = engineForItem(item) else { return Check(title: title, status: .problem, detail: t("Движок не найден. Укажи его папку в настройках.")) }
+        guard !system.isAppleSilicon || rosettaInstalled else {
             return Check(title: title, status: .problem, detail: t("Нет Rosetta, а без неё движок (x86_64) не запустится. Поставь её в настройках."))
         }
         var missing: [String] = []
         if !engine.hasCompatModule { missing.append(t("модуля совместимости")) }
         if !engine.hasDXVK { missing.append("DXVK") }
         if !engine.hasMoltenVK { missing.append("MoltenVK") }
-        let version = engineVersion ?? "Wine"
+        let version = engine.recordedVersion ?? "Wine"
         if !missing.isEmpty { return Check(title: title, status: .warning, detail: t("\(version): нет \(missing.joined(separator: ", ")).")) }
         return Check(title: title, status: .ok, detail: t("\(version) с DXVK, MoltenVK и модулем совместимости."))
     }
 
-    private func d3dmetalCheck() -> Check {
-        if let version = engine?.d3dmetalVersion {
+    private func d3dmetalCheck(_ item: LibraryItem) -> Check {
+        if let version = engineForItem(item)?.d3dmetalVersion {
             return Check(title: "D3DMetal", status: .ok, detail: t("Подключён, версия \(version): DirectX 11 и 12 идут через Metal."))
         }
         return Check(title: "D3DMetal", status: .warning,
@@ -292,7 +292,7 @@ extension AppState {
         }
         result.append(Check(title: t("Тип лаунчера"), status: .ok,
                             detail: t("\(recipe.name): его окна рисуются через DXVK (\(recipe.dxvkExecutables.joined(separator: ", "))).")))
-        if bottle.exists, let engine {
+        if bottle.exists, let engine = engineForItem(item) {
             let shipped = engine.dxvk.appendingPathComponent("x64/d3d11.dll").path
             let inBottle = bottle.driveC.appendingPathComponent("windows/system32/d3d11.dll").path
             if !FileManager.default.contentsEqual(atPath: shipped, andPath: inBottle) {
@@ -364,7 +364,7 @@ extension AppState {
                             remedies: settings.audioLatency == .stable ? [] : [.audioLatency(.stable)]))
         if let test = audioTests[item.bottle] {
             result.append(Check(title: t("Тестовый звук"), status: test.ok ? .ok : .problem, detail: test.detail, remedies: [.testAudio]))
-        } else if engine.map({ FileManager.default.fileExists(atPath: $0.audioTest.path) }) == true {
+        } else if engineForItem(item).map({ FileManager.default.fileExists(atPath: $0.audioTest.path) }) == true {
             result.append(Check(title: t("Тестовый звук"), status: .info,
                                 detail: t("Проиграет короткий сигнал через звук Windows в этой бутылке: так видно, доходит ли звук до Mac."),
                                 remedies: [.testAudio]))
@@ -445,7 +445,7 @@ extension AppState {
                             detail: system.memoryGB < 16
                                 ? t("\(system.memoryGB) ГБ: игре и Rosetta тесно. Закрой браузер и другие тяжёлые программы.")
                                 : t("\(system.memoryGB) ГБ.")))
-        if engine?.d3dmetalVersion == nil { result.append(d3dmetalCheck()) }
+        if engineForItem(item)?.d3dmetalVersion == nil { result.append(d3dmetalCheck(item)) }
         if effectiveGraphics(item) == .dxvk, environment(for: item)["DXVK_ASYNC"] != "1" {
             result.append(Check(title: t("Шейдеры DXVK"), status: .info,
                                 detail: t("Без асинхронной сборки шейдеров игра дёргается, когда впервые показывает эффект."),
@@ -463,8 +463,8 @@ extension AppState {
     /// Writes the report zip to Downloads and returns it
     func exportReport(for item: LibraryItem, checks: [Check]) async -> URL? {
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
-        var engineInfo: [String: String] = ["path": engine?.root.path ?? "none", "version": engineVersion ?? "?"]
-        if let engine {
+        var engineInfo: [String: String] = ["path": engineForItem(item)?.root.path ?? "none", "version": engineForItem(item)?.recordedVersion ?? "?"]
+        if let engine = engineForItem(item) {
             engineInfo["d3dmetal"] = engine.d3dmetalVersion ?? "none"
             engineInfo["dxvk"] = String(engine.hasDXVK)
             engineInfo["moltenvk"] = String(engine.hasMoltenVK)
@@ -472,7 +472,7 @@ extension AppState {
             engineInfo["discord bridge"] = String(engine.hasDiscordBridge)
         }
         var environment: [String: String] = [:]
-        if let engine {
+        if let engine = engineForItem(item) {
             var extra = self.environment(for: item)
             extra["EXERUNNER_COMPAT_FILE"] = BottleManager.compatFile(bottle).path
             environment = WineEnvironment.make(engine: engine, prefix: bottle.url, extra: extra)

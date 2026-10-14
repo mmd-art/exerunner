@@ -13,7 +13,7 @@ struct RuntimeComponentsView: View {
 
     private var bottle: Bottle { Bottle(name: item.bottle, root: state.bottlesRoot) }
     private var outstanding: Set<String> { Set(suggested.filter { !Winetricks.satisfies($0, installed: installed) }) }
-    private var blocked: Bool { item.isolated || item.bottle.hasPrefix("isolated-") || state.engine == nil || busy }
+    private var blocked: Bool { item.isolated || item.bottle.hasPrefix("isolated-") || state.engineForItem(item) == nil || busy }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -85,7 +85,7 @@ struct RuntimeComponentsView: View {
 
     private func reload() {
         installed = Winetricks.installed(in: bottle)
-        available = state.engine.map { Winetricks.available(in: $0) } ?? []
+        available = state.engineForItem(item).map { Winetricks.available(in: $0) } ?? []
         if let file = bottle.hostURL(forWindowsPath: item.executable) {
             inspection = PEInspection.read(file)
             suggested = Set(RuntimeComponent.suggested(for: file, available: available, installed: installed))

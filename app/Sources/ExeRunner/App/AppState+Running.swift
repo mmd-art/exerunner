@@ -14,7 +14,10 @@ extension AppState {
         guard !isShuttingDown else { throw CancellationError() }
         guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
         try Task.checkCancellation()
-        guard let engine else { throw AppError(t("Движок не найден. Укажи его папку в настройках.")) }
+        let engine = try selectedEngine(forBottle: item.bottle)
+        if effectiveGraphics(item) == .d3dmetal, engine.d3dmetalVersion == nil {
+            throw AppError(t("D3DMetal недоступен в выбранном движке или на этом Mac. Выбери другой графический режим."))
+        }
         if effectiveGraphics(item) == .dxmt {
             guard engine.hasDXMT else { throw AppError(t("DXMT отсутствует или движок не поддерживает его загрузку. Выберите другой графический режим.")) }
             guard GraphicsSelection.supportsDXMT(profile: profile(for: item)) else {
@@ -23,6 +26,12 @@ extension AppState {
             guard !item.isolated, !item.bottle.hasPrefix("isolated-") else {
                 throw AppError(t("DXMT пока недоступен в изолированном режиме. Обычный запуск автоматически не выполняется."))
             }
+        }
+        if effectiveGraphics(item) == .vkd3d {
+            guard !item.isolated, !item.bottle.hasPrefix("isolated-") else {
+                throw AppError(t("vkd3d пока недоступен в изолированном прототипе."))
+            }
+            guard engine.hasVKD3D else { throw AppError(t("В выбранном движке нет vkd3d или MoltenVK.")) }
         }
         if item.isolated || item.bottle.hasPrefix("isolated-") {
             guard !item.isSteamGame, item.kind != .launcher,
@@ -123,6 +132,8 @@ extension AppState {
                                                     hasGames: bottleItems.contains { $0.bottle == bottle.name && $0.kind == .game },
                                                     engine: engine, log: log)
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
+        try await prepareSerialPorts(bottle, engine: engine, log: log)
+        try await ControllerMapping.apply(settings(forBottle: bottle.name).controllerMode, in: bottle, engine: engine, log: log)
         let verbs = Array(Set(winetricksVerbs(in: bottle.name) + inferredRuntimeVerbs(in: bottle.name))).sorted()
         try await ensureRuntimeComponents(verbs, in: bottle, engine: engine, log: log, progress: progress)
         if !dxvkExecutables(in: bottle.name).isEmpty { try BottleManager.installDXVK(bottle, engine: engine) }
@@ -190,7 +201,10 @@ extension AppState {
     /// a few seconds is ended, and the rest of the bottle (Steam, say) keeps running.
     func stop(_ item: LibraryItem) async {
         cancelForegroundHandoff(item)
-        guard let engine else { return }
+        guard let engine = try? selectedEngine(forBottle: item.bottle) else {
+            WineProcesses.kill(processes(of: item, in: WineProcesses.list()))
+            await refreshProcesses(); return
+        }
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         stoppedByUser.insert(item.id)
         startingDeadlines[item.id] = nil
@@ -227,16 +241,18 @@ extension AppState {
         let list = WineProcesses.list()
         if let launcher = items.first(where: { $0.bottle == name && $0.kind == .launcher && !processes(of: $0, in: list).isEmpty }) {
             await stop(launcher)
-        } else if let engine {
+        } else if let engine = try? selectedEngine(forBottle: name) {
             await BottleManager.stop(Bottle(name: name, root: bottlesRoot), engine: engine)
+        } else {
+            let prefix = Bottle(name: name, root: bottlesRoot).prefixPath
+            WineProcesses.kill(WineProcesses.list(includeServers: true).filter { $0.prefix == prefix })
         }
     }
 
     /// Everything in the item's bottle, at once
     func stopBottle(_ item: LibraryItem) async {
-        guard let engine else { return }
         for other in allItems where other.bottle == item.bottle { stoppedByUser.insert(other.id) }
-        await BottleManager.stop(Bottle(name: item.bottle, root: bottlesRoot), engine: engine)
+        await quitBottle(item.bottle)
         await refreshProcesses()
     }
 
@@ -262,9 +278,12 @@ extension AppState {
         let bottles = Set(bottleItems.map(\.bottle)).map { Bottle(name: $0, root: bottlesRoot) }
         for item in allItems { stoppedByUser.insert(item.id) }
         PrefixLaunchGate.close(Set(bottles.map(\.prefixPath)))
-        guard let engine else { return }
         for bottle in bottles {
-            await BottleManager.stop(bottle, engine: engine)
+            if let engine = try? selectedEngine(forBottle: bottle.name) {
+                await BottleManager.stop(bottle, engine: engine)
+            } else {
+                WineProcesses.kill(WineProcesses.list(includeServers: true).filter { $0.prefix == bottle.prefixPath })
+            }
         }
         await refreshProcesses()
     }

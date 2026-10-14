@@ -4,6 +4,7 @@ import Foundation
 extension AppState {
     func saveLaunchSettings(_ proposed: LibraryItem, bottleSettings: BottleSettings) async throws {
         let previous = item(proposed.id) ?? proposed
+        try validateEnvironmentChange(bottleSettings, for: proposed.bottle)
         guard !running.contains(proposed.id) || proposed.isolated == previous.isolated else {
             throw AppError(t("Сначала останови программу, чтобы сменить режим."))
         }
@@ -34,7 +35,7 @@ extension AppState {
         let owner = dockExecutable(for: item, in: bottle)
         var env = ["WINE_APP_DISPLAY_NAME": item.name, "WINE_APP_DOCK_EXE": owner, "WINE_APP_IDENTITY_EXE": owner]
         env["WINE_APP_GAME"] = item.kind == .game ? "1" : "0"
-        if let engine { env["WINEDLLPATH"] = engine.root.appendingPathComponent("lib/wine").path }
+        if let engine = engineForItem(item) { env["WINEDLLPATH"] = engine.root.appendingPathComponent("lib/wine").path }
         if item.isolated || item.bottle.hasPrefix("isolated-") {
             guard let executable = bottle.hostURL(forWindowsPath: item.executable), IsolatedWine.inside(executable, bottle.driveC) else {
                 throw AppError(t("Для изоляции программа должна находиться внутри отдельной бутылки."))
