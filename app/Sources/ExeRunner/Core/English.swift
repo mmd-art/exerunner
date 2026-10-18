@@ -2,6 +2,10 @@
 /// of interpolations as %@). A text missing here shows in Russian.
 enum English {
     static let table: [String: String] = [
+        "Не удалось определить экран для параметров запуска. Параметры не изменены.": "Could not determine the launch display. Stored arguments have not been changed.",
+        "Неизвестная переменная экрана в параметрах запуска. Используйте {display.width}, {display.height} или {display.index}.": "Unknown display variable in launch arguments. Use {display.width}, {display.height} or {display.index}.",
+        "Вместо фиксированного разрешения можно использовать {display.width} и {display.height}. Экран выбирается при запуске: по окну ExeRunner, а для ярлыка — по положению указателя.": "Use {display.width} and {display.height} instead of a fixed resolution. The display is chosen at launch: from the ExeRunner window, or the pointer location for a shortcut.",
+
         "Завершено": "Completed",
         "Не удалось обновить историю. Запуск программы продолжается.": "Could not update history. Application launch continues.",
         "История запусков": "Launch history",
@@ -115,7 +119,7 @@ enum English {
         "Авто: %@. Профиль: %@.": "Auto: %@. Profile: %@.",
         "Авто: %@. Проверенного профиля для программы нет; это запасной вариант.": "Auto: %@. No verified app profile; this is a fallback.",
         "Авто": "Auto",
-        "Переводит DirectX 11/12 в Metal через Game Porting Toolkit. Для DirectX 9 выберите DXVK или Wine. Требует подключённый D3DMetal.": "Translates DirectX 11/12 to Metal using Game Porting Toolkit. For DirectX 9 choose DXVK or Wine. Requires D3DMetal.",
+        "Переводит DirectX 11/12 в Metal через Game Porting Toolkit. Для DirectX 9 используйте Wine; поддержка DXVK зависит от состава движка. Требует подключённый D3DMetal.": "Translates DirectX 11/12 to Metal using Game Porting Toolkit. For DirectX 9 use Wine; DXVK support depends on the engine libraries. Requires D3DMetal.",
         "DXMT переводит DirectX 10/11 напрямую в Metal. Альтернатива D3DMetal; скорость и совместимость зависят от программы. DirectX 9/12 не поддерживаются.": "DXMT translates DirectX 10/11 directly to Metal. An alternative to D3DMetal; performance and compatibility depend on the app. DirectX 9/12 are not supported.",
         "Проверено: %@. Этап: %@.": "Verified: %@. Stage: %@.",
         "Проверка на этой конфигурации не записана. Оценка базы не гарантирует совместимость.": "No recorded verification for this configuration. A database rating does not guarantee compatibility.",
@@ -443,7 +447,7 @@ enum English {
         "База совместимости": "Compatibility database",
         "Применять рекомендованные настройки": "Apply the recommended settings",
         "Использует рекомендацию для игры; без неё — D3DMetal для DirectX 11/12, если он подключён. Начните с этого режима.": "Uses the recommendation for the game; otherwise D3DMetal for DirectX 11/12 when available. Start with this mode.",
-        "DXVK переводит DirectX 9–11 в Vulkan, который на Mac работает через Metal. Попробуйте при сбоях или низком FPS в режиме Авто; результат зависит от игры.": "DXVK translates DirectX 9–11 to Vulkan, which runs through Metal on Mac. Try it if Auto has graphical issues or low FPS; results depend on the game.",
+        "Встроенная сборка DXVK для macOS переводит DirectX 10/11 в Vulkan через Metal. DirectX 9 требует отдельного совместимого d3d9.dll; его нет в стандартном движке.": "The bundled macOS DXVK translates DirectX 10/11 to Vulkan through Metal. DirectX 9 requires a separate compatible d3d9.dll, which is absent from the standard engine.",
         "Встроенный WineD3D переводит DirectX в OpenGL. Запасной вариант для старых игр и проблем совместимости; часто медленнее. DirectX 12 не поддерживается.": "WineD3D translates DirectX to OpenGL. A fallback for older games and compatibility issues; often slower. DirectX 12 is not supported.",
         "Экспериментальный Vulkan-рендерер встроенного WineD3D. Это другой переводчик, чем DXVK; используйте для проверки совместимости, если основные режимы дают сбои.": "WineD3D’s experimental Vulkan renderer. A different translator from DXVK; use it to check compatibility when the main modes have problems.",
         "Переводит существующий в игре DLSS в MetalFX через D3DMetal. DLSS нужно также включить в самой игре. Может повысить FPS за счёт рендера в меньшем разрешении; для игр без DLSS не нужен.": "Translates a game’s existing DLSS to MetalFX through D3DMetal. Also enable DLSS inside the game. It can improve FPS by rendering at a lower resolution; games without DLSS do not need it.",

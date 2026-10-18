@@ -11,10 +11,19 @@ struct NativeDisplayTarget: Equatable {
     var height: Int
     var refreshRate: Double
 
+    /// GUI launches follow the initiating window; windowless shortcuts follow the pointer.
+    /// Geometry is in macOS points, dimensions returned below are physical pixels.
+    static func preferredScreenIndex(window: Int?, frames: [CGRect], pointer: CGPoint) -> Int? {
+        if let window, frames.indices.contains(window) { return window }
+        return frames.firstIndex { $0.contains(pointer) } ?? (frames.isEmpty ? nil : 0)
+    }
+
     @MainActor static func current() -> NativeDisplayTarget? {
         let screens = NSScreen.screens
-        guard let screen = NSApp?.keyWindow?.screen ?? NSScreen.main ?? screens.first,
-              let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+        let windowScreen = NSApp?.keyWindow?.screen ?? NSApp?.mainWindow?.screen
+        let windowIndex = windowScreen.flatMap { selected in screens.firstIndex { $0 === selected } }
+        guard let screenIndex = preferredScreenIndex(window: windowIndex, frames: screens.map(\.frame), pointer: NSEvent.mouseLocation),
+              let number = screens[screenIndex].deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
               let mode = CGDisplayCopyDisplayMode(number.uint32Value) else { return nil }
         var online = [CGDirectDisplayID](repeating: 0, count: 16)
         var count: UInt32 = 0
@@ -115,5 +124,31 @@ enum NativeDisplayPolicy {
         var x = a, y = b
         while y != 0 { (x, y) = (y, x % y) }
         return max(1, x)
+    }
+}
+
+/// Explicit argument templates work for any app that accepts display options. No game ID,
+/// user path or resolution is stored here, and no shell command is constructed.
+enum DisplayLaunchArguments {
+    enum Failure: LocalizedError {
+        case unavailable, unknownToken
+        var errorDescription: String? {
+            switch self {
+            case .unavailable: return t("Не удалось определить экран для параметров запуска. Параметры не изменены.")
+            case .unknownToken: return t("Неизвестная переменная экрана в параметрах запуска. Используйте {display.width}, {display.height} или {display.index}.")
+            }
+        }
+    }
+    static func resolve(_ arguments: [String], target: NativeDisplayTarget?) throws -> [String] {
+        guard arguments.contains(where: { $0.contains("{display.") }) else { return arguments }
+        guard let target, target.width > 0, target.height > 0, target.outputIndex >= 0 else { throw Failure.unavailable }
+        let replacements = ["{display.width}": String(target.width), "{display.height}": String(target.height),
+                            "{display.index}": String(target.outputIndex)]
+        return try arguments.map { argument in
+            var resolved = argument
+            for (key, value) in replacements { resolved = resolved.replacingOccurrences(of: key, with: value) }
+            guard !resolved.contains("{display.") else { throw Failure.unknownToken }
+            return resolved
+        }
     }
 }

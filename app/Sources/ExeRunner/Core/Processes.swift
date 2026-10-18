@@ -121,11 +121,55 @@ enum WineProcesses {
         if WindowsPath.name(program).lowercased() == "start.exe", strings.count > 3, strings[2].lowercased() == "/exec" {
             program = strings[3]
         }
+        // Some wrappers create the game with an inherited argv[0]. The first mapped PE
+        // distinguishes that game from the idle wrapper without charging launcher uptime.
+        if WindowsPath.name(program).lowercased().hasPrefix("launch") {
+            program = resolvedWrapperImage(program, prefix: String(prefix), mapped: firstMappedExecutable(pid))
+        }
         var after = proc_bsdinfo()
         guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &after, Int32(MemoryLayout.size(ofValue: after))) == MemoryLayout.size(ofValue: after), after.pbi_status != 5,
               before.pbi_start_tvsec == after.pbi_start_tvsec, before.pbi_start_tvusec == after.pbi_start_tvusec else { return nil }
         return Entry(pid: pid, path: program, prefix: URL(fileURLWithPath: String(prefix)).standardizedFileURL.path,
                      birthSeconds: after.pbi_start_tvsec, birthMicros: after.pbi_start_tvusec)
+    }
+
+    /// Narrow LaunchFoo -> Foo resolution: same sibling, same prefix, never any mapped DLL.
+    /// Unknown mappings, other drives and resource images retain the original identity.
+    static func resolvedWrapperImage(_ program: String, prefix: String, mapped: String?) -> String {
+        let name = WindowsPath.name(program)
+        guard name.lowercased().hasPrefix("launch"), name.count > 10, let mapped else { return program }
+        let expected = String(name.dropFirst(6))
+        guard WindowsPath.name(mapped).caseInsensitiveCompare(expected) == .orderedSame else { return program }
+        let normalized = program.replacingOccurrences(of: "\\", with: "/")
+        let host: URL
+        if normalized.lowercased().hasPrefix("c:/") {
+            host = URL(fileURLWithPath: prefix).appendingPathComponent("drive_c").appendingPathComponent(String(normalized.dropFirst(3)))
+        } else if normalized.hasPrefix("/") {
+            host = URL(fileURLWithPath: normalized)
+        } else { return program }
+        let drive = URL(fileURLWithPath: prefix).appendingPathComponent("drive_c").resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        let sibling = host.deletingLastPathComponent().appendingPathComponent(expected).resolvingSymlinksInPath().standardizedFileURL
+        guard sibling.path.hasPrefix(drive) else { return program }
+        guard sibling == URL(fileURLWithPath: mapped).resolvingSymlinksInPath().standardizedFileURL else { return program }
+        return String(program.dropLast(name.count)) + expected
+    }
+
+    /// Read metadata only; no task port, memory contents or external helper process.
+    /// Stop at the first mapped .exe, rather than accepting an arbitrary later resource image.
+    static func firstMappedExecutable(_ pid: pid_t) -> String? {
+        var address: UInt64 = 0
+        for _ in 0..<128 {
+            var region = proc_regionwithpathinfo()
+            guard proc_pidinfo(pid, PROC_PIDREGIONPATHINFO, address, &region, Int32(MemoryLayout.size(ofValue: region))) == MemoryLayout.size(ofValue: region) else { return nil }
+            let path = withUnsafePointer(to: &region.prp_vip.vip_path) {
+                $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) }
+            }
+            if path.lowercased().hasSuffix(".exe"), region.prp_prinfo.pri_protection & UInt32(VM_PROT_EXECUTE) != 0 { return path }
+            let (next, overflow) = region.prp_prinfo.pri_address.addingReportingOverflow(region.prp_prinfo.pri_size)
+            guard !overflow, next > address else { return nil }
+            address = next
+        }
+        return nil
     }
 
     /// Ends processes at once, the way TerminateProcess does; wineserver notices them gone.

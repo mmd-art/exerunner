@@ -22,9 +22,9 @@ struct LibraryItem: Codable, Identifiable, Hashable {
         var help: String {
             switch self {
             case .automatic: t("Использует рекомендацию для игры; без неё — D3DMetal для DirectX 11/12, если он подключён. Начните с этого режима.")
-            case .d3dmetal: t("Переводит DirectX 11/12 в Metal через Game Porting Toolkit. Для DirectX 9 выберите DXVK или Wine. Требует подключённый D3DMetal.")
+            case .d3dmetal: t("Переводит DirectX 11/12 в Metal через Game Porting Toolkit. Для DirectX 9 используйте Wine; поддержка DXVK зависит от состава движка. Требует подключённый D3DMetal.")
             case .dxmt: t("DXMT переводит DirectX 10/11 напрямую в Metal. Альтернатива D3DMetal; скорость и совместимость зависят от программы. DirectX 9/12 не поддерживаются.")
-            case .dxvk: t("DXVK переводит DirectX 9–11 в Vulkan, который на Mac работает через Metal. Попробуйте при сбоях или низком FPS в режиме Авто; результат зависит от игры.")
+            case .dxvk: t("Встроенная сборка DXVK для macOS переводит DirectX 10/11 в Vulkan через Metal. DirectX 9 требует отдельного совместимого d3d9.dll; его нет в стандартном движке.")
             case .wine: t("Встроенный WineD3D переводит DirectX в OpenGL. Запасной вариант для старых игр и проблем совместимости; часто медленнее. DirectX 12 не поддерживается.")
             case .vkd3d: t("Запасной переводчик DirectX 12 в Vulkan через встроенный vkd3d. Экспериментальный: доступные feature level и функции зависят от GPU и MoltenVK; многие современные DX12-игры не поддерживаются.")
             case .vulkan: t("Экспериментальный Vulkan-рендерер встроенного WineD3D. Это другой переводчик, чем DXVK; используйте для проверки совместимости, если основные режимы дают сбои.")

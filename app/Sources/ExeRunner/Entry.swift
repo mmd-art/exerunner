@@ -94,6 +94,7 @@ enum Headless {
 
     static func launch(itemID: String) -> Never {
         Task { @MainActor in
+            let display = NativeDisplayTarget.current()
             let state = AppState()
             await state.refresh()
             guard let item = state.allItems.first(where: { $0.id == itemID }) else {
@@ -102,7 +103,7 @@ enum Headless {
             }
             do {
                 state.watchProcesses() // Shortcuts need the same observed-game lifecycle as the GUI.
-                let status = try await state.run(item)
+                let status = try await state.run(item, display: display)
                 if status == 0 { await state.waitForObservedGame(item) }
                 // a Steam client started for the game stays ours until it quits (and restarts after updates)
                 await state.waitForClients()

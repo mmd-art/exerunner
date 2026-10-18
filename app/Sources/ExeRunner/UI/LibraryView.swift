@@ -257,6 +257,8 @@ struct ItemSettingsView: View {
                 Section(t("Запуск")) {
                     TextField(item.isSteamGame ? t("Параметры запуска игры") : t("Аргументы"), text: $argumentsText,
                               prompt: Text(t("например -dx12")))
+                    Text(t("Вместо фиксированного разрешения можно использовать {display.width} и {display.height}. Экран выбирается при запуске: по окну ExeRunner, а для ярлыка — по положению указателя."))
+                        .font(.caption).foregroundStyle(.secondary)
                     TextField(t("Переменные окружения"), text: $environmentText,
                               prompt: Text(t("ИМЯ=значение, по одной на строку")), axis: .vertical)
                         .lineLimit(3...6)

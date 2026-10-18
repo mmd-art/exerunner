@@ -178,6 +178,20 @@ let saved = try? JSONDecoder().decode(AppSettings.self, from: Data(#"{"onboardin
 check("settings from before keep russian", saved?.language == .russian && saved?.onboardingCompleted == true)
 check("new settings follow the mac", AppSettings().language == .system)
 
+// A real Wine child can inherit LaunchFoo.exe argv while mapping Foo.exe.
+let wrapperPath = "C:\\Games\\Example\\LaunchExample.exe"
+let wrapperPrefix = "/private/tmp/exerunner-image-fixture"
+let gameImage = wrapperPrefix + "/drive_c/Games/Example/Example.exe"
+check("mapped child resolves inherited wrapper argv", WineProcesses.resolvedWrapperImage(wrapperPath, prefix: wrapperPrefix, mapped: gameImage) == "C:\\Games\\Example\\Example.exe")
+check("idle wrapper remains a wrapper", WineProcesses.resolvedWrapperImage(wrapperPath, prefix: wrapperPrefix, mapped: wrapperPrefix + "/drive_c/Games/Example/LaunchExample.exe") == wrapperPath)
+check("same name outside prefix is rejected", WineProcesses.resolvedWrapperImage(wrapperPath, prefix: wrapperPrefix, mapped: "/other/drive_c/Games/Example/Example.exe") == wrapperPath)
+check("another sibling is rejected", WineProcesses.resolvedWrapperImage(wrapperPath, prefix: wrapperPrefix, mapped: wrapperPrefix + "/drive_c/Games/Example/Other.exe") == wrapperPath)
+check("missing mapping keeps original", WineProcesses.resolvedWrapperImage(wrapperPath, prefix: wrapperPrefix, mapped: nil) == wrapperPath)
+check("ordinary game identity is unchanged", WineProcesses.resolvedWrapperImage("C:\\Games\\Example\\Example.exe", prefix: wrapperPrefix, mapped: gameImage) == "C:\\Games\\Example\\Example.exe")
+
+check("absolute outside-prefix wrapper is rejected", WineProcesses.resolvedWrapperImage("/other/LaunchExample.exe", prefix: wrapperPrefix, mapped: "/other/Example.exe") == "/other/LaunchExample.exe")
+check("drive traversal is rejected", WineProcesses.resolvedWrapperImage("C:\\..\\LaunchExample.exe", prefix: wrapperPrefix, mapped: wrapperPrefix + "/Example.exe") == "C:\\..\\LaunchExample.exe")
+
 // processes: fake wine processes started by tests/core-test.sh, arguments shifted the way wine does
 if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
     let prefix = URL(fileURLWithPath: expected).standardizedFileURL.path
@@ -187,6 +201,10 @@ if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
     check("process through start.exe", mine.contains { $0.path == "/Users/someone/tool.exe" }, "\(mine.map(\.path))")
     check("process name", mine.contains { $0.name == "game.exe" })
     check("process birth identity captured", !mine.isEmpty && mine.allSatisfy { $0.birthSeconds > 0 && $0.birthMicros < 1_000_000 })
+    let executablePID = ProcessInfo.processInfo.environment["EXPECT_IMAGE_EXEC_PID"].flatMap(Int32.init)
+    let resourcePID = ProcessInfo.processInfo.environment["EXPECT_IMAGE_DATA_PID"].flatMap(Int32.init)
+    check("native executable mapping resolves wrapper child", mine.contains { $0.pid == executablePID && $0.name == "Example.exe" }, "mapped=\(executablePID.flatMap(WineProcesses.firstMappedExecutable) ?? "none"), entries=\(mine.map { "\($0.pid):\($0.name)" })")
+    check("native data mapping is not a game process", mine.contains { $0.pid == resourcePID && $0.name == "LaunchExample.exe" })
     // A display-mode migration must refuse before writing or stopping a live program.
     let displayBottle = Bottle(name: URL(fileURLWithPath: prefix).lastPathComponent, root: URL(fileURLWithPath: prefix).deletingLastPathComponent())
     let registry = displayBottle.url.appendingPathComponent("user.reg")

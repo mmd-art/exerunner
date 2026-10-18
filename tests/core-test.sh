@@ -12,8 +12,19 @@ trap 'kill "${FAKES[@]}" 2>/dev/null || true; rm -rf "$WORK"' EXIT
 cat > "$WORK/wine.c" <<'C'
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <stdio.h>
 int main(int argc, char **argv)
 {
+    const char *image = getenv("MAPPED_IMAGE");
+    if (image) {
+        int fd = open(image, O_RDONLY);
+        int protection = PROT_READ | (getenv("MAPPED_EXECUTABLE") ? PROT_EXEC : 0);
+        if (fd < 0 || mmap((void *)0x400000, 4096, protection, MAP_PRIVATE, fd, 0) == MAP_FAILED) { perror("fixture mmap"); return 90; }
+        close(fd);
+    }
     int offset = argv[1] - argv[0];
     char *end = argv[argc - 1] + strlen(argv[argc - 1]) + 1;
     memmove(argv[0], argv[1], end - argv[1]);
@@ -51,5 +62,12 @@ env -i WINEPREFIX="$WORK/bottles/steam" "$WORK/winetemp-other/cef_subprocess" 'C
 FAKES+=($!); TRACKING_OTHER_PID=$!; disown
 env -i WINEPREFIX="$WORK/bottles/steam" "$WORK/ordinary-copy/cef_subprocess" 'C:\Games\outside-temp.exe' &
 FAKES+=($!); TRACKING_OUTSIDE_PID=$!; disown
+mkdir -p "$WORK/bottles/steam/drive_c/Games/Example" "$WORK/image-loader"
+clang -arch x86_64 -O0 -Wl,-pagezero_size,0x1000 -o "$WORK/image-loader/wine" "$WORK/wine.c"
+dd if=/dev/zero of="$WORK/bottles/steam/drive_c/Games/Example/Example.exe" bs=4096 count=1 2>/dev/null
+env -i WINEPREFIX="$WORK/bottles/steam" MAPPED_IMAGE="$WORK/bottles/steam/drive_c/Games/Example/Example.exe" MAPPED_EXECUTABLE=1 "$WORK/image-loader/wine" 'C:\Games\Example\LaunchExample.exe' &
+FAKES+=($!); IMAGE_EXEC_PID=$!; disown
+env -i WINEPREFIX="$WORK/bottles/steam" MAPPED_IMAGE="$WORK/bottles/steam/drive_c/Games/Example/Example.exe" "$WORK/wine" 'C:\Games\Example\LaunchExample.exe' &
+FAKES+=($!); IMAGE_DATA_PID=$!; disown
 sleep 0.5
-EXPECT_PREFIX="$WORK/bottles/steam" EXPECT_COPIED_LOADER="$WORK/wine" EXPECT_UNRELATED_CEF_PID="$TRACKING_OTHER_PID" EXPECT_OUTSIDE_CEF_PID="$TRACKING_OUTSIDE_PID" "$WORK/bin/core-test"
+EXPECT_IMAGE_EXEC_PID="$IMAGE_EXEC_PID" EXPECT_IMAGE_DATA_PID="$IMAGE_DATA_PID" EXPECT_PREFIX="$WORK/bottles/steam" EXPECT_COPIED_LOADER="$WORK/wine" EXPECT_UNRELATED_CEF_PID="$TRACKING_OTHER_PID" EXPECT_OUTSIDE_CEF_PID="$TRACKING_OUTSIDE_PID" "$WORK/bin/core-test"

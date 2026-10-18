@@ -11,12 +11,19 @@ extension AppState {
     /// Starts `item` and returns once wine is done with it: a program when it exits, a Steam game
     /// once its Steam client has it (the game itself is then followed in the process table).
     func run(_ item: LibraryItem) async throws -> Int32 {
+        try await run(item, display: NativeDisplayTarget.current())
+    }
+
+    func run(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
         guard !isShuttingDown else { throw CancellationError() }
         launching.insert(item.id)
         defer { launching.remove(item.id) }
+        // The caller captures before initialization/history/engine awaits can change focus.
         let ticket = await beginHistory(item)
         do {
-            let status = try await performRun(item)
+            var resolved = item
+            resolved.arguments = try DisplayLaunchArguments.resolve(item.arguments, target: display)
+            let status = try await performRun(resolved, display: display)
             await finishHistoryAttempt(item, ticket: ticket, status: status, failed: false)
             await refreshProcesses()
             return status
@@ -27,7 +34,7 @@ extension AppState {
         }
     }
 
-    private func performRun(_ item: LibraryItem) async throws -> Int32 {
+    private func performRun(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
         guard !isShuttingDown else { throw CancellationError() }
         guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
         try Task.checkCancellation()
@@ -72,12 +79,12 @@ extension AppState {
             return status
         }
         if item.isSteamGame, let client = steamClient(for: item) {
-            return try await runThroughSteam(item, client: client, engine: engine)
+            return try await runThroughSteam(item, client: client, engine: engine, display: display)
         }
         launching.insert(item.id)
         defer { launching.remove(item.id) }
         stoppedByUser.remove(item.id)
-        let (env, log) = try await prepare(item, engine: engine)
+        let (env, log) = try await prepare(item, engine: engine, display: display)
         try Task.checkCancellation()
         guard !isShuttingDown else { throw CancellationError() }
         let file = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)
@@ -103,7 +110,7 @@ extension AppState {
     /// Readies the bottle for `item`: created, Windows components, DLL overrides, fonts, audio,
     /// and the per-program settings cxcompatdb.so applies. Returns the launch's environment and
     /// its new log; starts the Discord bridge last, right before the program.
-    func prepare(_ item: LibraryItem, engine: Engine) async throws -> (environment: [String: String], log: URL) {
+    func prepare(_ item: LibraryItem, engine: Engine, display: NativeDisplayTarget?) async throws -> (environment: [String: String], log: URL) {
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
         Migration.renameStamps(in: bottle)
         let log = Paths.logFile(item.id)
@@ -117,7 +124,7 @@ extension AppState {
         // Capture the initiating window's screen before any Wine helper changes focus.
         if settings.automaticNativeResolution, item.kind == .game, !item.isolated, highResolutionEnabled(forBottle: item.bottle),
            !WineProcesses.list().contains(where: { $0.path.replacingOccurrences(of: "\\", with: "/").split(separator: "/").last?.lowercased() == item.executableName.lowercased() }),
-           let display = NativeDisplayTarget.current() {
+           let display {
             do {
                 if let update = try NativeDisplayPolicy.prepare(adapter: profile(for: item)?.nativeDisplayProfile,
                         documents: Paths.home.appendingPathComponent("Documents", isDirectory: true),
@@ -168,12 +175,12 @@ extension AppState {
     /// one that is not running starts with it, as the client's own run, which also restarts it
     /// after an update. The game counts as starting until its process shows up (two minutes at
     /// most) and writes its output into the client's log.
-    private func runThroughSteam(_ item: LibraryItem, client: LibraryItem, engine: Engine) async throws -> Int32 {
+    private func runThroughSteam(_ item: LibraryItem, client: LibraryItem, engine: Engine, display: NativeDisplayTarget?) async throws -> Int32 {
         launching.insert(item.id)
         defer { launching.remove(item.id) }
         stoppedByUser.remove(item.id)
         // the bottle and the game's settings; the client keeps its own environment
-        let (_, log) = try await prepare(item, engine: engine)
+        let (_, log) = try await prepare(item, engine: engine, display: display)
         handoffGameForeground(item)
         await refreshProcesses()
         expectStart(item.id)
@@ -187,7 +194,7 @@ extension AppState {
             followsClient[item.id] = (client.id, 0)
             clientRuns[client.id] = Task {
                 defer { self.clientRuns[client.id] = nil }
-                return try await self.run(started)
+                return try await self.run(started, display: display)
             }
             return 0
         }
