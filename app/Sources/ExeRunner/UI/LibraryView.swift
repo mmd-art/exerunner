@@ -65,6 +65,7 @@ struct ItemTile: View {
     @State private var editing = false
     @State private var managingComponents = false
     @State private var managingEnvironment = false
+    @State private var managingSaves = false
     @State private var troubleshooting: Symptom?
 
     var body: some View {
@@ -122,6 +123,7 @@ struct ItemTile: View {
         .sheet(isPresented: $editing) { ItemSettingsView(item: item) }
         .sheet(isPresented: $managingComponents) { RuntimeComponentsView(item: item) }
         .sheet(isPresented: $managingEnvironment) { EnvironmentView(item: item) }
+        .sheet(isPresented: $managingSaves) { SaveArchiveView(item: item).environmentObject(state) }
         .sheet(item: $troubleshooting) { TroubleshootView(itemID: item.id, symptom: $0) }
     }
 
@@ -148,6 +150,7 @@ struct ItemTile: View {
     @ViewBuilder
     private var menuItems: some View {
         Button(t("Настройки запуска…")) { editing = true }
+        if item.kind == .game { Button(t("Копии сохранений…")) { managingSaves = true } }
         Button(t("Библиотеки Windows…")) { managingComponents = true }
         Button(t("Windows-среда, движок и устройства…")) { managingEnvironment = true }
         Button(t("Помощник по проблемам…")) { troubleshooting = state.diagnoses[item.id] == nil ? (item.kind == .launcher ? .launcher : .launch) : .launch }

@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
         didSet {
             if settings.language != oldValue.language { L10n.use(settings.language) }
             if settings != oldValue { settings.save() }
+            if settings.keepAwake != oldValue.keepAwake { syncKeepAwake() }
             if settings.gameBoost != oldValue.gameBoost { Task { await self.syncGameBoost() } }
         }
     }
@@ -61,6 +62,8 @@ final class AppState: ObservableObject {
     @Published var gameBoostStatus = GameBoostSnapshot()
     let gameBoost = GameBoostCoordinator(directory: Paths.support.appendingPathComponent("GameBoost", isDirectory: true),
                                          helper: Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0]))
+    let keepAwake = KeepAwake()
+    let saveOperations = SaveOperationTracker()
     var watcher: Task<Void, Never>?
     var isShuttingDown = false
     let managesGameBoost: Bool

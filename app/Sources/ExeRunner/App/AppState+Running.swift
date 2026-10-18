@@ -271,6 +271,8 @@ extension AppState {
         cancelAllForegroundHandoffs()
         guard !isShuttingDown else { return }
         isShuttingDown = true
+        syncKeepAwake()
+        await saveOperations.finish()
         await gameBoost.finishOwnerStarts()
         watcher?.cancel()
         watcher = nil
@@ -321,7 +323,24 @@ extension AppState {
         // games a launcher ran have no run of their own to report their end
         for id in active.subtracting(found) where !launching.contains(id) { finished(id, status: nil) }
         if found != active { active = found }
+        syncKeepAwake()
         await syncGameBoost()
+    }
+
+    func syncKeepAwake() {
+        let games = Set(allItems.filter { $0.kind == .game && active.contains($0.id) }.map(\.id))
+        keepAwake.update(enabled: managesGameBoost && !isShuttingDown && settings.keepAwake, activeGameIDs: games)
+    }
+
+    /// A Steam URI helper can exit before its game starts; shortcut ownership must survive it.
+    func waitForObservedGame(_ item: LibraryItem) async {
+        guard item.isSteamGame else { return }
+        var wait = GameObservationWait(now: Date())
+        while !Task.isCancelled && !isShuttingDown {
+            await refreshProcesses()
+            if wait.finished(observed: active.contains(item.id), now: Date()) { return }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
     }
 
     func expectStart(_ id: String) {

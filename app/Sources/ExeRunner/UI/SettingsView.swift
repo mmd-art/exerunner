@@ -22,6 +22,12 @@ struct SettingsView: View {
                     .help(t("Приоритет CPU и GPU для игр. Прежний игровой режим macOS восстановится после выхода из последней игры."))
                 Text(state.gameBoostHint).font(.callout).foregroundStyle(.secondary)
 
+                Toggle(t("Не выключать экран во время игры"), isOn: $state.settings.keepAwake)
+                    .toggleStyle(.switch)
+                    .accessibilityIdentifier("keepAwakeToggle")
+                Text(t("Только пока обнаружен процесс игры. Лаунчеры не учитываются; настройки сна и блокировки Mac не меняются."))
+                    .font(.callout).foregroundStyle(.secondary)
+
                 Toggle(t("Удерживать мышь внутри игры"), isOn: $state.settings.cursorConfinement)
                     .toggleStyle(.switch)
                     .accessibilityIdentifier("cursorConfinementToggle")

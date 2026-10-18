@@ -13,6 +13,17 @@ import Foundation
 enum Entry {
     static func main() {
         let raw = CommandLine.arguments
+        // A synthetic export must not run migrations or read the owner's library/settings.
+        if let index = raw.firstIndex(of: "--snapshot-save-backups"), index + 1 < raw.count {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.prohibited)
+            Task { @MainActor in
+                await Snapshots.renderSaveBackups(to: URL(fileURLWithPath: raw[index + 1], isDirectory: true))
+                exit(0)
+            }
+            app.run()
+            exit(0)
+        }
         if let index = raw.firstIndex(of: "--game-boost-monitor"), index + 1 < raw.count {
             let store = GameBoostStore(directory: URL(fileURLWithPath: raw[index + 1], isDirectory: true))
             let status = GameBoostMonitor.run(store: store, enabled: { AppSettings.load().gameBoost }, observe: {
@@ -80,7 +91,9 @@ enum Headless {
                 exit(1)
             }
             do {
+                state.watchProcesses() // Shortcuts need the same observed-game lifecycle as the GUI.
                 let status = try await state.run(item)
+                if status == 0 { await state.waitForObservedGame(item) }
                 // a Steam client started for the game stays ours until it quits (and restarts after updates)
                 await state.waitForClients()
                 exit(status)

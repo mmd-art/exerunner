@@ -8,6 +8,7 @@ struct AppSettings: Codable, Equatable {
     /// nil preserves older per-program choices until the global control is used.
     var performanceHUD: Bool?
     var gameBoost = false
+    var keepAwake = false
     var cursorConfinement = true
     var automaticNativeResolution = true
     var automaticRuntimeComponents = true
@@ -22,6 +23,7 @@ struct AppSettings: Codable, Equatable {
         onboardingCompleted = try c.decodeIfPresent(Bool.self, forKey: .onboardingCompleted) ?? false
         performanceHUD = try c.decodeIfPresent(Bool.self, forKey: .performanceHUD)
         gameBoost = try c.decodeIfPresent(Bool.self, forKey: .gameBoost) ?? false
+        keepAwake = try c.decodeIfPresent(Bool.self, forKey: .keepAwake) ?? false
         cursorConfinement = try c.decodeIfPresent(Bool.self, forKey: .cursorConfinement) ?? true
         automaticNativeResolution = try c.decodeIfPresent(Bool.self, forKey: .automaticNativeResolution) ?? true
         automaticRuntimeComponents = try c.decodeIfPresent(Bool.self, forKey: .automaticRuntimeComponents) ?? true

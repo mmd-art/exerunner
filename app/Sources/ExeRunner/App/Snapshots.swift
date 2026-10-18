@@ -5,6 +5,18 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderSaveBackups(to dir: URL) async {
+        var settings = AppSettings()
+        settings.language = .english
+        let state = AppState(managesGameBoost: false, initialSettings: settings,
+                             initialItems: [], initialBottleSettings: [:])
+        let item = LibraryItem(id: "save-preview", name: "Example game", kind: .game,
+                               bottle: "preview", executable: "C:\\Game\\game.exe")
+        try? Paths.ensure(dir)
+        await capture("save-backups", AnyView(SaveArchiveView(item: item)), state: state, to: dir,
+                      size: NSSize(width: 720, height: 570))
+    }
+
     static func renderEnvironment(to dir: URL) async {
         let state = AppState(managesGameBoost: false)
         await state.refresh()
