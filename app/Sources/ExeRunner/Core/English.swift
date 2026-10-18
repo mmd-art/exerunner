@@ -2,6 +2,27 @@
 /// of interpolations as %@). A text missing here shows in Russian.
 enum English {
     static let table: [String: String] = [
+        "Завершено": "Completed",
+        "Не удалось обновить историю. Запуск программы продолжается.": "Could not update history. Application launch continues.",
+        "История запусков": "Launch history",
+        "История": "History",
+        "Игровое время считается по обнаруженным процессам игры, без времени лаунчера. Пауза внутри игры и работа в фоне входят в это время; сон Mac — нет.": "Playtime follows observed game processes, excluding launcher time. In-game pauses and background running count; Mac sleep does not.",
+        "Всего игрового времени:": "Total playtime:",
+        "Запуски появятся здесь после использования этой версии ExeRunner.": "Launches will appear here after using this version of ExeRunner.",
+        "Показаны последние 200 записей. Полная история ограничена 2000 завершёнными сессиями; суммарное игровое время сохраняется отдельно.": "Showing the latest 200 entries. History retains 2,000 completed sessions; lifetime playtime is stored separately.",
+        "Проверка процессов выполняется примерно раз в 2 секунды. Неизвестное время после потери наблюдения не добавляется; очень короткий запуск может остаться без замера.": "Processes are checked about every 2 seconds. Unknown time after observation is lost is not added; very short launches may have no measurement.",
+        "Время игры": "Playtime",
+        "Не игровое время": "No playtime recorded",
+        "Ожидание процесса": "Waiting for process",
+        "Процесс завершился; причина неизвестна": "Process ended; exit reason unknown",
+        "Остановлено пользователем": "Stopped by user",
+        "Аварийное завершение": "Crashed",
+        "Не удалось запустить": "Launch failed",
+        "Наблюдение прервано; учтено только подтверждённое время": "Observation interrupted; only confirmed time counted",
+        "Процесс не наблюдался; время не начислено": "Process not observed; no time counted",
+        "Недавние приложения": "Recent applications",
+        "Пока нет запусков": "No launches yet",
+
         "Выбранный движок не поддерживает преобразование контроллеров в XInput.": "The selected engine does not support controller mapping to XInput.",
         "Запись настроек контроллера повреждена. Существующие настройки сохранены.": "The controller settings record is damaged. Existing settings have been preserved.",
         "Настройки контроллера изменены вне ExeRunner. Существующие значения сохранены.": "Controller settings changed outside ExeRunner. Existing values have been preserved.",

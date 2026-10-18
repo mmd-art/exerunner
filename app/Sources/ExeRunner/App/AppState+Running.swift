@@ -12,6 +12,23 @@ extension AppState {
     /// once its Steam client has it (the game itself is then followed in the process table).
     func run(_ item: LibraryItem) async throws -> Int32 {
         guard !isShuttingDown else { throw CancellationError() }
+        launching.insert(item.id)
+        defer { launching.remove(item.id) }
+        let ticket = await beginHistory(item)
+        do {
+            let status = try await performRun(item)
+            await finishHistoryAttempt(item, ticket: ticket, status: status, failed: false)
+            await refreshProcesses()
+            return status
+        } catch {
+            await finishHistoryAttempt(item, ticket: ticket, status: nil, failed: true)
+            await refreshProcesses()
+            throw error
+        }
+    }
+
+    private func performRun(_ item: LibraryItem) async throws -> Int32 {
+        guard !isShuttingDown else { throw CancellationError() }
         guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
         try Task.checkCancellation()
         let engine = try selectedEngine(forBottle: item.bottle)
@@ -201,6 +218,7 @@ extension AppState {
     /// a few seconds is ended, and the rest of the bottle (Steam, say) keeps running.
     func stop(_ item: LibraryItem) async {
         cancelForegroundHandoff(item)
+        await markHistoryStop(allItems.filter { item.kind == .launcher ? $0.bottle == item.bottle : $0.id == item.id })
         guard let engine = try? selectedEngine(forBottle: item.bottle) else {
             WineProcesses.kill(processes(of: item, in: WineProcesses.list()))
             await refreshProcesses(); return
@@ -251,6 +269,7 @@ extension AppState {
 
     /// Everything in the item's bottle, at once
     func stopBottle(_ item: LibraryItem) async {
+        await markHistoryStop(allItems.filter { $0.bottle == item.bottle })
         for other in allItems where other.bottle == item.bottle { stoppedByUser.insert(other.id) }
         await quitBottle(item.bottle)
         await refreshProcesses()
@@ -271,6 +290,7 @@ extension AppState {
         cancelAllForegroundHandoffs()
         guard !isShuttingDown else { return }
         isShuttingDown = true
+        await markHistoryStop(allItems)
         syncKeepAwake()
         await saveOperations.finish()
         await gameBoost.finishOwnerStarts()
@@ -304,7 +324,8 @@ extension AppState {
     }
 
     func refreshProcesses() async {
-        let list = await Task.detached { WineProcesses.list() }.value
+        let sample = await Task.detached { HistoryProcessSample.capture() }.value
+        let list = sample.entries
         processTable = list
         var found = Set<String>()
         for item in allItems where !processes(of: item, in: list).isEmpty { found.insert(item.id) }
@@ -323,6 +344,7 @@ extension AppState {
         // games a launcher ran have no run of their own to report their end
         for id in active.subtracting(found) where !launching.contains(id) { finished(id, status: nil) }
         if found != active { active = found }
+        await refreshHistory(sample)
         syncKeepAwake()
         await syncGameBoost()
     }
@@ -334,7 +356,9 @@ extension AppState {
 
     /// A Steam URI helper can exit before its game starts; shortcut ownership must survive it.
     func waitForObservedGame(_ item: LibraryItem) async {
-        guard item.isSteamGame else { return }
+        guard item.kind == .game else { return }
+        if let ticket = historyTickets[item.id], let session = history.sessions.first(where: { $0.id == ticket }), !session.status.open { return }
+        if !item.isSteamGame && dockExecutable(for: item, in: Bottle(name: item.bottle, root: bottlesRoot)) == item.executableName { return }
         var wait = GameObservationWait(now: Date())
         while !Task.isCancelled && !isShuttingDown {
             await refreshProcesses()
@@ -387,16 +411,24 @@ extension AppState {
     /// After a run: its output is read for a crash when the exit was not clean or the log says
     /// so. A finding that names at least an error stays until the next launch.
     func finished(_ id: String, status: Int32?) {
+        // A later game launched inside Steam must start a fresh diagnostic window.
+        defer {
+            if item(id)?.isSteamGame == true { followsClient[id] = nil; launchTimes[id] = nil }
+        }
         if stoppedByUser.remove(id) != nil { return }
         // Unreal catches its own crashes and says so in a report of its own
         if let game = item(id), let report = UnrealCrashReport.latest(in: crashReportRoots(for: game), since: launchTimes[id]) {
+            queueHistoryCrash(id)
             diagnoses[id] = UnrealCrashReport.diagnosis(report)
             return
         }
         guard let text = segment(for: id)?.window() else { return }
         guard (status ?? 0) != 0 || CrashClassifier.looksLikeCrash(text) else { return }
         let diagnosis = CrashClassifier.shared.classify(text, exitStatus: status)
-        if let primary = diagnosis.primary, primary.pattern.severity >= .error { diagnoses[id] = diagnosis }
+        if let primary = diagnosis.primary, primary.pattern.severity >= .error {
+            queueHistoryCrash(id)
+            diagnoses[id] = diagnosis
+        }
     }
 
     /// Where an item's game engine leaves crash reports: its own folder (for a program, the

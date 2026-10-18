@@ -186,6 +186,7 @@ if let expected = ProcessInfo.processInfo.environment["EXPECT_PREFIX"] {
           "\(mine.map(\.path))")
     check("process through start.exe", mine.contains { $0.path == "/Users/someone/tool.exe" }, "\(mine.map(\.path))")
     check("process name", mine.contains { $0.name == "game.exe" })
+    check("process birth identity captured", !mine.isEmpty && mine.allSatisfy { $0.birthSeconds > 0 && $0.birthMicros < 1_000_000 })
     // A display-mode migration must refuse before writing or stopping a live program.
     let displayBottle = Bottle(name: URL(fileURLWithPath: prefix).lastPathComponent, root: URL(fileURLWithPath: prefix).deletingLastPathComponent())
     let registry = displayBottle.url.appendingPathComponent("user.reg")

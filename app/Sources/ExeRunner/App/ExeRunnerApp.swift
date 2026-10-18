@@ -12,7 +12,15 @@ struct ExeRunnerApp: App {
                 .frame(minWidth: 940, minHeight: 640)
         }
         .windowToolbarStyle(.unified)
-        .commands { CommandGroup(replacing: .newItem) {} }
+        .commands {
+            CommandGroup(replacing: .newItem) {}
+            CommandMenu(t("Недавние приложения")) {
+                if state.recentItems.isEmpty { Text(t("Пока нет запусков")) }
+                ForEach(state.recentItems) { item in
+                    Button(item.name) { state.launch(item) }.disabled(state.running.contains(item.id) || state.isShuttingDown)
+                }
+            }
+        }
     }
 }
 
@@ -46,7 +54,7 @@ struct RootView: View {
 
 struct MainView: View {
     @EnvironmentObject private var state: AppState
-    enum Section: Hashable { case library, catalog, settings }
+    enum Section: Hashable { case library, catalog, history, settings }
     @State private var section: Section?
 
     init(section: Section = .library) {
@@ -57,6 +65,7 @@ struct MainView: View {
         NavigationSplitView {
             List(selection: $section) {
                 Label(t("Библиотека"), systemImage: "square.grid.2x2").tag(Section.library)
+                Label(t("История"), systemImage: "clock.arrow.circlepath").tag(Section.history)
                 Label(t("Каталог"), systemImage: "bag").tag(Section.catalog)
                 Label(t("Настройки"), systemImage: "gearshape").tag(Section.settings)
             }
@@ -67,6 +76,7 @@ struct MainView: View {
                 switch section ?? .library {
                 case .library: LibraryView(openCatalog: { section = .catalog })
                 case .catalog: CatalogView()
+                case .history: HistoryView()
                 case .settings: SettingsView()
                 }
                 ActivityBar()

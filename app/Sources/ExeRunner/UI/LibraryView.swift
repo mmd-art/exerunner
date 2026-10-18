@@ -14,6 +14,7 @@ struct LibraryView: View {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 30) {
+                    RecentApplicationsView()
                     section(t("Лаунчеры"), state.launchers)
                     section(t("Игры"), state.games)
                     section(t("Программы"), state.programs)
@@ -72,6 +73,9 @@ struct ItemTile: View {
         VStack(alignment: .leading, spacing: 10) {
             cover
             Text(item.name).font(.headline).lineLimit(2, reservesSpace: true)
+            if item.kind == .game, let seconds = state.history.gameSeconds[item.id], seconds > 0 {
+                Label(HistoryView.duration(seconds), systemImage: "clock").font(.caption).foregroundStyle(.secondary)
+            }
             if item.isolated {
                 Label(t("Изолировано · без сети"), systemImage: "shield.lefthalf.filled")
                     .font(.caption).foregroundStyle(.secondary)

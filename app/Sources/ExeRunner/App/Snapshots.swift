@@ -5,6 +5,28 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderHistory(to dir: URL) async {
+        var settings = AppSettings(); settings.language = .english
+        let game = LibraryItem(id: "preview-game", name: "Example game (synthetic)", kind: .game,
+                               bottle: "preview", executable: "C:\\Game\\game.exe")
+        let state = AppState(managesGameBoost: false, initialSettings: settings,
+                             initialItems: [game], initialBottleSettings: [:])
+        let now = Date()
+        let target = SessionTarget(itemID: game.id, prefix: "/synthetic", name: game.name, kind: .game)
+        var stopped = HistorySession(target: target, requested: now.addingTimeInterval(-3600),
+            observed: now.addingTimeInterval(-3590), lastSeen: now.addingTimeInterval(-90),
+            seconds: 3500, status: .stopped, lastUptime: 0, boot: "preview", deadline: 0)
+        stopped.ended = stopped.lastSeen
+        var crashed = stopped; crashed.id = UUID(); crashed.status = .crashed; crashed.seconds = 42
+        crashed.requested = now.addingTimeInterval(-7200)
+        state.history = SessionHistorySnapshot(sessions: [stopped, crashed], gameSeconds: [game.id: 3542])
+        try? Paths.ensure(dir)
+        await capture("history", AnyView(MainView(section: .history)), state: state, to: dir,
+                      size: NSSize(width: 1160, height: 780))
+        await capture("history-library", AnyView(MainView(section: .library)), state: state, to: dir,
+                      size: NSSize(width: 1160, height: 780))
+    }
+
     static func renderSaveBackups(to dir: URL) async {
         var settings = AppSettings()
         settings.language = .english

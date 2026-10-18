@@ -64,6 +64,11 @@ final class AppState: ObservableObject {
                                          helper: Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0]))
     let keepAwake = KeepAwake()
     let saveOperations = SaveOperationTracker()
+    @Published var history = SessionHistorySnapshot()
+    @Published var historyError: String?
+    let historyStore = SessionHistoryStore(directory: Paths.support.appendingPathComponent("SessionHistory", isDirectory: true))
+    var historyTickets: [String: UUID] = [:]
+    var pendingHistoryCrashes = Set<UUID>()
     var watcher: Task<Void, Never>?
     var isShuttingDown = false
     let managesGameBoost: Bool

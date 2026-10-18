@@ -36,6 +36,9 @@ enum WineProcesses {
         /// WINEPREFIX, standardized
         let prefix: String
 
+        var birthSeconds: UInt64 = 0
+        var birthMicros: UInt64 = 0
+
         var name: String { WindowsPath.name(path) }
     }
 
@@ -97,6 +100,8 @@ enum WineProcesses {
     /// KERN_PROCARGS2: argc, the executable's path, then NUL-terminated arguments and environment.
     /// Wine's shift leaves zero bytes behind the arguments, so empty strings are skipped.
     private static func entry(_ pid: pid_t, buffer: inout [UInt8]) -> Entry? {
+        var before = proc_bsdinfo()
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &before, Int32(MemoryLayout.size(ofValue: before))) == MemoryLayout.size(ofValue: before), before.pbi_status != 5 else { return nil }
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         var size = buffer.count
         guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return nil }
@@ -116,7 +121,11 @@ enum WineProcesses {
         if WindowsPath.name(program).lowercased() == "start.exe", strings.count > 3, strings[2].lowercased() == "/exec" {
             program = strings[3]
         }
-        return Entry(pid: pid, path: program, prefix: URL(fileURLWithPath: String(prefix)).standardizedFileURL.path)
+        var after = proc_bsdinfo()
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &after, Int32(MemoryLayout.size(ofValue: after))) == MemoryLayout.size(ofValue: after), after.pbi_status != 5,
+              before.pbi_start_tvsec == after.pbi_start_tvsec, before.pbi_start_tvusec == after.pbi_start_tvusec else { return nil }
+        return Entry(pid: pid, path: program, prefix: URL(fileURLWithPath: String(prefix)).standardizedFileURL.path,
+                     birthSeconds: after.pbi_start_tvsec, birthMicros: after.pbi_start_tvusec)
     }
 
     /// Ends processes at once, the way TerminateProcess does; wineserver notices them gone.
