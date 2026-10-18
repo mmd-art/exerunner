@@ -3,8 +3,9 @@ import Foundation
 extension AppState {
     func launch(_ item: LibraryItem) {
         guard !isShuttingDown, !running.contains(item.id) else { return }
+        let display = NativeDisplayTarget.current()
         Task {
-            do { _ = try await run(item) } catch { errorMessage = error.localizedDescription }
+            do { _ = try await run(item, display: display) } catch { errorMessage = error.localizedDescription }
         }
     }
 
