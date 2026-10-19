@@ -11,9 +11,17 @@ import tempfile
 import time
 import uuid
 
+# Direct invocation also gets an owned workspace and automatic cleanup.
+import os as _artifact_os, sys as _artifact_sys
+from pathlib import Path as _ArtifactPath
+if not _artifact_os.environ.get('EXERUNNER_ARTIFACT_SESSION'):
+    _artifact_os.execv(_artifact_sys.executable, [_artifact_sys.executable, '-I',
+        str(_ArtifactPath(__file__).resolve().parents[1] / 'tools/artifacts.py'),
+        'run', '--label', 'test-isolation-broker-test', '--', _artifact_sys.executable, __file__, *_artifact_sys.argv[1:]])
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ENGINE = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else '/Applications/ExeRunner.app/Contents/Resources/engine')
-WORK = pathlib.Path(tempfile.mkdtemp(prefix='exerunner-broker.', dir='/private/tmp'))
+WORK = pathlib.Path(tempfile.mkdtemp(prefix='exerunner-broker.', dir=os.environ.get('TMPDIR', '/private/tmp')))
 PREFIX = WORK / 'isolated-broker'
 APP = PREFIX / 'Canary.app'
 MARKER = WORK / 'outside-marker.txt'
@@ -130,6 +138,6 @@ finally:
     except subprocess.TimeoutExpired:
         KEEP = True
     if KEEP:
-        print('Evidence:', WORK)
+        print('Test workspace (automatic cleanup):', WORK)
     else:
         shutil.rmtree(WORK)

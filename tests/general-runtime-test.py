@@ -5,12 +5,20 @@ Requires macOS, Rosetta, MinGW-w64 and the built portable engine. No account/log
 from pathlib import Path
 import argparse, json, os, shutil, subprocess, tempfile
 
+# Direct invocation also gets an owned workspace and automatic cleanup.
+import os as _artifact_os, sys as _artifact_sys
+from pathlib import Path as _ArtifactPath
+if not _artifact_os.environ.get('EXERUNNER_ARTIFACT_SESSION'):
+    _artifact_os.execv(_artifact_sys.executable, [_artifact_sys.executable, '-I',
+        str(_ArtifactPath(__file__).resolve().parents[1] / 'tools/artifacts.py'),
+        'run', '--label', 'test-general-runtime-test', '--', _artifact_sys.executable, __file__, *_artifact_sys.argv[1:]])
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--engine", type=Path, default=Path("/Applications/ExeRunner.app/Contents/Resources/engine"))
 parser.add_argument("--keep", action="store_true")
 args = parser.parse_args()
 source = Path(__file__).resolve().parent
-work = Path(tempfile.mkdtemp(prefix="exerunner-general-check-", dir="/private/tmp"))
+work = Path(tempfile.mkdtemp(prefix="exerunner-general-check-", dir=os.environ.get("TMPDIR", "/private/tmp")))
 prefix = work / "programs"
 engine = args.engine.resolve()
 env = {k: v for k, v in os.environ.items() if k in {"HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "LANG", "TERM", "PATH"} or k.startswith("LC_")}

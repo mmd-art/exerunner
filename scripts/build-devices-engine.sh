@@ -1,12 +1,17 @@
 #!/bin/bash
 # Add CUPS, libusb and OpenCL to a verified portable engine without rebuilding its game modules.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label build-devices-engine --exclusive engine -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BASE="${1:-$ROOT/engine/portable}"
-OUT="${2:-$ROOT/engine/portable-devices}"
-DEVICE_BUILD="${EXERUNNER_DEVICE_MODULE_BUILD:-$ROOT/engine/build-devices}"
+BASE="${1:-$(python3 -I "$ROOT/tools/artifacts.py" engine)}"
+OUT="${2:-$EXERUNNER_WORK_ROOT/candidate-engine}"
+DEVICE_BUILD="${EXERUNNER_DEVICE_MODULE_BUILD:-$EXERUNNER_WORK_ROOT/device-build}"
+export EXERUNNER_ENGINE_TOOLS_ROOT="${EXERUNNER_ENGINE_TOOLS_ROOT:-$EXERUNNER_WORK_ROOT/wine-tools}"
 if [ "${EXERUNNER_DEVICE_MODULES_READY:-0}" != 1 ]; then
-  EXERUNNER_ENGINE_BUILD_ROOT="$DEVICE_BUILD" EXERUNNER_ENGINE_DIST_ROOT="$ROOT/engine/dist-devices" bash "$ROOT/scripts/build-engine.sh" configure
+  bash "$ROOT/scripts/build-engine.sh" tools
+  EXERUNNER_ENGINE_BUILD_ROOT="$DEVICE_BUILD" EXERUNNER_ENGINE_DIST_ROOT="$EXERUNNER_WORK_ROOT/dist-devices" bash "$ROOT/scripts/build-engine.sh" configure
   make -C "$DEVICE_BUILD" -j4 dlls/winspool.drv/all dlls/wineusb.sys/all dlls/winebus.sys/all dlls/opencl/all
 fi
 python3 -I - "$BASE" "$OUT" "$DEVICE_BUILD" <<'PY'
@@ -46,7 +51,9 @@ licence=usb.parent.parent/'COPYING'
 assert licence.is_file()
 (out/'LICENSES/libusb').mkdir(parents=True,exist_ok=True)
 shutil.copy2(licence,out/'LICENSES/libusb/COPYING')
-with (out/'LICENSES.md').open('a') as f: f.write('\n\nlibusb 1.0.29, LGPL-2.1-or-later; source https://github.com/libusb/libusb/tree/v1.0.29. Licence: LICENSES/libusb/COPYING.\n')
+notice='libusb 1.0.29, LGPL-2.1-or-later; source https://github.com/libusb/libusb/tree/v1.0.29. Licence: LICENSES/libusb/COPYING.'
+if notice not in (out/'LICENSES.md').read_text():
+    with (out/'LICENSES.md').open('a') as f: f.write('\n\n'+notice+'\n')
 manifest=json.loads((out/'engine.json').read_text())
 manifest['capabilities']={'cups':True,'libusb':True,'coremidi':True,'iohid':True,'opencl':True}
 manifest['device_modules']={str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in changed}
@@ -54,3 +61,6 @@ manifest['device_module_source']='Wine 11.16 / 7dbc5b5322a6ef3fb04bdc643c64b188f
 (out/'engine.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print('Prepared portable printing/device engine:',out)
 PY
+
+# Compilation alone never replaces the accepted engine. Retain only after native controls pass.
+bash "$ROOT/scripts/verify-engine.sh" "$OUT"

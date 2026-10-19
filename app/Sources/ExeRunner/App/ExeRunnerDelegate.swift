@@ -17,7 +17,17 @@ final class ExeRunnerDelegate: NSObject, NSApplicationDelegate {
                index + 1 < CommandLine.arguments.count {
                 let proof: [String: Any] = ["terminationDelegateReached": true,
                                            "remainingWineProcesses": WineProcesses.list().count,
-                                           "runningItems": state.running.sorted()]
+                                           "runningItems": state.running.sorted(),
+                                           "libraryItemCount": state.allItems.count,
+                                           "bottleSettingsCount": state.bottleSettings.count,
+                                           "onboardingCompleted": state.settings.onboardingCompleted,
+                                           "home": Paths.home.path,
+                                           "support": Paths.support.path,
+                                           "caches": Paths.caches.path,
+                                           "logs": Paths.logs.path,
+                                           "shortcuts": Paths.shortcuts.path,
+                                           "engine": state.engine?.root.path ?? "",
+                                           "engineVersion": state.engineVersion ?? ""]
                 if let data = try? JSONSerialization.data(withJSONObject: proof, options: [.sortedKeys]) {
                     try? data.write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
                 }

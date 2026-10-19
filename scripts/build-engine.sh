@@ -19,6 +19,9 @@
 # The PE half uses mingw-w64 gcc: a kernelbase.dll built by llvm-mingw stalls Steam's CM login
 # (same notes).
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label build-engine --exclusive engine -- bash "$0" "$@"
+fi
 
 ENGINE_REPO="https://github.com/dappermint/winecx"
 ENGINE_COMMIT="7dbc5b5322a6ef3fb04bdc643c64b188fd641149"
@@ -35,15 +38,20 @@ WINETRICKS_COMMIT="f3890f670867b5ffbc3938726db45c0f7d16c8ba"
 WINETRICKS_SHA256="672a1ff4442e8691a3ffc0e6860137e201a1d1227e9b3044245f1731e9e9837e"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/engine/src"
-TOOLS="$ROOT/engine/build-tools"
+SRC="${EXERUNNER_ENGINE_SOURCE_ROOT:-$ROOT/engine/src}"
+TOOLS="${EXERUNNER_ENGINE_TOOLS_ROOT:-$ROOT/engine/build-tools}"
 BUILD="${EXERUNNER_ENGINE_BUILD_ROOT:-$ROOT/engine/build}"
 DIST="${EXERUNNER_ENGINE_DIST_ROOT:-$ROOT/engine/dist}"
+# A complete build is disposable; explicit incremental stages keep their one working tree.
+if [ "${1:-all}" = all ]; then
+  BUILD="${EXERUNNER_ENGINE_BUILD_ROOT:-$EXERUNNER_WORK_ROOT/wine-build}"
+  TOOLS="${EXERUNNER_ENGINE_TOOLS_ROOT:-$EXERUNNER_WORK_ROOT/wine-tools}"
+fi
 X86=/usr/local          # x86_64 Homebrew: freetype, gnutls, sdl2, ffmpeg, gstreamer
 ARM=/opt/homebrew       # arm64 Homebrew: bison, flex, make, mingw-w64, ccache, pkgconf, native freetype
 
 mkdir -p "$ROOT/engine"
-exec > >(tee -a "$ROOT/engine/build.log") 2>&1
+exec > >(tee "$ROOT/engine/build.log") 2>&1
 
 NCPU="$(sysctl -n hw.logicalcpu)"
 MACOS_MAJOR="$(sw_vers -productVersion | cut -d. -f1)"
@@ -56,7 +64,7 @@ X86_PC="$X86/lib/pkgconfig:$X86/share/pkgconfig:$X86/Homebrew/Library/Homebrew/o
 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-15.0}"
 export SDKROOT="$(/usr/bin/xcrun --show-sdk-path)"
 export PATH="$ARM/opt/bison/bin:$ARM/opt/flex/bin:$ARM/opt/make/libexec/gnubin:$ARM/bin:$PATH"
-export CCACHE_DIR="$ROOT/engine/ccache"
+export CCACHE_DIR="${CCACHE_DIR:-$ROOT/engine/ccache}"
 
 step() { printf '\n==> %s (%s)\n' "$1" "$(date +%H:%M:%S)"; }
 
@@ -120,12 +128,12 @@ configure_x86() {
   pointer_display_patch
   step "configure x86_64"
   mkdir -p "$BUILD" && cd "$BUILD"
-  export CC="ccache /usr/bin/clang -arch x86_64" CXX="ccache /usr/bin/clang++ -arch x86_64"
+  export CC="ccache /usr/bin/clang -arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" CXX="ccache /usr/bin/clang++ -arch x86_64 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
   # LIBDIR, not PATH: arm64 .pc files must never leak into the x86_64 build
   export PKG_CONFIG_LIBDIR="$X86_PC"
   export CFLAGS="-O2 -Wno-error=implicit-function-declaration -Werror=unguarded-availability-new -I$X86/include"
   export CROSSCFLAGS="-O2"
-  export LDFLAGS="-L$X86/lib"
+  export LDFLAGS="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -L$X86/lib"
   # pipe2 is above the 15.0 floor; every call site has a pipe + fcntl fallback
   export ac_cv_func_pipe2=no
   export ac_cv_lib_soname_freetype=libfreetype.6.dylib

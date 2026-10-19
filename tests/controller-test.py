@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """Read-only physical gamepad XInput/WinMM acceptance in a test-owned prefix."""
 import argparse,os,pathlib,subprocess,tempfile,json
+
+# Direct invocation also gets an owned workspace and automatic cleanup.
+import os as _artifact_os, sys as _artifact_sys
+from pathlib import Path as _ArtifactPath
+if not _artifact_os.environ.get('EXERUNNER_ARTIFACT_SESSION'):
+    _artifact_os.execv(_artifact_sys.executable, [_artifact_sys.executable, '-I',
+        str(_ArtifactPath(__file__).resolve().parents[1] / 'tools/artifacts.py'),
+        'run', '--label', 'test-controller-test', '--', _artifact_sys.executable, __file__, *_artifact_sys.argv[1:]])
 p=argparse.ArgumentParser();p.add_argument('--engine',type=pathlib.Path,required=True);p.add_argument('--seconds',type=int,default=3);p.add_argument('--prefix',type=pathlib.Path);p.add_argument('--mode',choices=['automatic','native','xinput']);a=p.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1];engine=a.engine.resolve()
 if a.prefix:
  a.prefix=a.prefix.resolve()
- if a.prefix.name!='prefix' or not str(a.prefix.parent).startswith('/private/tmp/exerunner-controller-check-'):p.error('--prefix must be a test-owned controller prefix')
-work=a.prefix.parent if a.prefix else pathlib.Path(tempfile.mkdtemp(prefix='exerunner-controller-check-',dir='/private/tmp'));prefix=a.prefix or work/'prefix'
+ if a.prefix.name!='prefix' or not (str(a.prefix.parent).startswith('/private/tmp/exerunner-controller-check-') or a.prefix.is_relative_to(pathlib.Path(os.environ['EXERUNNER_ARTIFACT_SESSION']).resolve())):p.error('--prefix must be a test-owned controller prefix')
+work=a.prefix.parent if a.prefix else pathlib.Path(tempfile.mkdtemp(prefix='exerunner-controller-check-',dir=os.environ.get('TMPDIR', '/private/tmp')));prefix=a.prefix or work/'prefix'
 env={k:v for k,v in os.environ.items() if k in {'HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','TERM','PATH'} or k.startswith('LC_')}
 env.update(WINEPREFIX=str(prefix),WINEDEBUG='fixme-all',WINEMSYNC='1',DYLD_FALLBACK_LIBRARY_PATH=str(engine/'lib')+':/usr/lib')
 try:
@@ -27,4 +35,4 @@ try:
  if status:raise RuntimeError('No XInput controller detected')
 finally:
  subprocess.run([str(engine/'bin/wineserver'),'-k'],env=env,capture_output=True,timeout=15)
- print('Evidence:',work,flush=True)
+ print('Test workspace (automatic cleanup):',work,flush=True)

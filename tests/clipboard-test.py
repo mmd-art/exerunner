@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """Fresh-prefix clipboard acceptance. Swift preserves all owner pasteboard data in memory."""
 import argparse, os, pathlib, subprocess, tempfile
+
+# Direct invocation also gets an owned workspace and automatic cleanup.
+import os as _artifact_os, sys as _artifact_sys
+from pathlib import Path as _ArtifactPath
+if not _artifact_os.environ.get('EXERUNNER_ARTIFACT_SESSION'):
+    _artifact_os.execv(_artifact_sys.executable, [_artifact_sys.executable, '-I',
+        str(_ArtifactPath(__file__).resolve().parents[1] / 'tools/artifacts.py'),
+        'run', '--label', 'test-clipboard-test', '--', _artifact_sys.executable, __file__, *_artifact_sys.argv[1:]])
 parser=argparse.ArgumentParser(); parser.add_argument('--engine',type=pathlib.Path,required=True);args=parser.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1];engine=args.engine.resolve()
-work=pathlib.Path(tempfile.mkdtemp(prefix='exerunner-clipboard-check-',dir='/private/tmp'))
+work=pathlib.Path(tempfile.mkdtemp(prefix='exerunner-clipboard-check-',dir=os.environ.get('TMPDIR', '/private/tmp')))
 env={k:v for k,v in os.environ.items() if k in {'HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','TERM','PATH'} or k.startswith('LC_')}
 env.update(WINEPREFIX=str(work/'prefix'),WINEDEBUG='-all',DYLD_FALLBACK_LIBRARY_PATH=str(engine/'lib')+':/usr/lib')
 try:
@@ -14,4 +22,4 @@ try:
  subprocess.run([str(work/'clipboard-helper'),str(work),str(engine)],check=True,timeout=40)
 finally:
  subprocess.run([str(engine/'bin/wineserver'),'-k'],env=env,capture_output=True,timeout=15)
- print('Evidence:',work)
+ print('Test workspace (automatic cleanup):',work)

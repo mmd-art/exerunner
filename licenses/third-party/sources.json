@@ -1,0 +1,473 @@
+{
+  "homebrew_libraries": [
+    {
+      "name": "dav1d",
+      "version": "1.5.3",
+      "license": "BSD-2-Clause",
+      "source_url": "https://code.videolan.org/videolan/dav1d/-/archive/1.5.3/dav1d-1.5.3.tar.bz2",
+      "source_sha256": "e099f53253f6c247580c554d53a13f1040638f2066edc3c740e4c2f15174ce22",
+      "git_revision": null,
+      "formula_sha256": "6b7c613a508d10e580d786f8560a6b80939c6e861ebba9948efd417558b82a97",
+      "license_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "ffmpeg",
+      "version": "8.1.1",
+      "license": "GPL-3.0-or-later",
+      "source_url": "https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz",
+      "source_sha256": "b6863adde98898f42602017462871b5f6333e65aec803fdd7a6308639c52edf3",
+      "git_revision": null,
+      "formula_sha256": "eba3aca56c255f322a987a64b4dd34fdf4f17b80f7c0c06fd3affd4c73e5bf60",
+      "license_files": [
+        "LICENSE.md",
+        "COPYING.LGPLv2.1",
+        "COPYING.GPLv2",
+        "COPYING.GPLv3",
+        "COPYING.LGPLv3"
+      ]
+    },
+    {
+      "name": "flac",
+      "version": "1.5.0",
+      "license": "BSD-3-Clause AND GPL-2.0-or-later AND ISC AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND LicenseRef-Homebrew-public-domain AND (GPL-2.0-or-later OR LGPL-2.1-or-later)",
+      "source_url": "https://downloads.xiph.org/releases/flac/flac-1.5.0.tar.xz",
+      "source_sha256": "f2c1c76592a82ffff8413ba3c4a1299b6c7ab06c734dee03fd88630485c2b920",
+      "git_revision": null,
+      "formula_sha256": "86c7e641b84c2030e00b8f263bef77c1e8e04e249a195cd284c70eeb91f23311",
+      "license_files": [
+        "COPYING.LGPL",
+        "COPYING.Xiph",
+        "AUTHORS",
+        "COPYING.GPL",
+        "COPYING.FDL"
+      ]
+    },
+    {
+      "name": "freetype",
+      "version": "2.14.3",
+      "license": "FTL",
+      "source_url": "https://downloads.sourceforge.net/project/freetype/freetype2/2.14.3/freetype-2.14.3.tar.xz",
+      "source_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+      "git_revision": null,
+      "formula_sha256": "cc500226718264185ecf4b0560e0d9daee933c3e40622dd936b955536d025613",
+      "license_files": [
+        "FTL.TXT",
+        "LICENSE.TXT",
+        "GPLv2.TXT"
+      ]
+    },
+    {
+      "name": "gettext",
+      "version": "1.0",
+      "license": "GPL-3.0-or-later AND LGPL-2.1-or-later",
+      "source_url": "https://ftpmirror.gnu.org/gnu/gettext/gettext-1.0.tar.gz",
+      "source_sha256": "85d99b79c981a404874c02e0342176cf75c7698e2b51fe41031cf6526d974f1a",
+      "git_revision": null,
+      "formula_sha256": "170f5a29d2eb95b9dd1f1f754c0f9b90692c3d5dcf6db02c199c93e2c445177d",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "glib",
+      "version": "2.88.1",
+      "license": "LGPL-2.1-or-later",
+      "source_url": "https://download.gnome.org/sources/glib/2.88/glib-2.88.1.tar.xz",
+      "source_sha256": "51ab804c56f6eab3e5045c774d1290ac5e4c923d4f9a3d8e33123bee45c1840e",
+      "git_revision": null,
+      "formula_sha256": "1f16eaf1df075dadf76d97a5f13157014410609bae81ee8b37209e6794dc1306",
+      "license_files": [
+        "MPL-1.1.txt",
+        "GPL-2.0-or-later.txt",
+        "LLVM-exception.txt",
+        "CC0-1.0.txt",
+        "AFL-2.0.txt",
+        "LGPL-2.1-only.txt",
+        "LicenseRef-old-glib-tests.txt",
+        "CC-BY-SA-3.0.txt",
+        "MIT.txt",
+        "LGPL-2.1-or-later.txt",
+        "Apache-2.0.txt"
+      ]
+    },
+    {
+      "name": "gmp",
+      "version": "6.3.0",
+      "license": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+      "source_url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz",
+      "source_sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+      "git_revision": null,
+      "formula_sha256": "efd0b5c0fcabce5f7e6bd832b53e925a7a1bd29e54bd38e8ad2542c29c08f41c",
+      "license_files": [
+        "COPYING.LESSERv3",
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "gnutls",
+      "version": "3.8.12",
+      "license": "LGPL-2.1-or-later AND GPL-3.0-only",
+      "source_url": "https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-3.8.12.tar.xz",
+      "source_sha256": "a7b341421bfd459acf7a374ca4af3b9e06608dcd7bd792b2bf470bea012b8e51",
+      "git_revision": null,
+      "formula_sha256": "2d1177a4d4f0ba03af84827200cb7a9c8c6350ee9bef93158b70a5db6e019c2c",
+      "license_files": [
+        "COPYING.LESSERv2",
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "gstreamer",
+      "version": "1.26.0_1",
+      "license": "LGPL-2.0-or-later AND LGPL-2.1-or-later AND MIT",
+      "source_url": "https://gitlab.freedesktop.org/gstreamer/gstreamer/-/archive/1.26.0/gstreamer-1.26.0.tar.bz2",
+      "source_sha256": "a0fa96f7fa7fc4d37db08c5a8a2007ef3baf7cc554ba54e9165bd37099182916",
+      "git_revision": null,
+      "formula_sha256": "fa113a36b75e9da1373b0003d9ac20b1c98ef0219123cffb66f3a2048742fa81",
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "lame",
+      "version": "3.100",
+      "license": "LGPL-2.0-or-later",
+      "source_url": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
+      "source_sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+      "git_revision": null,
+      "formula_sha256": "6d7895793d1dd6a2f932bf8b0d33810948a16a7153f43ae1a5c931d5137f52ff",
+      "license_files": [
+        "LICENSE",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libidn2",
+      "version": "2.3.8",
+      "license": "(GPL-2.0-or-later OR LGPL-3.0-or-later) AND (Unicode-TOU AND Unicode-DFS-2016) AND GPL-3.0-or-later AND LGPL-2.1-or-later AND FSFAP-no-warranty-disclaimer",
+      "source_url": "https://ftp.gnu.org/gnu/libidn/libidn2-2.3.8.tar.gz",
+      "source_sha256": "f557911bf6171621e1f72ff35f5b1825bb35b52ed45325dcdee931e5d3c0787a",
+      "git_revision": null,
+      "formula_sha256": "8994e093d93d516c9942a8f13039011b5743f9f30d4ba2cb5ab40de7ca28ec4e",
+      "license_files": [
+        "COPYING.LESSERv3",
+        "AUTHORS",
+        "COPYING",
+        "COPYING.unicode"
+      ]
+    },
+    {
+      "name": "libogg",
+      "version": "1.3.5",
+      "license": "BSD-3-Clause",
+      "source_url": "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-1.3.5.tar.gz",
+      "source_sha256": "0eb4b4b9420a0f51db142ba3f9c64b333f826532dc0f48c6410ae51f4799b664",
+      "git_revision": null,
+      "formula_sha256": "cd3464e556eb821c15b53e926338d644c3c1b629ff66e3324d762d9d7bda93a8",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.58",
+      "license": "libpng-2.0",
+      "source_url": "https://downloads.sourceforge.net/project/libpng/libpng16/1.6.58/libpng-1.6.58.tar.xz",
+      "source_sha256": "28eb403f51f0f7405249132cecfe82ea5c0ef97f1b32c5a65828814ae0d34775",
+      "git_revision": null,
+      "formula_sha256": "c125a77d8263e0fb215f8f5d693c53324caabb63801df7093d9f3c8e42f4dd22",
+      "license_files": [
+        "LICENSE",
+        "AUTHORS"
+      ]
+    },
+    {
+      "name": "libtasn1",
+      "version": "4.21.0",
+      "license": "LGPL-2.1-or-later",
+      "source_url": "https://ftpmirror.gnu.org/gnu/libtasn1/libtasn1-4.21.0.tar.gz",
+      "source_sha256": "1d8a444a223cc5464240777346e125de51d8e6abf0b8bac742ac84609167dc87",
+      "git_revision": null,
+      "formula_sha256": "751ed417e412362cc0764381e59f342bf860c06cf6aea840cd3ab7d84c538bfe",
+      "license_files": [
+        "COPYING.LESSERv2",
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libunistring",
+      "version": "1.4.2",
+      "license": "GPL-2.0-or-later OR LGPL-3.0-or-later",
+      "source_url": "https://ftpmirror.gnu.org/gnu/libunistring/libunistring-1.4.2.tar.gz",
+      "source_sha256": "e82664b170064e62331962126b259d452d53b227bb4a93ab20040d846fec01d8",
+      "git_revision": null,
+      "formula_sha256": "475a2914858445ba29061977337b455660e99ba50086565ce5089dd1f873dc2a",
+      "license_files": [
+        "AUTHORS",
+        "COPYING.LIB",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libvorbis",
+      "version": "1.3.7",
+      "license": "BSD-3-Clause",
+      "source_url": "https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.xz",
+      "source_sha256": "b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b",
+      "git_revision": null,
+      "formula_sha256": "57a1a4b15d0023b582bdce81759e5e34f0dd186641d77676fd98998b212e71a9",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libvpx",
+      "version": "1.16.0",
+      "license": "BSD-3-Clause",
+      "source_url": "https://github.com/webmproject/libvpx/archive/refs/tags/v1.16.0.tar.gz",
+      "source_sha256": "7a479a3c66b9f5d5542a4c6a1b7d3768a983b1e5c14c60a9396edc9b649e015c",
+      "git_revision": null,
+      "formula_sha256": "c221276a228e690c9e97e857e2573e7b4ce4c840b13befdb4283ee22b5c6aefd",
+      "license_files": [
+        "LICENSE",
+        "AUTHORS"
+      ]
+    },
+    {
+      "name": "libx11",
+      "version": "1.8.13",
+      "license": "MIT",
+      "source_url": "https://www.x.org/archive/individual/lib/libX11-1.8.13.tar.gz",
+      "source_sha256": "acf0e7cd7541110e6330ecb539441a2d53061f386ec7be6906dfde0de2598470",
+      "git_revision": null,
+      "formula_sha256": "223d2e493e3dabe4fe7ca1b3a05576025e8d89cd43027f6bee5bf8644b2dfc42",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libxau",
+      "version": "1.0.12",
+      "license": "MIT",
+      "source_url": "https://www.x.org/archive/individual/lib/libXau-1.0.12.tar.xz",
+      "source_sha256": "74d0e4dfa3d39ad8939e99bda37f5967aba528211076828464d2777d477fc0fb",
+      "git_revision": null,
+      "formula_sha256": "9c71744bb76db44bba40e0017edc3a398c1fdec4df6772dfa76ce4b21c441e7c",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libxcb",
+      "version": "1.17.0",
+      "license": "MIT",
+      "source_url": "https://xorg.freedesktop.org/archive/individual/lib/libxcb-1.17.0.tar.xz",
+      "source_sha256": "599ebf9996710fea71622e6e184f3a8ad5b43d0e5fa8c4e407123c88a59a6d55",
+      "git_revision": null,
+      "formula_sha256": "aeac35daa9eccafbe01029d2359af55a5881d1cabf582628d906028512899d51",
+      "license_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libxdmcp",
+      "version": "1.1.5",
+      "license": "MIT",
+      "source_url": "https://www.x.org/archive/individual/lib/libXdmcp-1.1.5.tar.xz",
+      "source_sha256": "d8a5222828c3adab70adf69a5583f1d32eb5ece04304f7f8392b6a353aa2228c",
+      "git_revision": null,
+      "formula_sha256": "a2b8f9ceca5ad35f70b0f84503137b422031ce67b0431fb2d1c71d9c64881eee",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "mpg123",
+      "version": "1.32.10",
+      "license": "LGPL-2.1-only",
+      "source_url": "https://www.mpg123.de/download/mpg123-1.32.10.tar.bz2",
+      "source_sha256": "87b2c17fe0c979d3ef38eeceff6362b35b28ac8589fbf1854b5be75c9ab6557c",
+      "git_revision": null,
+      "formula_sha256": "fb24ae2e98ffa5bdfdfc11335f32e8811bea8c79f89aebd0c81b7c186bad6cbb",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "nettle",
+      "version": "3.10.2",
+      "license": "GPL-2.0-or-later OR LGPL-3.0-or-later",
+      "source_url": "https://ftp.gnu.org/gnu/nettle/nettle-3.10.2.tar.gz",
+      "source_sha256": "fe9ff51cb1f2abb5e65a6b8c10a92da0ab5ab6eaf26e7fc2b675c45f1fb519b5",
+      "git_revision": null,
+      "formula_sha256": "de8b0f6da3a90cd5f1e062b7b898ebf79f05bade27bbf925b58bb9a138946e36",
+      "license_files": [
+        "COPYING.LESSERv3",
+        "AUTHORS"
+      ]
+    },
+    {
+      "name": "openssl@3",
+      "version": "3.6.3",
+      "license": "Apache-2.0",
+      "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz",
+      "source_sha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+      "git_revision": null,
+      "formula_sha256": "204067e3af016bba4246c64454f8a1a8d56916dd2f6d021b7bf5dcd13166374b",
+      "license_files": [
+        "AUTHORS.md",
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "name": "opus",
+      "version": "1.6.1",
+      "license": "BSD-3-Clause",
+      "source_url": "https://ftp.osuosl.org/pub/xiph/releases/opus/opus-1.6.1.tar.gz",
+      "source_sha256": "6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1",
+      "git_revision": null,
+      "formula_sha256": "7ebe72e9352ceb9236cfb49c8ba7134556295ca330ea9054135b1401257f03c4",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "orc",
+      "version": "0.4.41",
+      "license": "BSD-2-Clause AND BSD-3-Clause",
+      "source_url": "https://gstreamer.freedesktop.org/src/orc/orc-0.4.41.tar.xz",
+      "source_sha256": "cb1bfd4f655289cd39bc04642d597be9de5427623f0861c1fc19c08d98467fa2",
+      "git_revision": null,
+      "formula_sha256": "ec8217a470020a9db4c9a93ce987650f18959acfbeec0ec1895c63896c62d3c0",
+      "license_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "p11-kit",
+      "version": "0.26.2",
+      "license": "BSD-3-Clause",
+      "source_url": "https://github.com/p11-glue/p11-kit/releases/download/0.26.2/p11-kit-0.26.2.tar.xz",
+      "source_sha256": "09fd9f44da4813a3141e73d5e7cf7008e5660d0405f13d56c15e1da9dcecf828",
+      "git_revision": null,
+      "formula_sha256": "b09e81c33907b26794410c70b6dac94b323ef2aedbd255c8fcb19d10a81cdbac",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "pcre2",
+      "version": "10.47_1",
+      "license": "BSD-3-Clause",
+      "source_url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2",
+      "source_sha256": "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7",
+      "git_revision": null,
+      "formula_sha256": "40d07c0619cc42e570dfe34e22f02841254777c8a7eab72da2a4af5d60a5310e",
+      "license_files": [
+        "AUTHORS.md",
+        "LICENCE.md",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "sdl2",
+      "version": "2.32.10",
+      "license": "Zlib",
+      "source_url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
+      "source_sha256": "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
+      "git_revision": null,
+      "formula_sha256": "c774c1547452f0e04dc43a4994e12c57f202f94e5e4e27e09467ef7d29e3a7fb",
+      "license_files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "name": "svt-av1",
+      "version": "4.1.0",
+      "license": "BSD-3-Clause",
+      "source_url": "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v4.1.0/SVT-AV1-v4.1.0.tar.bz2",
+      "source_sha256": "184162d3db3a4448882b17230413b4938ca252eef6b3c5e2f1236b2fcf497881",
+      "git_revision": null,
+      "formula_sha256": "3b1ad068f0192f773b663a7abb3ad00c2a7c1b4e55262a1d0051a9db29083140",
+      "license_files": [
+        "LICENSE.md",
+        "LICENSE-BSD2.md"
+      ]
+    },
+    {
+      "name": "theora",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "source_url": "https://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2",
+      "source_sha256": "b6ae1ee2fa3d42ac489287d3ec34c5885730b1296f0801ae577a35193d3affbc",
+      "git_revision": null,
+      "formula_sha256": "3dc32d71c0f5ed000fe93f146897f53308c2b5619be86b91c4c602938840cba4",
+      "license_files": [
+        "LICENSE",
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "x264",
+      "version": "r3222",
+      "license": "GPL-2.0-or-later",
+      "source_url": "https://code.videolan.org/videolan/x264.git",
+      "source_sha256": null,
+      "git_revision": "b35605ace3ddf7c1a5d67a2eb553f034aef41d55",
+      "formula_sha256": "9165e288b689999b374401c1045a1904102ff279fb534f514d6569fcb608e264",
+      "license_files": [
+        "AUTHORS",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "x265",
+      "version": "4.2",
+      "license": "GPL-2.0-or-later",
+      "source_url": "https://bitbucket.org/multicoreware/x265_git/downloads/x265_4.2.tar.gz",
+      "source_sha256": "40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210",
+      "git_revision": null,
+      "formula_sha256": "ade84e50acc434797a5902cfb186f5ce65eff5bb7c02d9318739d3b0ca9d175c",
+      "license_files": [
+        "COPYING"
+      ]
+    }
+  ],
+  "wine": {
+    "repository": "https://github.com/dappermint/winecx",
+    "revision": "7dbc5b5322a6ef3fb04bdc643c64b188fd641149",
+    "source_archive": "https://github.com/dappermint/winecx/archive/7dbc5b5322a6ef3fb04bdc643c64b188fd641149.tar.gz",
+    "local_patches": "patches/ in corresponding ExeRunner source; scripts/build-engine.sh applies four Wine patches"
+  },
+  "other_components": {
+    "dxmt": "https://github.com/3Shain/dxmt/tree/v0.80",
+    "dxvk": "https://github.com/Gcenx/DXVK-macOS/tree/v1.10.3",
+    "moltenvk": "https://github.com/KhronosGroup/MoltenVK/tree/v1.4.2",
+    "winetricks": "https://github.com/Winetricks/winetricks/tree/f3890f670867b5ffbc3938726db45c0f7d16c8ba",
+    "libusb": "https://github.com/libusb/libusb/tree/v1.0.29",
+    "ffmpeg_local": "https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.xz",
+    "gst_libav_local": "https://gstreamer.freedesktop.org/src/gst-libav/gst-libav-1.26.0.tar.xz",
+    "wine_mono": "https://github.com/wine-mono/wine-mono/releases/download/wine-mono-11.3.0/wine-mono-11.3.0-src.tar.xz",
+    "wine_gecko": "https://dl.winehq.org/wine/wine-gecko/2.47.4/wine-gecko-2.47.4-src.tar.xz",
+    "cabextract": {
+      "source_url": "https://www.cabextract.org.uk/cabextract-1.11.tar.gz",
+      "source_sha256": "b5546db1155e4c718ff3d4b278573604f30dd64c3c5bfd4657cd089b823a3ac6"
+    }
+  },
+  "purpose": "Exact upstream source directions and build formulas for the accepted bundled runtime; Apple proprietary redistributables retain separate notices."
+}

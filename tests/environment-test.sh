@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label test-environment-test -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/app/Sources/ExeRunner/Core"
-WORK="$(mktemp -d /private/tmp/exerunner-environment-test.XXXXXX)"
+WORK="$(mktemp -d "${TMPDIR:-/private/tmp}/exerunner-environment-test.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp "$ROOT/tests/environment-test.swift" "$WORK/main.swift"
 swiftc -O -module-cache-path "$WORK/modules" -o "$WORK/check" "$WORK/main.swift" \

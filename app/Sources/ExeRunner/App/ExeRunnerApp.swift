@@ -38,7 +38,18 @@ struct RootView: View {
             // last-window callback and the same termination path as a user click.
             if CommandLine.arguments.contains("--verify-close") {
                 try? await Task.sleep(for: .seconds(1))
-                NSApplication.shared.windows.first(where: { $0.styleMask.contains(.titled) })?.performClose(nil)
+                if let window = NSApplication.shared.windows.first(where: { $0.styleMask.contains(.titled) }) {
+                    if let index = CommandLine.arguments.firstIndex(of: "--verify-close"),
+                       index + 1 < CommandLine.arguments.count,
+                       let view = window.contentView,
+                       let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                        view.cacheDisplay(in: view.bounds, to: bitmap)
+                        let path = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+                            .deletingPathExtension().appendingPathExtension("png")
+                        try? bitmap.representation(using: .png, properties: [:])?.write(to: path)
+                    }
+                    window.performClose(nil)
+                }
             }
         }
         .alert(t("Что-то пошло не так"), isPresented: Binding(

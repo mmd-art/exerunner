@@ -7,11 +7,24 @@
 # in git), so macOS keeps the app's permissions between builds; otherwise ad hoc. The engine goes inside when
 # engine/portable exists (scripts/build-engine.sh portable): the app then needs nothing else.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label build-app --exclusive build -- bash "$0" "$@"
+fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="ExeRunner"
-ENGINE_SOURCE="${EXERUNNER_BUILD_ENGINE_ROOT:-$ROOT/engine/portable}"
-KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-0}"
+if [ -n "${EXERUNNER_BUILD_ENGINE_ROOT:-}" ]; then
+  ENGINE_SOURCE="$EXERUNNER_BUILD_ENGINE_ROOT"
+  KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-0}"
+else
+  # A damaged checked engine is an error, never a silent fallback to an older one.
+  ENGINE_SOURCE="$(python3 -I "$ROOT/tools/artifacts.py" engine)"
+  if [ "$ENGINE_SOURCE" = "$ROOT/engine/portable" ]; then
+    KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-0}"
+  else
+    KEEP_ENGINE_SIGNATURES="${EXERUNNER_KEEP_ENGINE_SIGNATURES:-1}"
+  fi
+fi
 CONFIG="release"
 export MACOSX_DEPLOYMENT_TARGET=15.0
 WITH_D3DMETAL="${EXERUNNER_D3DMETAL:-1}"
@@ -46,8 +59,8 @@ for arch in $APP_ARCHS; do
   case "$arch" in arm64|x86_64) ARCH_ARGS+=(--arch "$arch") ;; *) echo "unsupported app architecture: $arch" >&2; exit 2 ;; esac
 done
 [ "${#ARCH_ARGS[@]}" -gt 0 ] || { echo 'no app architectures selected' >&2; exit 2; }
-swift build --package-path "$ROOT/app" -c "$CONFIG" "${ARCH_ARGS[@]}"
-BIN="$(swift build --package-path "$ROOT/app" -c "$CONFIG" "${ARCH_ARGS[@]}" --show-bin-path)/$NAME"
+swift build --package-path "$ROOT/app" --scratch-path "$EXERUNNER_WORK_ROOT/swiftpm" -c "$CONFIG" "${ARCH_ARGS[@]}"
+BIN="$(swift build --package-path "$ROOT/app" --scratch-path "$EXERUNNER_WORK_ROOT/swiftpm" -c "$CONFIG" "${ARCH_ARGS[@]}" --show-bin-path)/$NAME"
 
 rm -rf "$APP" "$ROOT/build/$NAME.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -55,7 +68,11 @@ cp "$BIN" "$APP/Contents/MacOS/$NAME"
 ditto "$ROOT/recipes" "$APP/Contents/Resources/recipes"
 ditto "$ROOT/compat" "$APP/Contents/Resources/compat"
 cp "$ROOT/LICENSE" "$ROOT/CREDITS.md" "$APP/Contents/Resources/"
+if [ -d "$ROOT/licenses/third-party" ]; then
+  ditto "$ROOT/licenses/third-party" "$APP/Contents/Resources/ThirdPartyNotices"
+fi
 if [ -f "$ENGINE_SOURCE/engine.json" ]; then
+  python3 -I "$ROOT/tools/check-portable.py" "$ENGINE_SOURCE" --minimum "$MACOSX_DEPLOYMENT_TARGET"
   ditto "$ENGINE_SOURCE" "$APP/Contents/Resources/engine"
 fi
 # D3DMetal goes in for free builds: Apple's Game Porting Toolkit licence lets it be passed on
@@ -94,8 +111,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>0.4</string>
+  <key>CFBundleShortVersionString</key><string>0.5.0</string>
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
+  <key>ExeRunnerSourceRevision</key><string>$(git -C "$ROOT" rev-parse HEAD)</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
   <key>NSHighResolutionCapable</key><true/>
@@ -131,5 +149,6 @@ PY
 fi
 codesign --force --sign "$SIGN" "$APP"
 codesign --verify --strict "$APP"
+python3 -I "$ROOT/tools/check-portable.py" "$APP" --minimum "$MACOSX_DEPLOYMENT_TARGET"
 # The EXIT trap verifies removal from LaunchServices, also after a failed build.
 echo "built $APP"

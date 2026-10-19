@@ -119,3 +119,17 @@ The staged runtime additionally carries **libusb 1.0.29** (LGPL-2.1-or-later), i
 `LICENSES/libusb/COPYING`. Source: https://github.com/libusb/libusb/tree/v1.0.29.
 CUPS, CoreMIDI, IOKit and OpenCL use the host macOS libraries. SDL2 was already part of the
 portable engine and retains its upstream licence and recorded version in `LICENSES.md`.
+
+## Release source and notices
+
+Version0.5.0 ships additional license texts and exact upstream source directions in
+`licenses/third-party` (also copied into the app's ThirdPartyNotices). Homebrew build
+formulas are included under Homebrew's BSD-2-Clause license. SDL2 is Zlib licensed.
+A release source archive includes ExeRunner and the patched Wine source used with
+the accepted engine; upstream dependency source URLs/versions/digests are listed
+separately in sources.json. No account/session/game data belongs in these archives.
+
+The portable-floor repair rebuilds native Wine modules, PCRE2, OpenSSL and universal
+cabextract for macOS15 rather than lowering load-command metadata. The accepted
+developer runtime is never modified in place. Source and build flags are in
+`scripts/build-portable-floor.sh` and `tools/portable-floor-deps.py`.

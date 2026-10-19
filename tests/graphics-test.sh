@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label test-graphics-test -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/app/Sources/ExeRunner/Core"
-WORK="$(mktemp -d /private/tmp/exerunner-graphics-check.XXXXXX)"
+WORK="$(mktemp -d "${TMPDIR:-/private/tmp}/exerunner-graphics-check.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp "$ROOT/tests/graphics-test.swift" "$WORK/main.swift"
 mkdir -p "$WORK/bin"

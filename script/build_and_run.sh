@@ -1,10 +1,14 @@
 #!/bin/bash
 # Canonical local UI build/run loop. The installed app is updated separately.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label build-and-run --exclusive build -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/build/app.noindex/ExeRunner.app"
 MODE="${1:-run}"
 case "$MODE" in run|--verify|--debug|--logs|--telemetry|--build-only) ;; *) echo 'usage: build_and_run.sh [--verify|--debug|--logs|--telemetry|--build-only]' >&2; exit 2;; esac
+if [ "$MODE" != --build-only ]; then python3 -I "$ROOT/tools/artifacts.py" idle-runtime; fi
 if [ "$MODE" != --build-only ] && pgrep -x ExeRunner >/dev/null; then
   osascript -e 'tell application id "local.exerunner.app" to quit'
   for attempt in 1 2 3 4 5; do pgrep -x ExeRunner >/dev/null || break; sleep 1; done

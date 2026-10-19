@@ -3,9 +3,12 @@
 # readback or a successful Present HRESULT cannot prove that a window displays.
 # Requires existing screen-capture permission; no third-party program is executed.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label test-isolation-present-test -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENGINE="${1:-/Applications/ExeRunner.app/Contents/Resources/engine}"
-WORK="$(mktemp -d /private/tmp/exerunner-present.XXXXXX)"
+WORK="$(mktemp -d "${TMPDIR:-/private/tmp}/exerunner-present.XXXXXX")"
 PREFIX="$WORK/isolated-present"
 wine_env() {
   /usr/bin/env -i WINEPREFIX="$PREFIX" HOME="$PREFIX/.isolation/home" TMPDIR="$PREFIX/.isolation/tmp" PATH=/usr/bin:/bin \

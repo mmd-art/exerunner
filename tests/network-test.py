@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """Windows networking and host-adapter inventory; only ephemeral loopback sockets are used."""
 import argparse,os,pathlib,socket,subprocess,tempfile,threading
+
+# Direct invocation also gets an owned workspace and automatic cleanup.
+import os as _artifact_os, sys as _artifact_sys
+from pathlib import Path as _ArtifactPath
+if not _artifact_os.environ.get('EXERUNNER_ARTIFACT_SESSION'):
+    _artifact_os.execv(_artifact_sys.executable, [_artifact_sys.executable, '-I',
+        str(_ArtifactPath(__file__).resolve().parents[1] / 'tools/artifacts.py'),
+        'run', '--label', 'test-network-test', '--', _artifact_sys.executable, __file__, *_artifact_sys.argv[1:]])
 p=argparse.ArgumentParser();p.add_argument('--engine',type=pathlib.Path,required=True);a=p.parse_args()
-root=pathlib.Path(__file__).resolve().parents[1];engine=a.engine.resolve();work=pathlib.Path(tempfile.mkdtemp(prefix='exerunner-network-check-',dir='/private/tmp'))
+root=pathlib.Path(__file__).resolve().parents[1];engine=a.engine.resolve();work=pathlib.Path(tempfile.mkdtemp(prefix='exerunner-network-check-',dir=os.environ.get('TMPDIR', '/private/tmp')))
 env={k:v for k,v in os.environ.items() if k in {'HOME','USER','LOGNAME','SHELL','TMPDIR','LANG','TERM','PATH'} or k.startswith('LC_')};env.update(WINEPREFIX=str(work/'prefix'),WINEDEBUG='-all',DYLD_FALLBACK_LIBRARY_PATH=str(engine/'lib')+':/usr/lib')
 udp=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);tcp=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 for server in [udp,tcp]:server.bind(('127.0.0.1',0));server.settimeout(10)
@@ -24,4 +32,4 @@ try:
  if r.returncode:raise RuntimeError(r.stderr or 'network control failed: '+str(r.returncode))
  for thread in threads:thread.join(timeout=1)
 finally:
- udp.close();tcp.close();subprocess.run([str(engine/'bin/wineserver'),'-k'],env=env,capture_output=True,timeout=15);print('Evidence:',work)
+ udp.close();tcp.close();subprocess.run([str(engine/'bin/wineserver'),'-k'],env=env,capture_output=True,timeout=15);print('Test workspace (automatic cleanup):',work)

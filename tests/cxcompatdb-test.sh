@@ -2,6 +2,9 @@
 # Checks cxcompatdb.c's decisions outside wine: the module is compiled into a test program named
 # game.exe, whose prepend_dll_path() records whether D3DMetal would be put first for it.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label test-cxcompatdb-test -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

@@ -3,6 +3,9 @@
 # processes in the process table (named wine, arguments shifted in place as wine's rebuild_argv
 # does) so that reading them back is tested too.
 set -euo pipefail
+if [ -z "${EXERUNNER_ARTIFACT_SESSION:-}" ]; then
+  exec python3 -I "$(cd "$(dirname "$0")/.." && pwd)/tools/artifacts.py" run --label test-core-test -- bash "$0" "$@"
+fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/app/Sources/ExeRunner/Core"
 WORK="$(mktemp -d)"

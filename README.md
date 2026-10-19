@@ -8,9 +8,17 @@ ExeRunner brings setup, a program library, launcher recipes, graphics selection 
 compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-**Status:** private alpha, version 0.4. Primarily validated on an M2 Pro Mac.
+**Status:** private alpha, version 0.5.0. Primarily validated on an M2 Pro Mac.
 The interface is available in English and Russian. The app executable includes arm64 and x86_64;
 Intel hardware acceptance is still pending. Compatibility depends on the application.
+
+## Install the alpha
+
+For Apple Silicon and **macOS 15 or later**. Download the DMG and matching checksums from
+[Releases](https://github.com/mmd-art/exerunner/releases), then read
+[installation and first-open instructions](docs/INSTALL.md). This alpha is not Apple-notarized.
+The package starts with an empty personal library and includes no games, accounts or saves.
+See [0.5.0 changes and limits](docs/RELEASE-0.5.0.md). Private repository links require access.
 
 ## Screenshots
 
@@ -63,6 +71,14 @@ Windows controls and selected real gameplay.
 | Controllers | Native HID or SDL-based Xbox/XInput mapping per environment, with restoration of previous policy | Bluetooth DualSense enumerated in WinMM and XInput; button/stick input recorded through XInput |
 | MIDI and OpenCL | Native CoreMIDI and OpenCL API bridges in the engine | WinMM message reached a virtual CoreMIDI destination; OpenCL platform enumeration passed |
 | Isolated launch | Experimental copied-bottle launch with restricted file-content access and blocked IP networking | Eligible standalone applications only; not a virtual machine or a malware guarantee |
+
+## Saves and session history
+
+Select a save folder to create a manual verified snapshot; preview restoration and retain a
+safety copy before replacing files. Backups are local and selected explicitly, not automatic cloud sync.
+Local launch history, per-game playtime and recent applications observe actual game processes;
+launcher uptime is excluded. Optional keep-awake lasts only while an observed game is active.
+See [session behavior](docs/session-history.md) and the in-app save controls.
 
 ## General Windows components
 
@@ -193,7 +209,7 @@ and the associated notices.
 per-program graphics/DLL overrides and catalog text. English UI strings are maintained in
 `app/Sources/ExeRunner/Core/English.swift`; `tools/l10n-check.py` checks translation coverage.
 
-The 0.4 disk image includes the current runtime and compatibility work. Validation on a clean
+The 0.5.0 disk image includes the stable runtime, save snapshots, observed-game history/playtime and current-display launch work. Experimental D9MT is excluded. Validation on a clean
 or second Mac remains pending.
 
 ## Next milestones
@@ -211,3 +227,57 @@ ExeRunner's application code is **GPL-3.0-or-later**. See [LICENSE](LICENSE) and
 DXMT is an MIT-licensed upstream project: [3Shain/dxmt](https://github.com/3Shain/dxmt).
 
 ExeRunner is not affiliated with Apple, Microsoft, Valve or CodeWeavers.
+
+## Build and test storage policy
+
+Builds and committed test entrypoints run in marked workspaces under
+`build/artifacts.noindex/jobs/`. Compiler/module caches and synthetic Wine prefixes
+are removed after success or failure. Interrupted inactive work is collected at the
+next invocation; work still used by a process is retained. No global `/tmp`, game,
+user Documents or evidence-directory sweep is performed.
+
+The policy keeps one previous verified app, one last checked engine and one current
+installer. Small output tails have at most 20 receipts; authored test sources and
+small documents are preserved by content hash instead of copying complete prefixes.
+A single current build app is an output, not an additional rollback.
+
+```sh
+# Normal build with disposable compiler caches; does not quit the installed app.
+bash script/build_and_run.sh --build-only
+bash scripts/test.sh network-test.py --engine /path/to/engine
+python3 -I tools/artifacts.py status
+python3 -I tools/artifacts.py gc
+
+# Native controls must pass before replacing the checked engine.
+bash scripts/verify-engine.sh /path/to/candidate-engine
+# Refuses a busy installed runtime; never quits games to update.
+bash scripts/install-app.sh
+bash scripts/make-dmg.sh
+```
+
+For a one-off experiment, use `python3 -I tools/artifacts.py run --label probe -- COMMAND`
+and write temporary output to `$EXERUNNER_WORK_ROOT` or `$TMPDIR`. Do not create dated
+app/engine backups or unmanaged test prefixes. Full `build-engine.sh all` and device
+builds use disposable intermediate trees. Explicit `tools/configure/make` engine stages
+retain their single incremental development tree until the developer finishes that workflow;
+they do not create archival copies. Direct compiler commands outside these entrypoints
+are outside the automatic policy.
+
+An existing accepted rollback/engine/installer can be registered once with
+`tools/artifacts.py seed --backup PATH --engine PATH --installer PATH`; registration
+hashes and verifies the artifacts without copying them. An artifact modified outside
+the policy, in use, or referenced by owner engine settings is not automatically deleted.
+
+## Distribution verification
+
+Release packaging rejects native binaries whose actual minimum macOS exceeds15,
+missing x86_64 runtime slices, developer-machine links and unresolved bundled dependencies.
+A newer Homebrew bottle may fail this gate even when the UI targets15.
+`scripts/build-portable-floor.sh /path/to/portable-engine /path/to/pinned-wine-source`
+builds a disposable native candidate and app without replacing the installed runtime.
+`tests/fresh-profile-test.py --app /path/to/candidate.app --report /path/to/report`
+checks actual onboarding, an empty library and native close in a verified disposable
+Foundation home with owner-data write protection. These checks are not a second-Mac acceptance.
+
+Private development diagnostics are kept outside Git. The public source and release
+package contain no personal library, installed games, store sessions or saves.
