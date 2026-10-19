@@ -28,3 +28,9 @@ __pycache__/
 
 # Windows compatibility assets are rebuilt by scripts/build-windows-compat.sh
 compat/windows/
+
+# Local agent context and private diagnostic notes are never release source.
+CURRENT.md
+.codex/
+.agents/
+docs/2026-10-13_farcry_startup.md

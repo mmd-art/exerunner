@@ -19,22 +19,26 @@ owner=Path.home().resolve();profile=work/'first-launch.sb'
 # Owner home is read-only except this job and the disposable candidate app (quarantine metadata).
 profile.write_text('(version 1)\n(allow default)\n(deny file-write* (require-all (subpath '+json.dumps(str(owner))+') (require-not (subpath '+json.dumps(str(work))+')) (require-not (subpath '+json.dumps(str(app))+'))))\n'+''.join('(deny file-read* (subpath '+json.dumps(str(owner/'Library/Application Support'/name))+'))\n' for name in ['ExeRunner','WinRunner']))
 command=['/usr/bin/sandbox-exec','-f',str(profile),str(exe)]
-for name,complete in [('first-launch',False),('empty-library',True)]:
-    if complete:
-        folder=Path(paths['support']);folder.mkdir(parents=True,exist_ok=True)
-        (folder/'settings.json').write_text(json.dumps({'onboardingCompleted':True,'language':'en'}))
-    target=work/(name+'.json')
-    run=subprocess.run([*command,'--verify-close',str(target)],env=env,cwd=work,capture_output=True,text=True,timeout=90)
-    (report/(name+'.log')).write_text(run.stdout+run.stderr)
-    assert run.returncode==0,(name,run.returncode,run.stderr[-1000:])
-    proof=json.loads(target.read_text());assert proof['terminationDelegateReached'] and proof['libraryItemCount']==0 and proof['bottleSettingsCount']==0 and proof['runningItems']==[],proof
-    assert proof['onboardingCompleted']==complete and Path(proof['engine'])==app/'Contents/Resources/engine',proof
-    assert all(Path(proof[k]).is_relative_to(home) for k in paths),proof
-    assert target.with_suffix('.png').is_file(),'actual window export missing'
-    (report/(name+'.json')).write_text(json.dumps(proof,indent=2)+'\n')
-    (report/(name+'.png')).write_bytes(target.with_suffix('.png').read_bytes())
-# Native version detection and app self-check use the same blank local profile.
-check=subprocess.run([*command,'--self-test'],env=env,cwd=work,capture_output=True,text=True,timeout=60)
-(report/'self-test.log').write_text(check.stdout+check.stderr);assert check.returncode==0
-assert any(line=='library: ' or line=='library:' for line in check.stdout.splitlines()),check.stdout
-print('PASS: actual welcome, empty library, bundled engine, native close and verified isolated paths')
+try:
+    for name,complete in [('first-launch',False),('empty-library',True)]:
+        if complete:
+            folder=Path(paths['support']);folder.mkdir(parents=True,exist_ok=True)
+            (folder/'settings.json').write_text(json.dumps({'onboardingCompleted':True,'language':'en'}))
+        target=work/(name+'.json')
+        run=subprocess.run([*command,'--verify-close',str(target)],env=env,cwd=work,capture_output=True,text=True,timeout=90)
+        (report/(name+'.log')).write_text(run.stdout+run.stderr)
+        assert run.returncode==0,(name,run.returncode,run.stderr[-1000:])
+        proof=json.loads(target.read_text());assert proof['terminationDelegateReached'] and proof['libraryItemCount']==0 and proof['bottleSettingsCount']==0 and proof['runningItems']==[],proof
+        assert proof['onboardingCompleted']==complete and Path(proof['engine'])==app/'Contents/Resources/engine',proof
+        assert all(Path(proof[k]).is_relative_to(home) for k in paths),proof
+        assert target.with_suffix('.png').is_file(),'actual window export missing'
+        (report/(name+'.json')).write_text(json.dumps(proof,indent=2)+'\n')
+        (report/(name+'.png')).write_bytes(target.with_suffix('.png').read_bytes())
+    # Native version detection and app self-check use the same blank local profile.
+    check=subprocess.run([*command,'--self-test'],env=env,cwd=work,capture_output=True,text=True,timeout=60)
+    (report/'self-test.log').write_text(check.stdout+check.stderr);assert check.returncode==0
+    assert any(line=='library: ' or line=='library:' for line in check.stdout.splitlines()),check.stdout
+    print('PASS: actual welcome, empty library, bundled engine, native close and verified isolated paths')
+finally:
+    cleanup=subprocess.run([sys.executable,'-I',str(ROOT/'tools/search-privacy.py'),'unregister-build',str(app)],capture_output=True,text=True)
+    if cleanup.returncode:raise RuntimeError('Candidate search-registration cleanup failed: '+cleanup.stderr)
