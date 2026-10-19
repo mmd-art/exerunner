@@ -17,6 +17,7 @@ Intel hardware acceptance is still pending. Compatibility depends on the applica
 For Apple Silicon and **macOS 15 or later**. Download the DMG and matching checksums from
 [Releases](https://github.com/mmd-art/exerunner/releases), then read
 [installation and first-open instructions](docs/INSTALL.md). This alpha is not Apple-notarized.
+DXMT and DXVK/MoltenVK are bundled; Apple D3DMetal is an optional separate import. GPTK 4 beta is excluded because a linked library requires macOS 26.4.
 The package starts with an empty personal library and includes no games, accounts or saves.
 See [0.5.0 changes and limits](docs/RELEASE-0.5.0.md). Release downloads and source are available without collaborator access.
 

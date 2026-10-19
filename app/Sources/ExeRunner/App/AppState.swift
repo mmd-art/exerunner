@@ -222,7 +222,7 @@ final class AppState: ObservableObject {
     func canTargetExecutables(_ item: LibraryItem) -> Bool { !executables(of: item).isEmpty }
 
     func effectiveGraphics(_ item: LibraryItem) -> LibraryItem.Graphics {
-        GraphicsSelection.resolve(item, profile: profile(for: item), hasD3DMetal: engineForItem(item)?.d3dmetalVersion != nil)
+        GraphicsSelection.resolve(item, profile: profile(for: item), hasD3DMetal: engineForItem(item)?.d3dmetalVersion != nil, hasDXMT: engineForItem(item)?.hasDXMT == true)
     }
 
     /// Executables in a bottle that draw through DXVK: the recipes' lists, the Chromium helpers

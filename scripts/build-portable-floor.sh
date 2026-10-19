@@ -55,4 +55,4 @@ fi
 python3 -I "$ROOT/tools/check-portable.py" "$EXERUNNER_BUILD_ENGINE_ROOT" --report "$EXERUNNER_RELEASE_REPORT/engine-portability-final.json"
 bash "$ROOT/scripts/verify-engine.sh" "$EXERUNNER_BUILD_ENGINE_ROOT"
 export EXERUNNER_BUILD_ENGINE_ROOT="$(python3 -I "$ROOT/tools/artifacts.py" engine --checked-only)"
-bash "$ROOT/scripts/build-app.sh" release
+bash "$ROOT/scripts/build-app.sh" release --without-d3dmetal

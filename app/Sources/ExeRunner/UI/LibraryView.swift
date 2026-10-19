@@ -216,7 +216,8 @@ struct ItemSettingsView: View {
                         }
                         .help(item.graphics.help)
                         Text(GraphicsSelection.explanation(item, profile: state.profile(for: item),
-                                                           hasD3DMetal: state.engineForItem(item)?.d3dmetalVersion != nil))
+                                                           hasD3DMetal: state.engineForItem(item)?.d3dmetalVersion != nil,
+                                                           hasDXMT: state.engineForItem(item)?.hasDXMT == true))
                             .font(.callout).foregroundStyle(.secondary)
                         if state.effectiveGraphics(item) == .dxmt {
                             Text(state.engineForItem(item)?.dxmtVersion.map { "DXMT " + $0 } ?? t("В движке нет DXMT"))

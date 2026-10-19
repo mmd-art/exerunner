@@ -510,7 +510,7 @@ enum English {
         "Указать папку движка…": "Choose the engine folder…",
         "Указать другую папку…": "Choose another folder…",
         "Выбрать движок": "Choose the engine",
-        "D3DMetal от Apple переводит DirectX 11 и 12 в Metal: без него большинство современных игр не запустится.": "Apple's D3DMetal translates DirectX 11 and 12 to Metal: without it most modern games will not run.",
+        "D3DMetal от Apple переводит DirectX 11 и 12 в Metal. Это дополнительный компонент; для DirectX 10/11 можно использовать встроенный DXMT. Импортируйте версию, совместимую с вашей macOS, или пропустите этот шаг.": "Apple's D3DMetal translates DirectX 11 and 12 to Metal. It is optional; bundled DXMT supports DirectX 10/11. Import a version compatible with your macOS, or skip this step.",
         "D3DMetal %@ уже в приложении": "D3DMetal %@ is already in the app",
         "D3DMetal %@ подключён": "D3DMetal %@ is connected",
         "Можно идти дальше. Новую версию от Apple можно подключить ниже.": "You can go on. A newer version from Apple can be connected below.",

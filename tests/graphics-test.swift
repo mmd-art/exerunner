@@ -68,4 +68,21 @@ try Data("EXERUNNER_EMULATE_MODESET".utf8).write(to: display)
 check("complete DXMT with display guard is available", engine.hasDXMT && engine.dxmtVersion == "0.80")
 try FileManager.default.removeItem(at: engine.dxmt.appendingPathComponent("i386-windows/dxgi.dll"))
 check("partial 32 bit install is not advertised", !engine.hasDXMT)
+
+check("bundled DXMT is Auto fallback without Apple beta", GraphicsSelection.resolve(primal, profile: nil, hasD3DMetal: false, hasDXMT: true) == .dxmt)
+check("Apple preferred when both present", GraphicsSelection.resolve(primal, profile: nil, hasD3DMetal: true, hasDXMT: true) == .d3dmetal)
+
+for api in ["d3d9", "d3d12"] {
+    var known = profile; known.graphicsAPI = api
+    check("DXMT Auto excludes known \(api)", GraphicsSelection.resolve(primal, profile: known, hasD3DMetal: false, hasDXMT: true) == .wine)
+}
+var isolated = primal; isolated.isolated = true
+check("isolated Auto does not enable DXMT", GraphicsSelection.resolve(isolated, profile: nil, hasD3DMetal: false, hasDXMT: true) == .wine)
+isolated.isolated = false; isolated.bottle = "isolated-fixture"
+check("legacy isolated bottle does not enable DXMT", GraphicsSelection.resolve(isolated, profile: nil, hasD3DMetal: false, hasDXMT: true) == .wine)
+var dxmtProfile = profile; dxmtProfile.recommended.graphics = .dxmt
+isolated.useRecommended = true
+check("recommendation respects isolated guard", GraphicsSelection.resolve(isolated, profile: dxmtProfile, hasD3DMetal: false, hasDXMT: true) == .wine)
+dxmtProfile.graphicsAPI = "d3d12"
+check("recommendation respects API guard", GraphicsSelection.resolve(recommended, profile: dxmtProfile, hasD3DMetal: false, hasDXMT: true) == .wine)
 print("graphics: \(passed) passed")

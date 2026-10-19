@@ -9,16 +9,19 @@ enum GraphicsSelection {
         if let appID = item.steamAppID { return candidates.first { $0.steamAppID == appID } }
         return candidates.first { $0.exeNames.contains { $0.caseInsensitiveCompare(item.executableName) == .orderedSame } }
     }
-    static func resolve(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool) -> LibraryItem.Graphics {
+    static func resolve(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool, hasDXMT: Bool = false) -> LibraryItem.Graphics {
         if item.graphics != .automatic { return item.graphics }
+        let dxmtEligible = hasDXMT && !item.isolated && !item.bottle.hasPrefix("isolated-") && supportsDXMT(profile: profile)
         if item.useRecommended, let choice = profile?.recommended.graphics, choice != .automatic {
             // Recommendations cannot enable an unavailable Apple-only runtime.
-            if choice != .d3dmetal || hasD3DMetal { return choice }
+            if (choice != .d3dmetal || hasD3DMetal) && (choice != .dxmt || dxmtEligible) { return choice }
         }
-        return hasD3DMetal ? .d3dmetal : .wine
+        if hasD3DMetal { return .d3dmetal }
+        if dxmtEligible { return .dxmt }
+        return .wine
     }
-    static func explanation(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool) -> String {
-        let choice = resolve(item, profile: profile, hasD3DMetal: hasD3DMetal)
+    static func explanation(_ item: LibraryItem, profile: GameProfile?, hasD3DMetal: Bool, hasDXMT: Bool = false) -> String {
+        let choice = resolve(item, profile: profile, hasD3DMetal: hasD3DMetal, hasDXMT: hasDXMT)
         if item.graphics != .automatic { return t("Выбран вручную: \(choice.title).") }
         if item.useRecommended, let profile {
             return t("Авто: \(choice.title). Профиль: \(profile.title).")

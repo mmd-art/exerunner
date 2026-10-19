@@ -158,7 +158,7 @@ struct OnboardingView: View {
 
     private var d3dmetal: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(t("D3DMetal от Apple переводит DirectX 11 и 12 в Metal: без него большинство современных игр не запустится."))
+            Text(t("D3DMetal от Apple переводит DirectX 11 и 12 в Metal. Это дополнительный компонент; для DirectX 10/11 можно использовать встроенный DXMT. Импортируйте версию, совместимую с вашей macOS, или пропустите этот шаг."))
                 .foregroundStyle(.secondary)
             if let engine = state.engine, let version = engine.d3dmetalVersion {
                 StatusRow(title: engine.d3dmetalSource == .bundled ? t("D3DMetal \(version) уже в приложении") : t("D3DMetal \(version) подключён"),
