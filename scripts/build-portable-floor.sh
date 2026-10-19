@@ -40,6 +40,18 @@ python3 -I "$ROOT/tools/portable-floor-deps.py" "$BASE" "$EXERUNNER_ENGINE_BUILD
 # The candidate exists only during this managed job. App packaging retains its own final copy.
 export EXERUNNER_BUILD_ENGINE_ROOT="$EXERUNNER_WORK_ROOT/candidate-engine"
 export EXERUNNER_KEEP_ENGINE_SIGNATURES=1
+if [ "${EXERUNNER_FLOOR_REVIEW_GATE:-0}" = 1 ]; then
+  python3 -I - "$EXERUNNER_BUILD_ENGINE_ROOT" <<'PY'
+import json,os,time
+from pathlib import Path
+work=Path(os.environ['EXERUNNER_WORK_ROOT']);report=Path(os.environ['EXERUNNER_RELEASE_REPORT'])
+(report/'candidate-ready.json').write_text(json.dumps({'candidate':str(work/'candidate-engine'),'work':str(work),'lease':os.environ['EXERUNNER_ARTIFACT_SESSION']}))
+deadline=time.monotonic()+600
+while not (work/'continue-release').exists():
+ if time.monotonic()>deadline:raise SystemExit('bounded diagnostic review gate expired')
+ time.sleep(1)
+PY
+fi
 python3 -I "$ROOT/tools/check-portable.py" "$EXERUNNER_BUILD_ENGINE_ROOT" --report "$EXERUNNER_RELEASE_REPORT/engine-portability-final.json"
 bash "$ROOT/scripts/verify-engine.sh" "$EXERUNNER_BUILD_ENGINE_ROOT"
 export EXERUNNER_BUILD_ENGINE_ROOT="$(python3 -I "$ROOT/tools/artifacts.py" engine --checked-only)"

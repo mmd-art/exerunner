@@ -23,7 +23,9 @@ def inspect(path):
   if ref.startswith('@loader_path/'):
    if not (path.parent/ref[len('@loader_path/'):]).exists():missing.append(ref)
   elif ref.startswith('@rpath/'):
-   name=ref[len('@rpath/'):];candidates=[path.parent/name,root/'lib'/name,root/'Contents/Resources/engine/lib'/name]
+   # Wine's main executable supplies @loader_path (lib/wine/x86_64-unix)
+   # to the inherited dyld run-path stack used by optional DXMT modules.
+   name=ref[len('@rpath/'):];candidates=[path.parent/name,root/'lib'/name,root/'Contents/Resources/engine/lib'/name,root/'lib/wine/x86_64-unix'/name,root/'Contents/Resources/engine/lib/wine/x86_64-unix'/name]
    for rp in rpaths:
     if rp.startswith('@loader_path/'):candidates.append(path.parent/rp[len('@loader_path/'):]/name)
    if not any(c.exists() for c in candidates):missing.append(ref)
