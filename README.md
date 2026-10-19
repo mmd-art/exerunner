@@ -8,7 +8,7 @@ ExeRunner brings setup, a program library, launcher recipes, graphics selection 
 compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-**Status:** private alpha, version 0.5.0. Primarily validated on an M2 Pro Mac.
+**Status:** early alpha, version 0.5.0. Primarily validated on an M2 Pro Mac.
 The interface is available in English and Russian. The app executable includes arm64 and x86_64;
 Intel hardware acceptance is still pending. Compatibility depends on the application.
 
@@ -18,7 +18,7 @@ For Apple Silicon and **macOS 15 or later**. Download the DMG and matching check
 [Releases](https://github.com/mmd-art/exerunner/releases), then read
 [installation and first-open instructions](docs/INSTALL.md). This alpha is not Apple-notarized.
 The package starts with an empty personal library and includes no games, accounts or saves.
-See [0.5.0 changes and limits](docs/RELEASE-0.5.0.md). Private repository links require access.
+See [0.5.0 changes and limits](docs/RELEASE-0.5.0.md). Release downloads and source are available without collaborator access.
 
 ## Screenshots
 

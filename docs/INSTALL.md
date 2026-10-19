@@ -1,4 +1,4 @@
-# ExeRunner 0.5.0 — private alpha
+# ExeRunner 0.5.0 — early alpha
 
 ## Before installing
 
