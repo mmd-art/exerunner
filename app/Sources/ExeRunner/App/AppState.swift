@@ -71,6 +71,7 @@ final class AppState: ObservableObject {
     var pendingHistoryCrashes = Set<UUID>()
     var watcher: Task<Void, Never>?
     var isShuttingDown = false
+    @Published var updateRestartPending = false
     let managesGameBoost: Bool
 
     var running: Set<String> { launching.union(active).union(starting) }
@@ -382,6 +383,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func install(_ recipe: Recipe) async -> Bool {
+        guard !updateRestartPending else { return false }
         let engine: Engine
         do { engine = try selectedEngine(forBottle: recipe.bottle) }
         catch { errorMessage = error.localizedDescription; return false }
@@ -413,6 +415,7 @@ final class AppState: ObservableObject {
     }
 
     func runInstaller(_ file: URL, bottle: String) async -> [URL] {
+        guard !updateRestartPending else { return [] }
         let engine: Engine
         do { engine = try selectedEngine(forBottle: bottle) }
         catch { errorMessage = error.localizedDescription; return [] }

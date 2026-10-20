@@ -31,6 +31,15 @@ ExeRunner is free software under the GNU General Public License, version 3 or la
 - **frankea/winecx-gptk**: the engine source tree it builds from (below) and the build lessons
   noted in `scripts/build-engine.sh` (gcc for the Windows half, Wine tools built native).
 
+## In-app updates
+
+- **Sparkle** 2.10.0, commit `eef1a539a373c1f1a320624b1130fc5de7b2e100`,
+  Copyright Sparkle Project contributors, BSD-style license. Embedded upstream framework,
+  XPC services and updater helpers; source: https://github.com/sparkle-project/Sparkle/tree/2.10.0.
+  Full license and bundled third-party notices: [Sparkle-LICENSE.txt](licenses/third-party/Sparkle-LICENSE.txt).
+  ExeRunner's integration is original; signing tools are used during publication and are
+  not copied into the user application. See [updates.md](docs/updates.md).
+
 ## The icon
 
 `app/Resources/AppIcon.png` was generated with ChatGPT's image generation from our sketch (a page

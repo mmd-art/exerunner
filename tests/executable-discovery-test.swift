@@ -3,7 +3,7 @@ import Foundation
 @main enum Test {
     static func main() throws {
         let fm = FileManager.default
-        let root = URL(fileURLWithPath: CommandLine.arguments[1])
+        let root = URL(fileURLWithPath: CommandLine.arguments[1]).standardizedFileURL
         let drive = root.appendingPathComponent("drive_c")
         var checks = 0
         func check(_ value: Bool, _ name: String) { if !value { FileHandle.standardError.write(Data(("FAIL: " + name + "\n").utf8)); exit(1) }; checks += 1 }
@@ -11,7 +11,7 @@ import Foundation
             let url = drive.appendingPathComponent(path)
             try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data("synthetic EXE fixture, never executed".utf8).write(to: url)
-            return url
+            return url.standardizedFileURL
         }
         let cad = try file("Vendor CAD/Version 10/bin/ugraf.EXE")
         let local = try file("users/test/AppData/Local/OtherVendor/start.exe")

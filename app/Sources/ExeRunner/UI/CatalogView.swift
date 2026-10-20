@@ -140,9 +140,15 @@ struct AddProgramSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     enum Mode: String, CaseIterable, Identifiable {
-        case installer, portable
+        case installer, portable, existing
         var id: String { rawValue }
-        var title: String { self == .installer ? t("Это установщик") : t("Запускать как есть") }
+        var title: String {
+            switch self {
+            case .installer: return t("Это установщик")
+            case .portable: return t("Запускать как есть")
+            case .existing: return t("Уже установлена")
+            }
+        }
     }
 
     enum Phase { case form, installing, choose }
@@ -151,10 +157,15 @@ struct AddProgramSheet: View {
     @State private var name = ""
     @State private var mode: Mode = .installer
     @State private var bottle = "programs"
+    @State private var existingBottle = ""
+    private var selectedBottle: String { mode == .existing ? existingBottle : bottle }
     @State private var phase: Phase = .form
     @State private var candidates: [URL] = []
     @State private var chosen: URL?
     @State private var fileError: String?
+    @State private var environments: [String] = []
+
+    init(initialMode: Mode = .installer) { _mode = State(initialValue: initialMode) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -167,6 +178,11 @@ struct AddProgramSheet: View {
         }
         .padding(24)
         .frame(width: 600)
+        .task {
+            let root = state.bottlesRoot
+            environments = await Task.detached { InstalledPrograms.environments(root: root) }.value
+            if !environments.contains(existingBottle) { existingBottle = environments.first ?? "" }
+        }
     }
 
     private var form: some View {
@@ -180,36 +196,50 @@ struct AddProgramSheet: View {
                 }
                 .font(.callout).foregroundStyle(.secondary).padding(.top, 8)
             }
-            HStack {
-                Button(t("Выбрать файл…")) {
-                    if let url = FilePicker.choose(startAt: Paths.home.appendingPathComponent("Downloads")) { pick(url) }
-                }
-                .buttonStyle(.pill)
-                Text(file?.lastPathComponent ?? t("файл .exe или .msi")).foregroundStyle(file == nil ? .secondary : .primary).lineLimit(1)
-            }
-            if let fileError { Text(fileError).font(.callout).foregroundStyle(.red) }
-            TextField(t("Название в библиотеке"), text: $name)
             Picker("", selection: $mode) {
                 ForEach(Mode.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .disabled(file?.pathExtension.lowercased() == "msi")
+            .onChange(of: mode) { _, value in
+                if value == .portable && file?.pathExtension.lowercased() == "msi" { mode = .installer }
+            }
+            if mode == .existing {
+                Text(t("Выбрать уже установленную программу")).font(.headline)
+                Picker(t("Окружение"), selection: $existingBottle) {
+                    ForEach(environments, id: \.self) { Text($0).tag($0) }
+                }
+                Text(environments.isEmpty
+                     ? t("Установленных окружений пока нет. Сначала установи программу.")
+                     : t("Выбери окружение, затем найди EXE по имени или пути. Повторная установка не нужна."))
+                    .font(.callout).foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Button(t("Выбрать файл…")) {
+                        if let url = FilePicker.choose(startAt: Paths.home.appendingPathComponent("Downloads")) { pick(url) }
+                    }
+                    .buttonStyle(.pill)
+                    Text(file?.lastPathComponent ?? t("файл .exe или .msi"))
+                        .foregroundStyle(file == nil ? .secondary : .primary).lineLimit(1)
+                }
+            }
+            if let fileError { Text(fileError).font(.callout).foregroundStyle(.red) }
+            TextField(t("Название в библиотеке"), text: $name)
             if mode == .installer {
                 TextField(t("Бутылка"), text: $bottle)
                 Text(t("Установщик откроется в своём окне, пройди его шаги. Программы можно держать в одной общей бутылке «programs» или дать программе отдельную."))
                     .font(.callout).foregroundStyle(.secondary)
-            } else {
+            } else if mode == .portable {
                 Text(t("Программа запускается прямо с того места, где лежит, без копирования. Не перемещай её потом."))
                     .font(.callout).foregroundStyle(.secondary)
             }
             HStack {
                 Spacer()
                 Button(t("Отмена")) { dismiss() }
-                Button(mode == .installer ? t("Установить") : t("Добавить")) { start() }
+                Button(mode == .existing ? t("Найти EXE") : mode == .installer ? t("Установить") : t("Добавить")) { start() }
                     .buttonStyle(.pillProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(file == nil || name.isEmpty || bottle.isEmpty)
+                    .disabled(mode == .existing ? !environments.contains(existingBottle) : file == nil || name.isEmpty || bottle.isEmpty)
             }
             .buttonStyle(.pill)
         }
@@ -218,15 +248,15 @@ struct AddProgramSheet: View {
     private var installing: some View {
         HStack(spacing: 12) {
             ProgressView().controlSize(.small)
-            Text(state.activity ?? t("Идёт установка…")).foregroundStyle(.secondary)
+            Text(mode == .existing ? t("Поиск установленных программ…") : state.activity ?? t("Идёт установка…")).foregroundStyle(.secondary)
         }
     }
 
     private var choose: some View {
         ExecutableChooser(candidates: candidates,
-                          driveC: Bottle(name: bottle, root: state.bottlesRoot).driveC,
+                          driveC: Bottle(name: selectedBottle, root: state.bottlesRoot).driveC,
                           chosen: $chosen, error: fileError, browse: {
-            let start = Bottle(name: bottle, root: state.bottlesRoot).driveC
+            let start = Bottle(name: selectedBottle, root: state.bottlesRoot).driveC
             if let url = FilePicker.choose(startAt: start, fileExtensions: ["exe"]) {
                 guard ExecutableDiscovery.usable(url) else {
                     fileError = t("Выбери доступный EXE-файл программы.")
@@ -253,8 +283,19 @@ struct AddProgramSheet: View {
     }
 
     private func start() {
+        if mode == .existing {
+            phase = .installing
+            let root = state.bottlesRoot, environment = existingBottle
+            Task {
+                candidates = await Task.detached { InstalledPrograms.executables(root: root, environment: environment) }.value
+                chosen = nil
+                phase = .choose
+            }
+            return
+        }
         guard let file else { return }
         if mode == .portable {
+            guard file.pathExtension.lowercased() == "exe" else { return }
             state.addPortable(file, name: name)
             dismiss()
             return
@@ -272,8 +313,17 @@ struct AddProgramSheet: View {
             fileError = t("Выбери доступный EXE-файл программы.")
             return
         }
+        if mode == .existing {
+            let drive = Bottle(name: selectedBottle, root: state.bottlesRoot).driveC.resolvingSymlinksInPath().path + "/"
+            guard InstalledPrograms.environments(root: state.bottlesRoot).contains(existingBottle),
+                  exe.resolvingSymlinksInPath().path.hasPrefix(drive) else {
+                fileError = t("Выбери EXE внутри выбранного окружения.")
+                return
+            }
+        }
         fileError = nil
-        state.addInstalled(exe, name: name, bottle: bottle)
+        state.addInstalled(exe, name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                           ? exe.deletingPathExtension().lastPathComponent : name, bottle: selectedBottle)
         dismiss()
     }
 }

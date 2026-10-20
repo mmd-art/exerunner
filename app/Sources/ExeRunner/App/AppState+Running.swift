@@ -2,7 +2,7 @@ import Foundation
 
 extension AppState {
     func launch(_ item: LibraryItem) {
-        guard !isShuttingDown, !running.contains(item.id) else { return }
+        guard !updateRestartPending, !isShuttingDown, !running.contains(item.id) else { return }
         let display = NativeDisplayTarget.current()
         Task {
             do { _ = try await run(item, display: display) } catch { errorMessage = error.localizedDescription }
@@ -16,7 +16,7 @@ extension AppState {
     }
 
     func run(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
-        guard !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
         launching.insert(item.id)
         defer { launching.remove(item.id) }
         // The caller captures before initialization/history/engine awaits can change focus.
@@ -36,7 +36,7 @@ extension AppState {
     }
 
     private func performRun(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
-        guard !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
         guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
         try Task.checkCancellation()
         let engine = try selectedEngine(forBottle: item.bottle)
@@ -87,13 +87,13 @@ extension AppState {
         stoppedByUser.remove(item.id)
         let (env, log) = try await prepare(item, engine: engine, display: display)
         try Task.checkCancellation()
-        guard !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
         let file = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)
         let plan = try await ExecutionBreakpointCompatibility.plan(executable: item.executable, arguments: item.arguments,
                                                                   file: file, isolated: item.isolated, environment: env,
                                                                   compatibilityDirectory: Paths.compat)
         try Task.checkCancellation()
-        guard !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
         let arguments = plan.arguments
         let folder = file?.deletingLastPathComponent()
         handoffGameForeground(item)

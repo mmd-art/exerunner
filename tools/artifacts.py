@@ -351,7 +351,46 @@ class Artifacts:
                 if not p.is_symlink():
                     p.unlink()
 
+    @staticmethod
+    def managed_workspace():
+        import runpy
+        return runpy.run_path(str(ROOT / 'tools/managed-context.py'))['workspace']()
+
     def run(self, label, command, exclusive=None):
+        if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', label):
+            raise RuntimeError('Invalid job label')
+        context = self.managed_workspace()
+        if context is not None:
+            # Reuse the already-admitted resource context. Never queue behind our own slot.
+            env = dict(os.environ)
+            with contextlib.ExitStack() as stack:
+                if exclusive and exclusive not in env.get('EXERUNNER_HELD_LOCKS', '').split(','):
+                    if exclusive not in ['build', 'engine']: raise RuntimeError('Invalid lock')
+                    fd = stack.enter_context(real_directory(self.root / (exclusive + '.lock')).open('a'))
+                    fcntl.flock(fd, fcntl.LOCK_EX)
+                    env['EXERUNNER_HELD_LOCKS'] = ','.join(filter(None, [env.get('EXERUNNER_HELD_LOCKS'), exclusive]))
+                interrupted = []
+                def defer_signal(signum, frame): interrupted.append(signum)
+                previous = {s: signal.signal(s, defer_signal) for s in [signal.SIGINT, signal.SIGTERM, signal.SIGHUP]}
+                try:
+                    child = subprocess.Popen(command, env=env)
+                    status = child.wait()
+                    if interrupted and status == 0: status = 128 + interrupted[0]
+                finally:
+                    for signum, handler in previous.items(): signal.signal(signum, handler)
+                atomic_json(self.root / 'reports' / ('run-' + label + '.json'), {'status': status, 'scratch': str(context), 'cleanup': 'outer global managed job'})
+                return status
+        # Owner's cross-project runner supplies resource admission and disposable scratch.
+        # Keep this project's retained app/engine/installer management separate; no nested
+        # TMPDIR wrappers or heavy.sh calls. Other machines retain the reviewed local runner.
+        runner = Path.home() / 'LifeOS/life/99_System/tools/dev-session/managed_job.py'
+        python = Path.home() / 'lifeos-core/.venv/bin/python'
+        if runner.is_file() and python.is_file():
+            adapter = [str(python), str(runner), '--', str(python),
+                       str(self.project / 'tools/managed-artifact-command.py')]
+            if exclusive:
+                adapter += ['--exclusive', exclusive]
+            return subprocess.call(adapter + ['--'] + command)
         if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', label):
             raise RuntimeError('Invalid job label')
         self.gc()
@@ -444,7 +483,9 @@ class Artifacts:
         if self.in_use(destination):
             raise RuntimeError('Installed app or one of its games is running; install refused')
         job = Path(os.environ['EXERUNNER_ARTIFACT_SESSION'])
-        self.owned(job, 'jobs')
+        context = self.managed_workspace()
+        if context is None or job.resolve() != context:
+            self.owned(job, 'jobs')
         incoming, previous = job / 'incoming.app', job / 'previous.app'
         subprocess.run(['/bin/cp', '-cR', '-P', str(candidate), str(incoming)], check=True)
         self.verify('backup', incoming)

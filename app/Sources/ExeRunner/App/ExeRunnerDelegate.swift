@@ -8,6 +8,7 @@ final class ExeRunnerDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if AppUpdater.shared.mustDeferTermination { return .terminateCancel }
         guard let state else { return .terminateNow }
         guard !terminationPending else { return .terminateLater }
         terminationPending = true

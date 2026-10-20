@@ -26,8 +26,15 @@ def inspect(path):
    # Wine's main executable supplies @loader_path (lib/wine/x86_64-unix)
    # to the inherited dyld run-path stack used by optional DXMT modules.
    name=ref[len('@rpath/'):];candidates=[path.parent/name,root/'lib'/name,root/'Contents/Resources/engine/lib'/name,root/'lib/wine/x86_64-unix'/name,root/'Contents/Resources/engine/lib/wine/x86_64-unix'/name]
+   # Sparkle's helper XPC executables inherit framework runpaths from their enclosing app.
+   for parent in path.parents:
+    if parent.suffix == '.app':
+     candidates.append(parent/'Contents/Frameworks'/name)
    for rp in rpaths:
     if rp.startswith('@loader_path/'):candidates.append(path.parent/rp[len('@loader_path/'):]/name)
+    if rp.startswith('@executable_path/'):
+     # In a bundled executable, executable_path is its containing directory.
+     candidates.append(path.parent/rp[len('@executable_path/'):]/name)
    if not any(c.exists() for c in candidates):missing.append(ref)
  return {'path':str(path.relative_to(root)),'minimum_os':values,'above_floor':any(version(x)>version(a.minimum) for x in values),'external_links':external,'private_install_ids':private_ids,'architectures':archs,'missing_x86_64':'x86_64' not in archs,'missing_deployment_command':not values,'external_rpaths':external_rpaths,'unresolved_links':missing}
 paths=[]

@@ -1,4 +1,4 @@
-# ExeRunner 0.5.1 — early alpha
+# ExeRunner 0.6.0 — early alpha
 
 ## Before installing
 
@@ -32,3 +32,11 @@ The app is GPL-3.0-or-later. The release includes corresponding application sour
 
 Apple's first-open instructions: https://support.apple.com/en-us/102445
 GNU distribution FAQ: https://www.gnu.org/licenses/gpl-faq.en.html#GPLRequireSourcePostedPublic
+
+## Updating and existing programs
+
+Replace only ExeRunner.app in Applications when installing this version. Do not delete
+Application Support or rerun Windows installers. Use Add → Already installed → choose
+environment → Find EXE to recover a program's library entry. For later releases, use
+Settings → Updates → Check for updates… and close Windows programs before installing.
+The updater verifies both the feed and update archive; it does not send a hardware profile.

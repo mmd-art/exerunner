@@ -4,8 +4,21 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var state: AppState
 
+    @ObservedObject private var updater = AppUpdater.shared
+
     var body: some View {
         Form {
+            Section(t("Обновления")) {
+                HStack {
+                    Text("ExeRunner \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "development")")
+                    Spacer()
+                    Button(t("Проверить обновления…")) { updater.check() }.disabled(!updater.ready)
+                }
+                Text(t("Обновления загружаются с GitHub и проверяются по цифровой подписи. Установка заменяет только приложение и перезапускает ExeRunner."))
+                    .font(.callout).foregroundStyle(.secondary)
+                if let status = updater.status { Text(status).font(.callout).foregroundStyle(.secondary) }
+            }
+
             Section(t("Язык интерфейса")) {
                 Picker(t("Язык"), selection: $state.settings.language) {
                     Text(t("Как на Mac")).tag(InterfaceLanguage.system)

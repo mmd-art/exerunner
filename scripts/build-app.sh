@@ -63,7 +63,12 @@ swift build --package-path "$ROOT/app" --scratch-path "$EXERUNNER_WORK_ROOT/swif
 BIN="$(swift build --package-path "$ROOT/app" --scratch-path "$EXERUNNER_WORK_ROOT/swiftpm" -c "$CONFIG" "${ARCH_ARGS[@]}" --show-bin-path)/$NAME"
 
 rm -rf "$APP" "$ROOT/build/$NAME.app"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
+# Preserve Sparkle's versioned framework symlinks and upstream-signed XPC/helper code.
+SPARKLE="$EXERUNNER_WORK_ROOT/swiftpm/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+[ -f "$SPARKLE/Sparkle" ] || { echo "missing pinned Sparkle framework" >&2; exit 1; }
+ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
+codesign --verify --deep --strict "$APP/Contents/Frameworks/Sparkle.framework"
 cp "$BIN" "$APP/Contents/MacOS/$NAME"
 ditto "$ROOT/recipes" "$APP/Contents/Resources/recipes"
 ditto "$ROOT/compat" "$APP/Contents/Resources/compat"
@@ -111,9 +116,17 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>0.5.1</string>
+  <key>CFBundleShortVersionString</key><string>0.6.0</string>
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>ExeRunnerSourceRevision</key><string>$(git -C "$ROOT" rev-parse HEAD)</string>
+  <key>SUFeedURL</key><string>https://raw.githubusercontent.com/mmd-art/exerunner/main/updates/appcast.xml</string>
+  <key>SUPublicEDKey</key><string>H/EVor0z1CA9i7efFoYIWA+3XBz0AqtjQ3sEqOHwOIw=</string>
+  <key>SUEnableAutomaticChecks</key><false/>
+  <key>SUAutomaticallyUpdate</key><false/>
+  <key>SUEnableInstallerLauncherService</key><true/>
+  <key>SUVerifyUpdateBeforeExtraction</key><true/>
+  <key>SURequireSignedFeed</key><true/>
+  <key>SUSendProfileInfo</key><false/>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
   <key>NSHighResolutionCapable</key><true/>

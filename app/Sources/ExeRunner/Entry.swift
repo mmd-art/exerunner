@@ -33,6 +33,16 @@ enum Entry {
             app.run()
             exit(0)
         }
+        if let index = raw.firstIndex(of: "--snapshot-installed-programs"), index + 1 < raw.count {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.prohibited)
+            Task { @MainActor in
+                await Snapshots.renderInstalledPrograms(to: URL(fileURLWithPath: raw[index + 1], isDirectory: true))
+                exit(0)
+            }
+            app.run()
+            exit(0)
+        }
         // A synthetic export must not run migrations or read the owner's library/settings.
         if let index = raw.firstIndex(of: "--snapshot-save-backups"), index + 1 < raw.count {
             let app = NSApplication.shared

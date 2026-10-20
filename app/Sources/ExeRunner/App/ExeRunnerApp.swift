@@ -2,18 +2,26 @@ import SwiftUI
 
 struct ExeRunnerApp: App {
     @StateObject private var state = AppState()
+    @StateObject private var updater = AppUpdater.shared
     @NSApplicationDelegateAdaptor(ExeRunnerDelegate.self) private var delegate
 
     var body: some Scene {
         WindowGroup(AppInfo.name) {
             RootView()
                 .environmentObject(state)
-                .onAppear { delegate.state = state }
+                .disabled(state.updateRestartPending)
+                .onAppear {
+                    delegate.state = state
+                    updater.start(state: state)
+                }
                 .frame(minWidth: 940, minHeight: 640)
         }
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appInfo) {
+                Button(t("Проверить обновления…")) { updater.check() }.disabled(!updater.ready)
+            }
             CommandMenu(t("Недавние приложения")) {
                 if state.recentItems.isEmpty { Text(t("Пока нет запусков")) }
                 ForEach(state.recentItems) { item in

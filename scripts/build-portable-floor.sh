@@ -10,6 +10,7 @@ SOURCE_REPO="${2:?read-only upstream source checkout required}"
 export EXERUNNER_RELEASE_REPORT="${EXERUNNER_RELEASE_REPORT:-$ROOT/build/release-checks}"
 mkdir -p "$EXERUNNER_RELEASE_REPORT"
 export MACOSX_DEPLOYMENT_TARGET=15.0
+export EXERUNNER_SOURCE_ROOT="$ROOT"
 export EXERUNNER_ENGINE_SOURCE_ROOT="$EXERUNNER_WORK_ROOT/source"
 export EXERUNNER_ENGINE_TOOLS_ROOT="$EXERUNNER_WORK_ROOT/tools"
 export EXERUNNER_ENGINE_BUILD_ROOT="$EXERUNNER_WORK_ROOT/wine-build"
@@ -19,8 +20,12 @@ export CCACHE_DIR="$EXERUNNER_WORK_ROOT/ccache"
 # Unique authored scripts/patches live in ROOT; the input SOURCE_REPO stays read-only.
 cleanup_inputs() {
  python3 -I - "$EXERUNNER_WORK_ROOT" <<'PY'
-import os,json,shutil,sys
+import os,json,shutil,sys,runpy
 from pathlib import Path
+if os.environ.get('EXERUNNER_GLOBAL_MANAGED_ROOT'):
+ # Global runner performs the sole deletion after live-use checks. No nested cleanup.
+ runpy.run_path(str(Path(os.environ["EXERUNNER_SOURCE_ROOT"])/'tools/managed-context.py'))['workspace']()
+ sys.exit(0)
 w=Path(sys.argv[1]).resolve();j=Path(os.environ['EXERUNNER_ARTIFACT_SESSION']).resolve()
 assert w==j/'work' and json.loads((j/'lease.json').read_text())['area']=='jobs'
 for name in ['source','tools','wine-build','pcre2','openssl','cabextract','cab-arm64','cab-x86_64','ccache']:

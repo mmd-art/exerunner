@@ -28,6 +28,7 @@ extension AppState {
 
     @discardableResult
     func installRuntimeComponents(_ verbs: [String], for item: LibraryItem) async -> Bool {
+        guard !updateRestartPending else { return false }
         let engine: Engine
         do { engine = try selectedEngine(forBottle: item.bottle) }
         catch { errorMessage = error.localizedDescription; return false }

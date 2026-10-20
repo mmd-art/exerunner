@@ -2,6 +2,21 @@
 /// of interpolations as %@). A text missing here shows in Russian.
 enum English {
     static let table: [String: String] = [
+        "Обновления": "Updates",
+        "Проверить обновления…": "Check for updates…",
+        "Закрой Windows-программы и дождись завершения операций перед обновлением.": "Close Windows programs and wait for operations to finish before updating.",
+        "Обновление загружено. Перезапуск — после закрытия Windows-программ.": "Update downloaded. Restart will wait until Windows programs have closed.",
+        "Обновления загружаются с GitHub и проверяются по цифровой подписи. Установка заменяет только приложение и перезапускает ExeRunner.": "Updates are downloaded from GitHub and verified with a digital signature. Installation replaces only the app and restarts ExeRunner.",
+
+        "Уже установлена": "Already installed",
+        "Выбрать уже установленную программу": "Choose an already installed program",
+        "Окружение": "Environment",
+        "Установленных окружений пока нет. Сначала установи программу.": "No installed environments yet. Install a program first.",
+        "Выбери окружение, затем найди EXE по имени или пути. Повторная установка не нужна.": "Choose an environment, then search EXEs by name or path. No reinstall needed.",
+        "Найти EXE": "Find EXE",
+        "Поиск установленных программ…": "Searching installed programs…",
+        "Выбери EXE внутри выбранного окружения.": "Choose an EXE inside the selected environment.",
+
         "Не удалось определить экран для параметров запуска. Параметры не изменены.": "Could not determine the launch display. Stored arguments have not been changed.",
         "Неизвестная переменная экрана в параметрах запуска. Используйте {display.width}, {display.height} или {display.index}.": "Unknown display variable in launch arguments. Use {display.width}, {display.height} or {display.index}.",
         "Вместо фиксированного разрешения можно использовать {display.width} и {display.height}. Экран выбирается при запуске: по окну ExeRunner, а для ярлыка — по положению указателя.": "Use {display.width} and {display.height} instead of a fixed resolution. The display is chosen at launch: from the ExeRunner window, or the pointer location for a shortcut.",

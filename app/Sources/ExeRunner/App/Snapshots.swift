@@ -5,6 +5,23 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderInstalledPrograms(to dir: URL) async {
+        // This export must be run inside the managed developer-artifact wrapper.
+        guard let work = ProcessInfo.processInfo.environment["EXERUNNER_WORK_ROOT"] else { return }
+        let root = URL(fileURLWithPath: work).appendingPathComponent("import-fixture")
+        try? Paths.ensure(root.appendingPathComponent("cad/drive_c/Siemens/NX 10.0/NXBIN"))
+        try? Data("fixture".utf8).write(to: root.appendingPathComponent("cad/system.reg"))
+        try? Data("fixture".utf8).write(to: root.appendingPathComponent("cad/drive_c/Siemens/NX 10.0/NXBIN/ugraf.exe"))
+        var settings = AppSettings(); settings.language = .english; settings.bottlesPath = root.path
+        let state = AppState(managesGameBoost: false, initialSettings: settings,
+                             initialItems: [], initialBottleSettings: [:])
+        try? Paths.ensure(dir)
+        await capture("import-installed", AnyView(AddProgramSheet(initialMode: .existing)), state: state,
+                      to: dir, size: NSSize(width: 600, height: 540))
+        await capture("update-settings", AnyView(MainView(section: .settings)), state: state,
+                      to: dir, size: NSSize(width: 1100, height: 850))
+    }
+
     static func renderExecutableChoice(to dir: URL) async {
         var settings = AppSettings(); settings.language = .english
         let state = AppState(managesGameBoost: false, initialSettings: settings,
