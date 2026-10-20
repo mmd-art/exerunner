@@ -32,7 +32,11 @@ enum WineProcesses {
   policy.updater(updaterForPolicy!, didAbortWithError: NSError(domain: "ExeRunner.Updates", code: 1))
   self.state?.running = ["synthetic-game"]
   precondition(policy.mustDeferTermination, "An aborted check cleared an existing staged installation")
+  policy.updater(updaterForPolicy!, willInstallUpdate: appcastItem)
+  policy.updater(updaterForPolicy!, didAbortWithError: NSError(domain: SUSparkleErrorDomain, code: Int(SUError.installationCanceledError.rawValue)))
+  precondition(!policy.mustDeferTermination, "Confirmed install cancellation should release the staged guard")
   self.state?.running = []
+  policy.updater(updaterForPolicy!, willInstallUpdate: appcastItem)
   receipt("staged-termination-policy-passed")
   reply(.install) }
  func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}

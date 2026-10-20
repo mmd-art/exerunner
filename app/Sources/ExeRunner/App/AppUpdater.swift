@@ -110,7 +110,7 @@ final class AppUpdater: NSObject, ObservableObject, SPUUpdaterDelegate {
         // install-on-quit. Only Sparkle's confirmed cancellation of this installer does.
         let failure = error as NSError
         if installationAttemptInThisCycle && failure.domain == SUSparkleErrorDomain
-            && failure.code == SUInstallationCanceledError {
+            && failure.code == Int(SUError.installationCanceledError.rawValue) {
             stagedInstallation = false
             UserDefaults.standard.removeObject(forKey: pendingKey)
         }
