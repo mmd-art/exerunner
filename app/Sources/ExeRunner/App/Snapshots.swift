@@ -15,12 +15,12 @@ enum Snapshots {
             + [target, drive.appendingPathComponent("Vendor CAD/Version 10/bin/crash-helper.exe"),
                drive.appendingPathComponent("Program Files/Another program/main.exe")]
         try? Paths.ensure(dir)
-        for (name, query) in [("exe-groups", ""), ("exe-search", "version 10 main"), ("exe-no-match", "missing-program") ] {
+        for (name, query) in [("exe-groups", ""), ("exe-search", "version 10 main"), ("exe-many", "tool"), ("exe-no-match", "missing-program") ] {
             await capture(name, AnyView(VStack(alignment: .leading, spacing: 18) {
                 Text(t("Своя Windows-программа")).font(.title2.weight(.semibold))
                 ExecutableChooser(candidates: candidates, driveC: drive,
-                    chosen: .constant(query.isEmpty ? nil : target), browse: {}, cancel: {}, add: {}, query: query)
-            }.padding(24)), state: state, to: dir, size: NSSize(width: 648, height: 530))
+                    chosen: .constant(query == "version 10 main" ? target : nil), browse: {}, cancel: {}, add: {}, query: query)
+            }.padding(24)), state: state, to: dir, size: NSSize(width: 600, height: 530))
         }
     }
 

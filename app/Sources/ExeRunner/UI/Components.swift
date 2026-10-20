@@ -223,21 +223,3 @@ struct Card<Content: View>: View {
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(nsColor: .separatorColor).opacity(0.6)))
     }
 }
-
-/// NSOpenPanel instead of SwiftUI's fileImporter: several pickers per screen, and a start folder.
-@MainActor
-enum FilePicker {
-    static func choose(files: Bool = true, folders: Bool = false, startAt: URL? = nil, prompt: String = t("Выбрать"), fileExtensions: [String] = []) -> URL? {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = files
-        panel.canChooseDirectories = folders
-        panel.allowsMultipleSelection = false
-        panel.prompt = prompt
-        if !fileExtensions.isEmpty {
-            panel.allowedContentTypes = fileExtensions.compactMap { UTType(filenameExtension: $0) }
-            panel.allowsOtherFileTypes = false
-        }
-        if let startAt { panel.directoryURL = startAt }
-        return panel.runModal() == .OK ? panel.url : nil
-    }
-}
