@@ -11,8 +11,8 @@ report=a.report.resolve();report.mkdir(parents=True,exist_ok=True)
 env=dict(os.environ,HOME=str(home),CFFIXED_USER_HOME=str(home))
 # Verify the exact production Paths implementation before invoking Migration/GUI.
 probe=work/'probe.swift';probe.write_text('import Foundation\n@main struct Probe { static func main() throws { print(String(data:try JSONSerialization.data(withJSONObject:["home":Paths.home.path,"support":Paths.support.path,"caches":Paths.caches.path,"logs":Paths.logs.path,"shortcuts":Paths.shortcuts.path]),encoding:.utf8)!) } }\n')
-subprocess.run(['swiftc','-parse-as-library',str(ROOT/'app/Sources/ExeRunner/Core/Basics.swift'),str(probe),'-o',str(work/'probe')],check=True,capture_output=True)
-paths=json.loads(subprocess.check_output([str(work/'probe')],env=env,text=True));assert all(Path(v).is_relative_to(home) for v in paths.values()),paths
+subprocess.run(['swiftc','-module-cache-path',str(work/'modules'),'-parse-as-library',str(ROOT/'app/Sources/ExeRunner/Core/Basics.swift'),str(probe),'-o',str(work/'probe')],check=True,capture_output=True)
+paths=json.loads(subprocess.check_output([str(work/'probe')],env=env,text=True));assert all(Path(v).resolve().is_relative_to(home.resolve()) for v in paths.values()),paths
 (report/'paths.json').write_text(json.dumps(paths,indent=2)+'\n')
 assert not Path(paths['support']).exists()
 owner=Path.home().resolve();profile=work/'first-launch.sb'
@@ -23,14 +23,14 @@ try:
     for name,complete in [('first-launch',False),('empty-library',True)]:
         if complete:
             folder=Path(paths['support']);folder.mkdir(parents=True,exist_ok=True)
-            (folder/'settings.json').write_text(json.dumps({'onboardingCompleted':True,'language':'en'}))
+            (folder/'settings.json').write_text(json.dumps({'onboardingCompleted':True,'language':'english'}))
         target=work/(name+'.json')
         run=subprocess.run([*command,'--verify-close',str(target)],env=env,cwd=work,capture_output=True,text=True,timeout=90)
         (report/(name+'.log')).write_text(run.stdout+run.stderr)
         assert run.returncode==0,(name,run.returncode,run.stderr[-1000:])
         proof=json.loads(target.read_text());assert proof['terminationDelegateReached'] and proof['libraryItemCount']==0 and proof['bottleSettingsCount']==0 and proof['runningItems']==[],proof
         assert proof['onboardingCompleted']==complete and Path(proof['engine'])==app/'Contents/Resources/engine',proof
-        assert all(Path(proof[k]).is_relative_to(home) for k in paths),proof
+        assert all(Path(proof[k]).resolve().is_relative_to(home.resolve()) for k in paths),proof
         assert target.with_suffix('.png').is_file(),'actual window export missing'
         (report/(name+'.json')).write_text(json.dumps(proof,indent=2)+'\n')
         (report/(name+'.png')).write_bytes(target.with_suffix('.png').read_bytes())

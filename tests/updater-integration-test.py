@@ -1,9 +1,11 @@
 """Local signed feed, disposable app bundles, actual Sparkle replacement and relaunch.
 Never installs into /Applications or uses the production signing key.
 """
-import functools,http.server,json,os,plistlib,re,shutil,subprocess,sys,threading,time,uuid
+import functools,hashlib,http.server,json,os,plistlib,re,shutil,subprocess,sys,threading,time,uuid
 from pathlib import Path
 work,framework,root=map(Path,sys.argv[1:]); tools=work/'sparkle/bin'
+revision=(work/'tested-revision').read_text().strip()
+assert subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip()==revision
 def run(*args,**kw): return subprocess.run(list(map(str,args)),check=True,**kw)
 public=(work/'test-public-key').read_text().strip()
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(work)))
@@ -57,7 +59,9 @@ try:
  else:raise AssertionError('No native tamper rejection: '+rejected)
  assert 'ready' not in rejected and 'installing' not in rejected and 'relaunched-version-2' not in rejected,rejected
  assert plistlib.loads((old/'Contents/Info.plist').read_bytes())['CFBundleVersion']=='1'
- report={'passed':True,'actual_replacement':True,'actual_relaunch':True,'tamper_rejected':True,'native_tamper_rejected_without_installation':True,'stages':text.splitlines()}
+ subprocess.run(['git','-C',str(root),'diff','--quiet'],check=True)
+ assert subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip()==revision
+ report={'source_revision':revision,'tested_source_hashes':{name:hashlib.sha256((root/name).read_bytes()).hexdigest() for name in ['app/Sources/ExeRunner/App/AppUpdater.swift','tests/updater-host.swift','tests/updater-integration-test.py']},'passed':True,'actual_replacement':True,'actual_relaunch':True,'tamper_rejected':True,'native_tamper_rejected_without_installation':True,'stages':text.splitlines()}
  dest=root/'build/updater-integration-report.json';dest.write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
 finally:
  if process and process.poll() is None:process.terminate();process.wait(timeout=10)
