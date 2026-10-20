@@ -600,5 +600,14 @@ enum English {
         "Копия повреждена или относится к другой игре.": "The backup is damaged or belongs to a different game.",
         "В папке восстановления конфликт файлов и папок.": "The restore folder has a file and directory conflict.",
         "Восстановление не завершено. Исходные файлы сохранены здесь:": "Restore did not complete. The original files are preserved here:",
+        "Файлы сгруппированы по папкам установки. Выбери основной EXE или укажи его вручную.": "Files are grouped by installation folder. Select the main EXE or choose it manually.",
+        "Поиск по имени или пути": "Search by name or path",
+        "Очистить": "Clear",
+        "Дополнительные EXE": "Additional EXEs",
+        "EXE не найдены. Выбери файл вручную.": "No EXEs found. Choose the file manually.",
+        "Совпадений нет. Измени поиск или выбери файл вручную.": "No matches. Change the search or choose the file manually.",
+        "Файл не выбран": "No file selected",
+        "Выбрать EXE вручную…": "Choose EXE manually…",
+        "Выбери доступный EXE-файл программы.": "Choose a readable EXE file for the application.",
     ]
 }

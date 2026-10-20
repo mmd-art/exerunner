@@ -166,7 +166,7 @@ struct AddProgramSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 540)
+        .frame(width: 600)
     }
 
     private var form: some View {
@@ -223,34 +223,21 @@ struct AddProgramSheet: View {
     }
 
     private var choose: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if candidates.isEmpty {
-                Text(t("Установщик закончил, но новых программ я не нашёл. Укажи файл программы вручную."))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(t("Какой файл запускать?")).font(.headline)
-                Picker("", selection: $chosen) {
-                    ForEach(candidates, id: \.self) { url in
-                        Text(url.lastPathComponent + "  ·  " + url.deletingLastPathComponent().lastPathComponent).tag(Optional(url))
-                    }
+        ExecutableChooser(candidates: candidates,
+                          driveC: Bottle(name: bottle, root: state.bottlesRoot).driveC,
+                          chosen: $chosen, error: fileError, browse: {
+            let start = Bottle(name: bottle, root: state.bottlesRoot).driveC
+            if let url = FilePicker.choose(startAt: start, fileExtensions: ["exe"]) {
+                guard ExecutableDiscovery.usable(url) else {
+                    fileError = t("Выбери доступный EXE-файл программы.")
+                    return
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
+                fileError = nil
+                if !candidates.contains(url) { candidates.append(url) }
+                chosen = url
             }
-            HStack {
-                Button(t("Выбрать вручную…")) {
-                    let start = Bottle(name: bottle, root: state.bottlesRoot).driveC
-                    if let url = FilePicker.choose(startAt: start) { finish(url) }
-                }
-                Spacer()
-                Button(t("Отмена")) { dismiss() }
-                Button(t("Добавить в библиотеку")) { if let chosen { finish(chosen) } }
-                    .buttonStyle(.pillProminent)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(chosen == nil)
-            }
-            .buttonStyle(.pill)
-        }
+        }, cancel: { dismiss() }, add: { if let chosen { finish(chosen) } })
+
     }
 
     private func pick(_ url: URL) {
@@ -275,12 +262,17 @@ struct AddProgramSheet: View {
         phase = .installing
         Task {
             candidates = await state.runInstaller(file, bottle: bottle)
-            chosen = candidates.first
+            chosen = nil
             phase = .choose
         }
     }
 
     private func finish(_ exe: URL) {
+        guard ExecutableDiscovery.usable(exe) else {
+            fileError = t("Выбери доступный EXE-файл программы.")
+            return
+        }
+        fileError = nil
         state.addInstalled(exe, name: name, bottle: bottle)
         dismiss()
     }

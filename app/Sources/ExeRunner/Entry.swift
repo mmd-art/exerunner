@@ -13,6 +13,16 @@ import Foundation
 enum Entry {
     static func main() {
         let raw = CommandLine.arguments
+        if let index = raw.firstIndex(of: "--snapshot-executable-choice"), index + 1 < raw.count {
+            let app = NSApplication.shared
+            app.setActivationPolicy(.prohibited)
+            Task { @MainActor in
+                await Snapshots.renderExecutableChoice(to: URL(fileURLWithPath: raw[index + 1], isDirectory: true))
+                exit(0)
+            }
+            app.run()
+            exit(0)
+        }
         if let index = raw.firstIndex(of: "--snapshot-history"), index + 1 < raw.count {
             let app = NSApplication.shared
             app.setActivationPolicy(.prohibited)

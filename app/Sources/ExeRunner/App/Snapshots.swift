@@ -5,6 +5,25 @@ import SwiftUI
 /// layout can be checked headless.
 @MainActor
 enum Snapshots {
+    static func renderExecutableChoice(to dir: URL) async {
+        var settings = AppSettings(); settings.language = .english
+        let state = AppState(managesGameBoost: false, initialSettings: settings,
+                             initialItems: [], initialBottleSettings: [:])
+        let drive = URL(fileURLWithPath: "/synthetic/drive_c")
+        let target = drive.appendingPathComponent("Vendor CAD/Version 10/bin/main.exe")
+        let candidates = (0..<800).map { drive.appendingPathComponent("Vendor CAD/Version 10/bin/tool\($0).exe") }
+            + [target, drive.appendingPathComponent("Vendor CAD/Version 10/bin/crash-helper.exe"),
+               drive.appendingPathComponent("Program Files/Another program/main.exe")]
+        try? Paths.ensure(dir)
+        for (name, query) in [("exe-groups", ""), ("exe-search", "version 10 main"), ("exe-no-match", "missing-program") ] {
+            await capture(name, AnyView(VStack(alignment: .leading, spacing: 18) {
+                Text(t("Своя Windows-программа")).font(.title2.weight(.semibold))
+                ExecutableChooser(candidates: candidates, driveC: drive,
+                    chosen: .constant(query.isEmpty ? nil : target), browse: {}, cancel: {}, add: {}, query: query)
+            }.padding(24)), state: state, to: dir, size: NSSize(width: 648, height: 530))
+        }
+    }
+
     static func renderHistory(to dir: URL) async {
         var settings = AppSettings(); settings.language = .english
         let game = LibraryItem(id: "preview-game", name: "Example game (synthetic)", kind: .game,

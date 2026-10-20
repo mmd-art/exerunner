@@ -87,7 +87,6 @@ enum Installer {
         try await BottleManager.ensure(bottle, engine: engine, log: log)
         guard !bottle.name.hasPrefix("isolated-") else { throw AppError("Installer unsupported in isolation prototype") }
         try await BottleManager.applyDefaults(bottle, engine: engine, log: log)
-        let before = executables(in: bottle)
         progress(t("Идёт установка: пройди шаги в окне установщика"))
         let env = WineEnvironment.make(engine: engine, prefix: bottle.url)
         let arguments = WindowsInstaller.arguments(for: file)
@@ -97,38 +96,15 @@ enum Installer {
         guard WindowsInstaller.succeeded(status, isMSI: file.pathExtension.lowercased() == "msi") else {
             throw AppError(t("Установщик завершился с кодом \(status). Подробности: \(log.path)"))
         }
-        return executables(in: bottle).subtracting(before).map { URL(fileURLWithPath: $0) }
-            .sorted { score($0) > score($1) || (score($0) == score($1) && $0.path < $1.path) }
+        // Include existing paths too: repair/reinstall may replace the main EXE in place.
+        // Search all real C: directories, not only Program Files and Local/Programs.
+        return ExecutableDiscovery.scan(driveC: bottle.driveC)
     }
 
     static func executables(in bottle: Bottle) -> Set<String> {
-        var roots = ["Program Files", "Program Files (x86)", "Programs", "ProgramData"].map {
-            bottle.driveC.appendingPathComponent($0, isDirectory: true)
-        }
-        let users = bottle.driveC.appendingPathComponent("users", isDirectory: true)
-        for user in (try? FileManager.default.contentsOfDirectory(atPath: users.path)) ?? [] {
-            roots.append(users.appendingPathComponent("\(user)/AppData/Local/Programs", isDirectory: true))
-        }
-        var found = Set<String>()
-        for root in roots {
-            guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil,
-                                                              options: [.skipsHiddenFiles]) else { continue }
-            for case let url as URL in walker where url.pathExtension.lowercased() == "exe" {
-                found.insert(url.path)
-            }
-        }
-        return found
+        Set(ExecutableDiscovery.scan(driveC: bottle.driveC).map(\.path))
     }
 
-    private static let notPrograms = ["unins", "uninstall", "setup", "install", "update", "crash", "helper",
-                                      "redist", "vc_redist", "dxsetup", "dotnet", "report"]
-
-    /// Uninstallers and helpers last, shallow paths first.
-    private static func score(_ url: URL) -> Int {
-        let name = url.lastPathComponent.lowercased()
-        if notPrograms.contains(where: { name.contains($0) }) { return 0 }
-        return 20 - min(url.pathComponents.count, 19)
-    }
 }
 
 extension Bottle {

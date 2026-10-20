@@ -33,7 +33,7 @@ trap cleanup_stage EXIT
 ditto "$APP" "$STAGE/ExeRunner.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$ROOT/docs/INSTALL.md" "$STAGE/Read me first.md"
-cp "$ROOT/docs/RELEASE-0.5.0.md" "$STAGE/Release notes.md"
+cp "$ROOT/docs/RELEASE-${VERSION}.md" "$STAGE/Release notes.md"
 if [ -d "$APP/Contents/Resources/d3dmetal" ]; then
   D3DM="D3DMetal от Apple уже внутри; новую версию можно подключить из Game Porting Toolkit"
   D3DM_EN="Apple's D3DMetal is already inside; a newer one can be connected from the Game Porting Toolkit"
