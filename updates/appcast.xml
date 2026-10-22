@@ -4,15 +4,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
   <channel>
     <title>ExeRunner updates</title>
     <item>
-      <title>ExeRunner 0.6.0 alpha</title>
-      <link>https://github.com/mmd-art/exerunner/releases/tag/v0.6.0-alpha.1</link>
-      <sparkle:version>202610201702</sparkle:version>
-      <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
+      <title>ExeRunner 0.6.1 alpha</title>
+      <link>https://github.com/mmd-art/exerunner/releases/tag/v0.6.1-alpha.1</link>
+      <sparkle:version>202610221446</sparkle:version>
+      <sparkle:shortVersionString>0.6.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/mmd-art/exerunner/releases/download/v0.6.0-alpha.1/ExeRunner-0.6.0.dmg" length="435567104" type="application/octet-stream" sparkle:edSignature="kVXPxidHZzxdE+8494rc6KLA91A0IJXOnV6MpZZr2Py865QZYqPFT5zRwGPQv349fgKraSPBhj7e8yqkXA35Cg=="></enclosure>
+      <enclosure url="https://github.com/mmd-art/exerunner/releases/download/v0.6.1-alpha.1/ExeRunner-0.6.1.dmg" length="435651072" type="application/octet-stream" sparkle:edSignature="PDH3ERW4/ferQUHFtBcD/SkjMWsfKxVCkKKyhobMKl9GU1AvJJuwDmdW7ftMDgKYIrLsYayD/wGNW++wH5RmAw=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: EfzExOuC8SD2jx8eUlqYcVoZcfIJW6eia+pQHQb/MqQ7DgTtREXcckGBiSfIbJHAv4HEYr1TOA7Z1UUtmbzsDA==
+edSignature: Wn7q60GBMnzF4m6AlHDfIQShbX4E3KBN1yM3r7ReE8oKqpOUOGONJZ87igATgw72M8XeqBk2PHOfka5kHTiJAA==
 length: 1080
 -->
