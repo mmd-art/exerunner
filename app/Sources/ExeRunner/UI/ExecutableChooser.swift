@@ -80,8 +80,12 @@ struct ExecutableChooser: View {
                 Text("\(Set(candidates.filter { ExecutableTree.matches($0, driveC: driveC, query: query) }).union(programs.map(\.executable)).count) / \(Set(candidates).count)")
                     .monospacedDigit().foregroundStyle(.secondary)
             }
-            List {
-                Section(t("Найденные программы")) {
+            // Dynamic disclosure rows do not need NSTableView selection. SwiftUI List
+            // reentered its table delegate during disclosure/search updates on macOS 27.
+            ScrollView {
+              LazyVStack(alignment: .leading, spacing: 0) {
+                    Text(t("Найденные программы")).font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary).padding(10).accessibilityAddTraits(.isHeader)
                     ForEach(programs) { app in
                         Button {
                             chosen = app.executable
@@ -97,13 +101,15 @@ struct ExecutableChooser: View {
                                 if chosen == app.executable { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
                             }.contentShape(Rectangle())
                         }.buttonStyle(.plain).help(ExecutableDiscovery.path(app.shortcut, driveC: driveC))
+                            .padding(.horizontal, 10).padding(.vertical, 7)
+                        Divider().padding(.horizontal, 10)
                     }
                     if programs.isEmpty {
                         Text(searching ? t("Ярлыки не найдены по запросу.") : t("Подходящих ярлыков нет. Выбери EXE в папках ниже."))
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.secondary).padding(10)
                     }
-                }
                 ForEach(rows) { row in
+                  Group {
                     if row.count > 0 {
                         Button {
                             if open(row) { expanded.remove(row.id); expanded.insert("closed:" + row.id) }
@@ -129,13 +135,17 @@ struct ExecutableChooser: View {
                             }.padding(.leading, CGFloat(row.depth * 12 + 18)).contentShape(Rectangle())
                         }.buttonStyle(.plain).help(ExecutableDiscovery.path(url, driveC: driveC))
                     }
+                  }.padding(.horizontal, 10).padding(.vertical, 6)
+                  Divider().padding(.horizontal, 10)
                 }
                 if rows.isEmpty && programs.isEmpty {
                     Text(candidates.isEmpty ? t("EXE не найдены. Выбери файл вручную.") : t("Совпадений нет. Измени поиск или выбери файл вручную."))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.secondary).padding(10)
                 }
+              }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            .listStyle(.inset).frame(height: 260)
+            .frame(height: 260)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
             .accessibilityIdentifier("executable-list")
             Text(chosen.map { ExecutableDiscovery.path($0, driveC: driveC) } ?? t("Файл не выбран"))
                 .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)

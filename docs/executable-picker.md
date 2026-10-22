@@ -5,6 +5,7 @@ The chooser reads existing C: content and does not run shortcuts or installers t
 - Detected applications uses friendly names from direct EXE shortcuts in public/user Start Menu Programs and Desktop folders. Copies with the same name and target are deduplicated. Selecting a shortcut suggests its name when the user has not supplied a custom library name.
 - All EXEs preserves every nested directory; opening a vendor does not flatten all its executables. Common helper/install/update/crash EXEs remain accessible in an Additional EXEs group within their actual folder.
 - Wine's Internet Explorer, Windows Media Player and Windows NT folders are in a separate initially collapsed system-utilities section. Java and other installed applications are not classified as system utilities by name similarity.
+- Dynamic rows use a bounded ScrollView/LazyVStack rather than table-backed List, avoiding the reproduced NSTableView delegate reentrancy during disclosure/search updates on macOS 27. Normal-window expansion, scrolling, helper grouping, search and selection were retested without the warning.
 - Search matches friendly shortcut names and full Windows paths; matching folders expand to expose results. The list scrolls inside a fixed viewport, and manual selection uses the existing native Finder NSOpenPanel.
 - Installation status uses the same leading edge as the title, a wrapping status label and an indeterminate horizontal progress indicator. The indicator does not represent a measured installation percentage.
 

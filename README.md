@@ -8,7 +8,7 @@ ExeRunner brings setup, a program library, launcher recipes, graphics selection 
 compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
-**Status:** early alpha, version 0.6.0. Primarily validated on an M2 Pro Mac.
+**Status:** early alpha, version 0.6.1. Primarily validated on an M2 Pro Mac.
 The interface is available in English and Russian. The app executable includes arm64 and x86_64;
 Intel hardware acceptance is still pending. Compatibility depends on the application.
 
@@ -19,7 +19,7 @@ For Apple Silicon and **macOS 15 or later**. Download the DMG and matching check
 [installation and first-open instructions](docs/INSTALL.md). This alpha is not Apple-notarized.
 DXMT and DXVK/MoltenVK are bundled; Apple D3DMetal is an optional separate import. GPTK 4 beta is excluded because a linked library requires macOS 26.4.
 The package starts with an empty personal library and includes no games, accounts or saves.
-See [0.6.0 changes and limits](docs/RELEASE-0.6.0.md). Release downloads and source are available without collaborator access.
+See [0.6.1 changes and limits](docs/RELEASE-0.6.1.md). Release downloads and source are available without collaborator access.
 
 Already installed a Windows program? Use **Add → Already installed**, select its environment,
 then search for its EXE. Reinstallation is not required.

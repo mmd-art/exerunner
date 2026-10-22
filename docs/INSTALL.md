@@ -1,4 +1,4 @@
-# ExeRunner 0.6.0 — early alpha
+# ExeRunner 0.6.1 — early alpha
 
 ## Before installing
 

@@ -116,7 +116,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>0.6.0</string>
+  <key>CFBundleShortVersionString</key><string>0.6.1</string>
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>ExeRunnerSourceRevision</key><string>$(git -C "$ROOT" rev-parse HEAD)</string>
   <key>SUFeedURL</key><string>https://raw.githubusercontent.com/mmd-art/exerunner/main/updates/appcast.xml</string>
