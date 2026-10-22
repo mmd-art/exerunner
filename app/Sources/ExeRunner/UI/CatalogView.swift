@@ -161,11 +161,16 @@ struct AddProgramSheet: View {
     private var selectedBottle: String { mode == .existing ? existingBottle : bottle }
     @State private var phase: Phase = .form
     @State private var candidates: [URL] = []
+    @State private var shortcuts: [InstalledShortcut] = []
+    @State private var selectedProgram: InstalledShortcut?
     @State private var chosen: URL?
     @State private var fileError: String?
     @State private var environments: [String] = []
 
-    init(initialMode: Mode = .installer) { _mode = State(initialValue: initialMode) }
+    init(initialMode: Mode = .installer, initialPhase: Phase = .form) {
+        _mode = State(initialValue: initialMode)
+        _phase = State(initialValue: initialPhase)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -177,7 +182,7 @@ struct AddProgramSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 600)
+        .frame(width: 600, alignment: .leading)
         .task {
             let root = state.bottlesRoot
             environments = await Task.detached { InstalledPrograms.environments(root: root) }.value
@@ -246,16 +251,13 @@ struct AddProgramSheet: View {
     }
 
     private var installing: some View {
-        HStack(spacing: 12) {
-            ProgressView().controlSize(.small)
-            Text(mode == .existing ? t("Поиск установленных программ…") : state.activity ?? t("Идёт установка…")).foregroundStyle(.secondary)
-        }
+        InstallationProgress(message: mode == .existing ? t("Поиск установленных программ…") : state.activity ?? t("Идёт установка…"))
     }
 
     private var choose: some View {
         ExecutableChooser(candidates: candidates,
                           driveC: Bottle(name: selectedBottle, root: state.bottlesRoot).driveC,
-                          chosen: $chosen, error: fileError, browse: {
+                          shortcuts: shortcuts, chosen: $chosen, error: fileError, browse: {
             let start = Bottle(name: selectedBottle, root: state.bottlesRoot).driveC
             if let url = FilePicker.choose(startAt: start, fileExtensions: ["exe"]) {
                 guard ExecutableDiscovery.usable(url) else {
@@ -266,7 +268,8 @@ struct AddProgramSheet: View {
                 if !candidates.contains(url) { candidates.append(url) }
                 chosen = url
             }
-        }, cancel: { dismiss() }, add: { if let chosen { finish(chosen) } })
+        }, cancel: { dismiss() }, add: { if let chosen { finish(chosen) } },
+           selectProgram: { selectedProgram = $0 })
 
     }
 
@@ -288,6 +291,7 @@ struct AddProgramSheet: View {
             let root = state.bottlesRoot, environment = existingBottle
             Task {
                 candidates = await Task.detached { InstalledPrograms.executables(root: root, environment: environment) }.value
+                await findShortcuts()
                 chosen = nil
                 phase = .choose
             }
@@ -303,9 +307,17 @@ struct AddProgramSheet: View {
         phase = .installing
         Task {
             candidates = await state.runInstaller(file, bottle: bottle)
+            await findShortcuts()
             chosen = nil
             phase = .choose
         }
+    }
+
+    private func findShortcuts() async {
+        let drive = Bottle(name: selectedBottle, root: state.bottlesRoot).driveC
+        let files = candidates
+        shortcuts = await Task.detached { InstalledShortcut.scan(driveC: drive, candidates: files) }.value
+        selectedProgram = nil
     }
 
     private func finish(_ exe: URL) {
@@ -322,8 +334,11 @@ struct AddProgramSheet: View {
             }
         }
         fileError = nil
-        state.addInstalled(exe, name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                           ? exe.deletingPathExtension().lastPathComponent : name, bottle: selectedBottle)
+        let typedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let shortcutName = selectedProgram.flatMap { $0.executable == exe ? $0.name : nil }
+        let suggested = shortcutName ?? exe.deletingPathExtension().lastPathComponent
+        let usesDefault = typedName.isEmpty || typedName == file?.deletingPathExtension().lastPathComponent
+        state.addInstalled(exe, name: usesDefault ? suggested : typedName, bottle: selectedBottle)
         dismiss()
     }
 }

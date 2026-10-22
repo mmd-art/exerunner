@@ -24,20 +24,29 @@ enum Snapshots {
 
     static func renderExecutableChoice(to dir: URL) async {
         var settings = AppSettings(); settings.language = .english
+        settings.bottlesPath = (ProcessInfo.processInfo.environment["EXERUNNER_WORK_ROOT"] ?? "/synthetic").appending("/empty-bottles")
         let state = AppState(managesGameBoost: false, initialSettings: settings,
                              initialItems: [], initialBottleSettings: [:])
         let drive = URL(fileURLWithPath: "/synthetic/drive_c")
-        let target = drive.appendingPathComponent("Vendor CAD/Version 10/bin/main.exe")
-        let candidates = (0..<800).map { drive.appendingPathComponent("Vendor CAD/Version 10/bin/tool\($0).exe") }
-            + [target, drive.appendingPathComponent("Vendor CAD/Version 10/bin/crash-helper.exe"),
-               drive.appendingPathComponent("Program Files/Another program/main.exe")]
+        let target = drive.appendingPathComponent("Program Files/Siemens/NX 10.0/NXBIN/ugraf.exe")
+        let candidates = (0..<338).map { drive.appendingPathComponent("Program Files/Siemens/NX 10.0/CATIAV5/translator/tool\($0).exe") }
+            + [target, drive.appendingPathComponent("Program Files/Siemens/NX 10.0/NXBIN/crash-helper.exe"),
+               drive.appendingPathComponent("Program Files/Internet Explorer/iexplore.exe")]
+        let app = InstalledShortcut(name: "NX 10.0", executable: target,
+            shortcut: drive.appendingPathComponent("ProgramData/Microsoft/Windows/Start Menu/Programs/Siemens/NX 10.0.lnk"))
         try? Paths.ensure(dir)
-        for (name, query) in [("exe-groups", ""), ("exe-search", "version 10 main"), ("exe-many", "tool"), ("exe-no-match", "missing-program") ] {
+        for (name, query) in [("exe-groups", ""), ("exe-search", "ugraf"), ("exe-many", "translator"), ("exe-no-match", "missing-program") ] {
             await capture(name, AnyView(VStack(alignment: .leading, spacing: 18) {
                 Text(t("Своя Windows-программа")).font(.title2.weight(.semibold))
-                ExecutableChooser(candidates: candidates, driveC: drive,
-                    chosen: .constant(query == "version 10 main" ? target : nil), browse: {}, cancel: {}, add: {}, query: query)
-            }.padding(24)), state: state, to: dir, size: NSSize(width: 600, height: 530))
+                ExecutableChooser(candidates: candidates, driveC: drive, shortcuts: query == "" ? [app] : [],
+                    chosen: .constant(query == "ugraf" ? target : nil), browse: {}, cancel: {}, add: {}, query: query)
+            }.padding(24).frame(maxWidth: .infinity, alignment: .leading)), state: state, to: dir, size: NSSize(width: 600, height: 560))
+        }
+        for language in [InterfaceLanguage.english, .russian] {
+            L10n.use(language)
+            state.activity = t("Идёт установка: пройди шаги в окне установщика. Установка программы может занять несколько минут.")
+            await capture(language == .english ? "install-progress-en" : "install-progress-ru",
+                AnyView(AddProgramSheet(initialPhase: .installing)), state: state, to: dir, size: NSSize(width: 600, height: 170))
         }
     }
 

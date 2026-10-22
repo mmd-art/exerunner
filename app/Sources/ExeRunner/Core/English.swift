@@ -2,6 +2,14 @@
 /// of interpolations as %@). A text missing here shows in Russian.
 enum English {
     static let table: [String: String] = [
+        "Идёт установка: пройди шаги в окне установщика. Установка программы может занять несколько минут.": "Installing: go through the steps in the installer window. This application may take several minutes to finish.",
+        "Какую программу добавить?": "Which program should I add?",
+        "Выбери программу по ярлыку или раскрой папки в «Все EXE». Поиск работает по названию и полному пути.": "Choose an application shortcut or expand folders under All EXEs. Search matches names and full paths.",
+        "Все EXE": "All EXEs",
+        "Системные утилиты Wine": "Wine system utilities",
+        "Найденные программы": "Detected applications",
+        "Ярлыки не найдены по запросу.": "No shortcuts match your search.",
+        "Подходящих ярлыков нет. Выбери EXE в папках ниже.": "No direct EXE shortcuts found. Choose an EXE from the folders below.",
         "Обновления": "Updates",
         "Проверить обновления…": "Check for updates…",
         "Закрой Windows-программы и дождись завершения операций перед обновлением.": "Close Windows programs and wait for operations to finish before updating.",
