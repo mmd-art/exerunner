@@ -1,7 +1,7 @@
 import Foundation
 @main struct Tests {
  static func main() throws {
-  let fm = FileManager.default, root = StorageScan.canonical(URL(fileURLWithPath:ProcessInfo.processInfo.environment["TMPDIR"]!)).appendingPathComponent("storage-fixture")
+  let fm = FileManager.default, root = StorageScan.canonical(URL(fileURLWithPath:ProcessInfo.processInfo.environment["TMPDIR"]!)).appendingPathComponent("storage-fixture-" + UUID().uuidString)
   try fm.createDirectory(at:root,withIntermediateDirectories:true)
   var checks = 0
   func file(_ path:String,_ count:Int) throws -> URL { let p=root.appendingPathComponent(path);try fm.createDirectory(at:p.deletingLastPathComponent(),withIntermediateDirectories:true);try Data(repeating:1,count:count).write(to:p);return p }
