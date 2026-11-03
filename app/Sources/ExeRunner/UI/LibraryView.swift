@@ -67,6 +67,8 @@ struct ItemTile: View {
     @State private var managingComponents = false
     @State private var managingEnvironment = false
     @State private var managingSaves = false
+    @State private var removingCard = false
+    @State private var uninstalling = false
     @State private var troubleshooting: Symptom?
 
     var body: some View {
@@ -124,6 +126,14 @@ struct ItemTile: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Color(nsColor: .controlBackgroundColor)))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(nsColor: .separatorColor).opacity(0.6)))
         .contextMenu { menuItems }
+        .alert(t("Убрать карточку из библиотеки?"), isPresented: $removingCard) {
+            Button(t("Отмена"), role: .cancel) {}
+            Button(t("Убрать только карточку"), role: .destructive) { state.remove(item) }
+                .disabled(state.running.contains(item.id) || state.launching.contains(item.id))
+        } message: {
+            Text(t("Файлы игры, сейвы и Windows-среда останутся на диске. Место не освободится. Для Steam сбросятся только настройки карточки; игра может снова появиться из библиотеки Steam."))
+        }
+        .sheet(isPresented: $uninstalling) { GameRemovalView(item: item).environmentObject(state) }
         .sheet(isPresented: $editing) { ItemSettingsView(item: item) }
         .sheet(isPresented: $managingComponents) { RuntimeComponentsView(item: item) }
         .sheet(isPresented: $managingEnvironment) { EnvironmentView(item: item) }
@@ -163,9 +173,10 @@ struct ItemTile: View {
         Button(t("Открыть журнал")) { state.openLog(item) }
         Divider()
         Button(t("Остановить всё в бутылке «\(item.bottle)»")) { Task { await state.stopBottle(item) } }
+        Button(t("Удалить установленную игру или программу…"), role: .destructive) { uninstalling = true }
         if state.isSaved(item) {
             Divider()
-            Button(item.isSteamGame ? t("Сбросить настройки игры") : t("Убрать из библиотеки"), role: .destructive) { state.remove(item) }
+            Button(t("Убрать только карточку…"), role: .destructive) { removingCard = true }
         }
     }
 }

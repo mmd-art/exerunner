@@ -141,7 +141,7 @@ final class CrashClassifier: @unchecked Sendable {
         classify(text, exitStatus: nil)
     }
 
-    func classify(_ text: String, exitStatus: Int32?) -> CrashDiagnosis {
+    func classify(_ text: String, exitStatus: Int32?, steamClient: Bool = false) -> CrashDiagnosis {
         var matches: [CrashDiagnosis.Match] = []
         for (index, line) in text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
             let line = String(line)
@@ -152,7 +152,16 @@ final class CrashClassifier: @unchecked Sendable {
                 let captures: [String] = (1..<max(hit.numberOfRanges, 1)).compactMap {
                     Range(hit.range(at: $0), in: line).map { String(line[$0]) }
                 }
-                matches.append(.init(pattern: pattern, lineNumber: index + 1, line: line, captures: captures))
+                // Steam's optional GPU probe failing is not the Steam client failing.
+                // Scoped to a known helper path and client context; main/game failures stay errors.
+                if steamClient && pattern.id == "dll-load-failure" &&
+                    line.lowercased().replacingOccurrences(of: "\\\\", with: "\\").contains("\\steam\\bin\\gldriverquery.exe\"") {
+                    let note = CrashPattern(id: "steam-gpu-probe", category: .graphics, severity: .warning,
+                        confidence: 0.4, prefilter: nil, regex: "", remedies: [])
+                    matches.append(.init(pattern: note, lineNumber: index + 1, line: line, captures: captures))
+                } else {
+                    matches.append(.init(pattern: pattern, lineNumber: index + 1, line: line, captures: captures))
+                }
             }
         }
         // stable: equal matches keep the order of the log

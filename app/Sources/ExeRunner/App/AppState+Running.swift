@@ -2,7 +2,7 @@ import Foundation
 
 extension AppState {
     func launch(_ item: LibraryItem) {
-        guard !updateRestartPending, !isShuttingDown, !running.contains(item.id) else { return }
+        guard !updateRestartPending, !isShuttingDown, !stoppingBottles.contains(item.bottle), !running.contains(item.id) else { return }
         let display = NativeDisplayTarget.current()
         Task {
             do { _ = try await run(item, display: display) } catch { errorMessage = error.localizedDescription }
@@ -16,7 +16,7 @@ extension AppState {
     }
 
     func run(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
-        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown, !stoppingBottles.contains(item.bottle) else { throw CancellationError() }
         launching.insert(item.id)
         defer { launching.remove(item.id) }
         // The caller captures before initialization/history/engine awaits can change focus.
@@ -36,7 +36,7 @@ extension AppState {
     }
 
     private func performRun(_ item: LibraryItem, display: NativeDisplayTarget?) async throws -> Int32 {
-        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown, !stoppingBottles.contains(item.bottle) else { throw CancellationError() }
         guard !componentInstalls.contains(item.bottle) else { throw AppError(t("В этой бутылке уже идёт установка компонентов.")) }
         try Task.checkCancellation()
         let engine = try selectedEngine(forBottle: item.bottle)
@@ -69,7 +69,7 @@ extension AppState {
             let log = Paths.logFile(item.id)
             logSegments[item.id] = LogSegment(url: log)
             launchTimes[item.id] = Date()
-            stoppedByUser.remove(item.id)
+            stopIntents.begin(item.id)
             var extra = environment(for: item)
             extra.merge(try nativeIdentity(for: item, in: bottle)) { $1 }
             handoffGameForeground(item)
@@ -84,16 +84,16 @@ extension AppState {
         }
         launching.insert(item.id)
         defer { launching.remove(item.id) }
-        stoppedByUser.remove(item.id)
+        stopIntents.begin(item.id)
         let (env, log) = try await prepare(item, engine: engine, display: display)
         try Task.checkCancellation()
-        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown, !stoppingBottles.contains(item.bottle) else { throw CancellationError() }
         let file = Bottle(name: item.bottle, root: bottlesRoot).hostURL(forWindowsPath: item.executable)
         let plan = try await ExecutionBreakpointCompatibility.plan(executable: item.executable, arguments: item.arguments,
                                                                   file: file, isolated: item.isolated, environment: env,
                                                                   compatibilityDirectory: Paths.compat)
         try Task.checkCancellation()
-        guard !updateRestartPending, !isShuttingDown else { throw CancellationError() }
+        guard !updateRestartPending, !isShuttingDown, !stoppingBottles.contains(item.bottle) else { throw CancellationError() }
         let arguments = plan.arguments
         let folder = file?.deletingLastPathComponent()
         handoffGameForeground(item)
@@ -179,7 +179,7 @@ extension AppState {
     private func runThroughSteam(_ item: LibraryItem, client: LibraryItem, engine: Engine, display: NativeDisplayTarget?) async throws -> Int32 {
         launching.insert(item.id)
         defer { launching.remove(item.id) }
-        stoppedByUser.remove(item.id)
+        stopIntents.begin(item.id)
         // the bottle and the game's settings; the client keeps its own environment
         let (_, log) = try await prepare(item, engine: engine, display: display)
         handoffGameForeground(item)
@@ -225,14 +225,19 @@ extension AppState {
     /// first. A game or program stops alone: its windows are asked to close, what is left after
     /// a few seconds is ended, and the rest of the bottle (Steam, say) keeps running.
     func stop(_ item: LibraryItem) async {
+        let ownsStop = stoppingBottles.insert(item.bottle).inserted
+        defer { if ownsStop { stoppingBottles.remove(item.bottle) } }
         cancelForegroundHandoff(item)
         await markHistoryStop(allItems.filter { item.kind == .launcher ? $0.bottle == item.bottle : $0.id == item.id })
+        for affected in allItems where affected.id == item.id || (item.kind == .launcher && affected.bottle == item.bottle) {
+            stopIntents.mark(affected.id)
+            diagnoses[affected.id] = nil
+        }
         guard let engine = try? selectedEngine(forBottle: item.bottle) else {
             WineProcesses.kill(processes(of: item, in: WineProcesses.list()))
             await refreshProcesses(); return
         }
         let bottle = Bottle(name: item.bottle, root: bottlesRoot)
-        stoppedByUser.insert(item.id)
         startingDeadlines[item.id] = nil
         starting.remove(item.id)
         let log = segment(for: item.id)?.url ?? Paths.logFile(item.id)
@@ -277,8 +282,10 @@ extension AppState {
 
     /// Everything in the item's bottle, at once
     func stopBottle(_ item: LibraryItem) async {
+        let ownsStop = stoppingBottles.insert(item.bottle).inserted
+        defer { if ownsStop { stoppingBottles.remove(item.bottle) } }
         await markHistoryStop(allItems.filter { $0.bottle == item.bottle })
-        for other in allItems where other.bottle == item.bottle { stoppedByUser.insert(other.id) }
+        for other in allItems where other.bottle == item.bottle { stopIntents.mark(other.id); diagnoses[other.id] = nil }
         await quitBottle(item.bottle)
         await refreshProcesses()
     }
@@ -306,7 +313,7 @@ extension AppState {
         watcher = nil
         for task in clientRuns.values { task.cancel() }
         let bottles = Set(bottleItems.map(\.bottle)).map { Bottle(name: $0, root: bottlesRoot) }
-        for item in allItems { stoppedByUser.insert(item.id) }
+        for item in allItems { stopIntents.mark(item.id) }
         PrefixLaunchGate.close(Set(bottles.map(\.prefixPath)))
         for bottle in bottles {
             if let engine = try? selectedEngine(forBottle: bottle.name) {
@@ -348,6 +355,15 @@ extension AppState {
             guard let game = item(id), game.isSteamGame, let client = steamClient(for: game) else { continue }
             followsClient[id] = (client.id, currentLog(of: client)?.size ?? 0)
             launchTimes[id] = launchTimes[id] ?? now
+        }
+        // Fresh externally launched games (including Steam UI launches) begin a new intent.
+        // Keep stop suppression throughout teardown, including duplicate end observers.
+        for id in found.subtracting(active) {
+            if let entry = item(id) {
+                let stopping = stoppingBottles.contains(entry.bottle)
+                stopIntents.observeLaunch(id, duringStop: stopping)
+                if !stopping { diagnoses[id] = nil }
+            }
         }
         // games a launcher ran have no run of their own to report their end
         for id in active.subtracting(found) where !launching.contains(id) { finished(id, status: nil) }
@@ -423,7 +439,7 @@ extension AppState {
         defer {
             if item(id)?.isSteamGame == true { followsClient[id] = nil; launchTimes[id] = nil }
         }
-        if stoppedByUser.remove(id) != nil { return }
+        if stopIntents.ignoresExit(id) { return }
         // Unreal catches its own crashes and says so in a report of its own
         if let game = item(id), let report = UnrealCrashReport.latest(in: crashReportRoots(for: game), since: launchTimes[id]) {
             queueHistoryCrash(id)
@@ -432,7 +448,7 @@ extension AppState {
         }
         guard let text = segment(for: id)?.window() else { return }
         guard (status ?? 0) != 0 || CrashClassifier.looksLikeCrash(text) else { return }
-        let diagnosis = CrashClassifier.shared.classify(text, exitStatus: status)
+        let diagnosis = classifyOutput(text, for: item(id), exitStatus: status)
         if let primary = diagnosis.primary, primary.pattern.severity >= .error {
             queueHistoryCrash(id)
             diagnoses[id] = diagnosis

@@ -54,7 +54,8 @@ final class AppState: ObservableObject {
     /// Launcher runs started for a game, which a headless launch waits for
     var clientRuns: [String: Task<Int32, Error>] = [:]
     /// Stopped from the app: the end of their run is not a crash
-    var stoppedByUser: Set<String> = []
+    var stopIntents = StopIntent()
+    var stoppingBottles: Set<String> = []
     /// The last audio check in each bottle
     var audioTests: [String: AudioTestResult] = [:]
     /// Launchers being installed: their bottle is set up for them before their installer runs

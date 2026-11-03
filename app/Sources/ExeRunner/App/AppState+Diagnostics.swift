@@ -2,6 +2,11 @@ import AppKit
 import Foundation
 
 extension AppState {
+    func classifyOutput(_ text: String, for item: LibraryItem?, exitStatus: Int32? = nil) -> CrashDiagnosis {
+        CrashClassifier.shared.classify(text, exitStatus: exitStatus,
+            steamClient: item?.kind == .launcher && item?.recipeID == "steam")
+    }
+
     // MARK: remedies
 
     /// A finding's remedies as this item can use them: the components that provide the missing
@@ -194,7 +199,7 @@ extension AppState {
         guard let text = segment(for: item.id)?.window() else {
             return Check(title: title, status: .info, detail: t("Журнала пока нет: запусти программу и проверь снова."))
         }
-        var diagnosis = diagnoses[item.id] ?? CrashClassifier.shared.classify(text)
+        var diagnosis = diagnoses[item.id] ?? classifyOutput(text, for: item)
         if let categories { diagnosis = CrashDiagnosis(matches: diagnosis.matches.filter { categories.contains($0.pattern.category) }) }
         guard let primary = diagnosis.primary else {
             return Check(title: title, status: .ok, detail: t("Известных ошибок нет."))
@@ -236,7 +241,7 @@ extension AppState {
         guard let text = segment(for: item.id)?.window() else {
             return Check(title: title, status: .info, detail: t("Журнала пока нет: после запуска здесь будет видно, каких библиотек не хватило."))
         }
-        let failures = CrashDiagnosis(matches: CrashClassifier.shared.classify(text).matches
+        let failures = CrashDiagnosis(matches: classifyOutput(text, for: item).matches
             .filter { $0.pattern.category == .dependenciesLoading })
         let names = failures.missingLibraries
         guard !names.isEmpty else { return Check(title: title, status: .ok, detail: t("В журнале нет ошибок загрузки библиотек.")) }
@@ -482,7 +487,7 @@ extension AppState {
             item: item, effectiveGraphics: effectiveGraphics(item), recipe: recipe(item.recipeID), profile: profile(for: item),
             bottle: bottle, bottleSettings: settings(forBottle: item.bottle), system: system, rosetta: rosettaInstalled,
             engine: engineInfo, environment: environment,
-            diagnosis: diagnoses[item.id] ?? segment?.window().map(CrashClassifier.shared.classify), checks: checks, log: segment,
+            diagnosis: diagnoses[item.id] ?? segment?.window().map { classifyOutput($0, for: item) }, checks: checks, log: segment,
             prefixProblems: PrefixCheck.problems(in: bottle).map(PrefixCheck.describe),
             winetricks: Winetricks.installed(in: bottle).sorted(),
             processes: processTable.filter { $0.prefix == bottle.prefixPath }.map(\.name).sorted())
