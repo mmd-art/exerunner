@@ -105,9 +105,11 @@ enum StorageScan {
         let started = Date()
         var roots: [(URL, String)] = []
         for claim in claims {
+            if cancelled() || Date().timeIntervalSince(started) > maxSeconds { result.incomplete = true; stopped = true; break }
             if var existing = result.buckets[claim.id] { existing.owners.formUnion(claim.owners); result.buckets[claim.id] = existing }
             else { result.buckets[claim.id] = Bucket(id: claim.id, kind: claim.kind, owners: claim.owners) }
             for raw in claim.roots {
+                if cancelled() || Date().timeIntervalSince(started) > maxSeconds { result.incomplete = true; stopped = true; break }
                 let root = canonical(raw)
                 guard realDirectory(root) else {
                     if FileManager.default.fileExists(atPath: root.path) { result.incomplete = true; result.failures += 1 }
