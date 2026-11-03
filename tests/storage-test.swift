@@ -55,6 +55,9 @@ import Foundation
   _ = try file("orphan/system.reg",3)
   let withOrphan=StorageSources.measure(unknownInput)
   assert(withOrphan.buckets.values.contains{$0.kind == .environment && $0.owners.isEmpty && $0.bytes==16});checks += 1
+  let unavailable=try file("not-a-root",1)
+  assert(StorageSources.measure(.init(items:[],bottlesRoot:unavailable,shared:[])).incomplete);checks += 1
+  assert(!StorageSources.measure(.init(items:[],bottlesRoot:root.appendingPathComponent("absent"),shared:[])).incomplete);checks += 1
   print("Storage: \(checks) attribution, identity, traversal and cancellation checks passed")
  }
 }

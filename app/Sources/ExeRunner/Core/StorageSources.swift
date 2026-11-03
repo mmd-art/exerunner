@@ -131,6 +131,8 @@ enum StorageSources {
                     claims.append(.init(id: "environment:" + prefix.path, kind: .environment, owners: [], roots: [prefix]))
                 }
             }
+        } else if FileManager.default.fileExists(atPath: input.bottlesRoot.path) {
+            incomplete = true
         }
         unknown.formUnion(pending)
         return Plan(claims: claims, unknown: unknown, folders: folders, incomplete: incomplete || expired())
