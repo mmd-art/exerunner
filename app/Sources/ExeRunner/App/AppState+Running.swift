@@ -304,6 +304,7 @@ extension AppState {
     func shutdown() async {
         cancelAllForegroundHandoffs()
         guard !isShuttingDown else { return }
+        storageTask?.cancel()
         isShuttingDown = true
         await markHistoryStop(allItems)
         syncKeepAwake()

@@ -6,7 +6,6 @@ struct LibraryView: View {
     var openCatalog: () -> Void
     @State private var addingProgram = false
 
-    private let columns = [GridItem(.adaptive(minimum: 170, maximum: 230), spacing: 18, alignment: .top)]
 
     var body: some View {
         ScrollView {
@@ -14,7 +13,11 @@ struct LibraryView: View {
                 empty
             } else {
                 VStack(alignment: .leading, spacing: 30) {
-                    RecentApplicationsView()
+                    HStack(alignment: .top) {
+                        RecentApplicationsView()
+                        Spacer()
+                        StorageButton(item: nil)
+                    }
                     section(t("Лаунчеры"), state.launchers)
                     section(t("Игры"), state.games)
                     section(t("Программы"), state.programs)
@@ -23,6 +26,7 @@ struct LibraryView: View {
             }
         }
         .navigationTitle(t("Библиотека"))
+        .task(id: state.storageModelKey) { state.refreshStorage() }
         .toolbar {
             ToolbarItemGroup {
                 Button { addingProgram = true } label: { Label(t("Добавить программу"), systemImage: "plus") }
@@ -52,9 +56,14 @@ struct LibraryView: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text(title).font(.title3.weight(.semibold))
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
-                    ForEach(items) { ItemTile(item: $0) }
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        ItemTile(item: item)
+                        if index < items.count - 1 { Divider().padding(.leading, 88) }
+                    }
                 }
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color(nsColor: .controlBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(nsColor: .separatorColor).opacity(0.35)))
             }
         }
     }
@@ -72,59 +81,41 @@ struct ItemTile: View {
     @State private var troubleshooting: Symptom?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            cover
-            Text(item.name).font(.headline).lineLimit(2, reservesSpace: true)
-            if item.kind == .game, let seconds = state.history.gameSeconds[item.id], seconds > 0 {
-                Label(HistoryView.duration(seconds), systemImage: "clock").font(.caption).foregroundStyle(.secondary)
-            }
-            if item.isolated {
-                Label(t("Изолировано · без сети"), systemImage: "shield.lefthalf.filled")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            if let profile = state.profile(for: item) {
-                HStack(spacing: 6) {
-                    VerdictBadge(profile: profile)
-                    if !profile.recommended.winetricks.isEmpty, item.useRecommended {
-                        Badge(text: t("+ компоненты"))
-                    }
+        HStack(spacing: 16) {
+            cover.frame(width: 56, height: 56)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(item.name).font(.headline).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        .help(item.name).layoutPriority(1)
+                    if let profile = state.profile(for: item) { compatibility(profile) }
                 }
-            }
-            if let diagnosis = state.diagnoses[item.id] {
-                Button { troubleshooting = .launch } label: {
-                    Label(diagnosis.primary?.pattern.category.shortTitle ?? t("Ошибка"), systemImage: "exclamationmark.triangle.fill")
-                        .lineLimit(1)
-                }
-                .buttonStyle(PillButtonStyle(compact: true, tint: .orange))
-                .help(t("\(diagnosis.headline). Открыть помощника"))
-            }
-            HStack(spacing: 8) {
-                if state.running.contains(item.id) {
-                    let active = state.active.contains(item.id)
-                    Button { Task { await state.stop(item) } } label: {
-                        Label(active ? t("Остановить") : t("Запускается…"), systemImage: active ? "stop.fill" : "hourglass")
+                HStack(spacing: 8) {
+                    if item.kind == .game, let seconds = state.history.gameSeconds[item.id], seconds > 0 {
+                        Text(t("В игре:") + " " + HistoryView.duration(seconds))
                     }
-                    .buttonStyle(.pillCompact)
-                    .help(active ? (item.kind == .launcher ? t("Закрыть лаунчер и всё, что он запустил") : t("Закрыть только эту программу"))
-                                 : t("Отменить запуск"))
-                } else {
-                    Button { state.launch(item) } label: {
-                        Label(item.kind == .game ? t("Играть") : t("Открыть"), systemImage: "play.fill")
-                    }
-                    .buttonStyle(.pillCompactProminent)
+                    if item.isolated { Image(systemName: "shield.lefthalf.filled").help(t("Изолировано · без сети")) }
+                    Text(state.active.contains(item.id) ? t("Запущено") : state.starting.contains(item.id) || state.launching.contains(item.id) ? t("Запускается…") : t("Не запущено"))
+                }.font(.caption).foregroundStyle(.secondary)
+                if let diagnosis = state.diagnoses[item.id] {
+                    Button { troubleshooting = .launch } label: {
+                        Label(diagnosis.primary?.pattern.category.shortTitle ?? t("Ошибка"), systemImage: "exclamationmark.triangle.fill").lineLimit(1)
+                    }.buttonStyle(.plain).font(.caption).foregroundStyle(.orange)
                 }
-                Spacer()
-                Menu { menuItems } label: { Image(systemName: "ellipsis") }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            StorageButton(item: item).frame(minWidth: 64, alignment: .trailing)
+            if state.running.contains(item.id) {
+                Button { Task { await state.stop(item) } } label: {
+                    Label(state.active.contains(item.id) ? t("Остановить") : t("Запускается…"), systemImage: "stop.fill")
+                }.buttonStyle(.pillCompact)
+            } else {
+                Button { state.launch(item) } label: {
+                    Label(item.kind == .game ? t("Играть") : t("Открыть"), systemImage: "play.fill")
+                }.buttonStyle(.pillCompactProminent)
             }
-            .buttonStyle(.pill)
-            .controlSize(.small)
+            Menu { menuItems } label: { Image(systemName: "ellipsis").frame(width: 20, height: 24) }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color(nsColor: .controlBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(nsColor: .separatorColor).opacity(0.6)))
+        .padding(16).frame(maxWidth: .infinity, minHeight: 96)
         .contextMenu { menuItems }
         .alert(t("Убрать карточку из библиотеки?"), isPresented: $removingCard) {
             Button(t("Отмена"), role: .cancel) {}
@@ -141,19 +132,26 @@ struct ItemTile: View {
         .sheet(item: $troubleshooting) { TroubleshootView(itemID: item.id, symptom: $0) }
     }
 
+    @ViewBuilder
+    private func compatibility(_ profile: GameProfile) -> some View {
+        switch profile.verdict {
+        case .good: Badge(text: t("Совместимо"), tint: .green).help(profile.ratingTitle)
+        case .caution: Badge(text: t("С ограничениями"), tint: .orange).help(profile.ratingTitle)
+        case .bad: Badge(text: t("Несовместимо"), tint: .red).help(profile.ratingTitle)
+        case .unknown: EmptyView()
+        }
+    }
+
     private var cover: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10).fill(.quaternary)
-            if let path = item.artwork, let image = NSImage(contentsOfFile: path) {
+            if let icon = state.icon(for: item) {
+                Image(nsImage: icon).resizable().interpolation(.high).scaledToFit()
+            } else if let path = item.artwork, let image = NSImage(contentsOfFile: path) {
                 Image(nsImage: image).resizable().scaledToFill()
-            } else if let icon = state.icon(for: item) {
-                Image(nsImage: icon).resizable().interpolation(.high).scaledToFit().frame(width: item.kind == .game ? 144 : 76, height: item.kind == .game ? 144 : 76)
             } else {
-                Image(systemName: symbol).font(.system(size: 40, weight: .light)).foregroundStyle(.secondary)
+                Image(systemName: symbol).font(.system(size: 32, weight: .light)).foregroundStyle(.secondary)
             }
-        }
-        .aspectRatio(item.kind == .game ? 2.0 / 3.0 : 16.0 / 10.0, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        }.frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var symbol: String {

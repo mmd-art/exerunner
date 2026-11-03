@@ -70,6 +70,10 @@ final class AppState: ObservableObject {
     let historyStore = SessionHistoryStore(directory: Paths.support.appendingPathComponent("SessionHistory", isDirectory: true))
     var historyTickets: [String: UUID] = [:]
     var pendingHistoryCrashes = Set<UUID>()
+    @Published var storage: StorageScan.Snapshot?
+    @Published var storageScanning = false
+    var storageFolders: [String: URL] = [:]
+    var storageTask: Task<Void, Never>?
     var watcher: Task<Void, Never>?
     var isShuttingDown = false
     @Published var updateRestartPending = false
