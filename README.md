@@ -4,8 +4,8 @@
 
 **A native macOS launcher for Windows applications and games on Apple Silicon.**
 
-ExeRunner brings setup, a program library, launcher recipes, graphics selection and
-compatibility diagnostics into one SwiftUI/AppKit application. It integrates a custom-built
+ExeRunner combines setup, a program library, launcher recipes, graphics selection and
+compatibility diagnostics in one SwiftUI/AppKit application. It integrates a custom-built
 Wine runtime with existing graphics translators and targeted compatibility fixes.
 
 **Status:** early alpha, version 0.6.3. Primarily validated on an M2 Pro Mac.
@@ -45,7 +45,7 @@ its native export anonymizes configured printer names.
 
 ## What it does
 
-The committed source provides:
+The committed source includes:
 
 - **A native program library:** launchers, Windows programs and games, with optional
   shortcuts in macOS Applications.
@@ -63,7 +63,7 @@ The committed source provides:
 ### Compatibility and runtime features
 
 The alpha includes the following work, validated through regression checks, self-authored
-Windows controls and selected real gameplay.
+Windows test programs and selected real gameplay.
 
 | Area | Implemented | Validation boundary |
 | --- | --- | --- |
